@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
 export default function LoginPage() {
@@ -117,9 +117,9 @@ export default function LoginPage() {
                     className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 focus:outline-none"
                   >
                     {showPassword ? (
-                      <span>👁️</span> // You can use an icon here like EyeOffIcon if available
+                      <EyeOff className="h-5 w-5" aria-label="Hide password" />
                     ) : (
-                      <span>👁️‍🗨️</span>
+                      <Eye className="h-5 w-5" aria-label="Show password" />
                     )}
                   </button>
                 </div>
