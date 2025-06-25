@@ -8,7 +8,7 @@ export const metadata = {
   description: 'Smart Attendance Management System',
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       {/* The font class is applied to the body tag */}

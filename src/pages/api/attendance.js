@@ -1,7 +1,4 @@
-// ... (imports: dbConnect, models, etc.)
 
-// A middleware to verify the token would be ideal here.
-// For simplicity, we'll assume a valid user ID is passed.
 
 export default async function handler(req, res) {
     // ... authentication and user retrieval logic ...
