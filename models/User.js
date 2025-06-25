@@ -16,14 +16,13 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['Staff', 'Intern', 'Manager', 'HR'], 
+    // --- MODIFIED: Added 'Project Manager' to the list ---
+    enum: ['Staff', 'Intern', 'Manager', 'Project Manager', 'HR'], 
     default: 'Staff',
   },
-  // --- NEW: Add the phoneNumber field ---
-  // We use 'String' because phone numbers can include '+', '-', etc.
   phoneNumber: {
     type: String,
-    required: false, // Making it optional for now
+    required: false,
     maxlength: [20, 'Phone number cannot be more than 20 characters'],
   },
 });

@@ -11,7 +11,7 @@ export default function AddUserPage({ user }) {
     name: '',
     email: '',
     password: '',
-    role: 'Staff',
+    role: 'Staff', // Default role remains 'Staff'
     phoneNumber: '', 
   });
   const [message, setMessage] = useState('');
@@ -73,57 +73,27 @@ export default function AddUserPage({ user }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            />
+            <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" />
           </div>
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            />
+            <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" />
           </div>
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Initial Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            />
+            <input type="password" id="password" name="password" value={formData.password} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" />
           </div>
 
           <div>
             <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">Phone Number (Optional)</label>
-            <input
-              type="tel"
-              id="phoneNumber"
-              name="phoneNumber"
-              value={formData.phoneNumber}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            />
+            <input type="tel" id="phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" />
           </div>
 
           <div>
             <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            {/* --- THIS IS THE MODIFIED SECTION --- */}
             <select
               id="role"
               name="role"
@@ -135,6 +105,8 @@ export default function AddUserPage({ user }) {
               <option value="Staff">Staff</option>
               <option value="Intern">Intern</option>
               <option value="Manager">Manager</option>
+              {/* Added the Project Manager option */}
+              <option value="Project Manager">Project Manager</option>
             </select>
           </div>
 
@@ -173,6 +145,8 @@ export default function AddUserPage({ user }) {
   );
 }
 
+
+// --- This getServerSideProps function remains unchanged ---
 export async function getServerSideProps(context) {
   await dbConnect();
   const { token } = context.req.cookies;

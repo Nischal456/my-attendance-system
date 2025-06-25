@@ -10,14 +10,17 @@ export default async function handler(req, res) {
   await dbConnect();
 
   try {
-    // --- MODIFIED: Destructure phoneNumber from the request body ---
     const { name, email, password, role, phoneNumber } = req.body;
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({ message: 'Missing required fields. Name, email, password, and role are required.' });
     }
 
-    const assignableRoles = ['Staff', 'Intern', 'Manager'];
+    // --- THIS IS THE CORRECTED LINE ---
+    // We have now added 'Project Manager' to the list of roles that can be assigned.
+    const assignableRoles = ['Staff', 'Intern', 'Manager', 'Project Manager'];
+    
+    // This security check will now allow 'Project Manager' but still block 'HR'.
     if (!assignableRoles.includes(role)) {
       return res.status(403).json({ message: 'Forbidden: The selected role is not assignable.' });
     }
@@ -34,7 +37,6 @@ export default async function handler(req, res) {
       email,
       password: hashedPassword,
       role: role,
-      // --- MODIFIED: Add phoneNumber to the new user object ---
       phoneNumber: phoneNumber, 
     });
 
