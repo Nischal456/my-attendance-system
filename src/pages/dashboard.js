@@ -194,7 +194,7 @@ export default function Dashboard({ user, initialAttendance, initialTasks, activ
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <Image src="/geckoworks.png" alt="GeckoWorks Logo" width={40} height={40} className="rounded-full" />
-            <h1 className="text-xl font-bold text-gray-800">My Dashboard</h1>
+            <h1 className="text-xl font-bold text-gray-800">{user.name} Dashboard</h1>
           </div>
           <div className="flex items-center space-x-6">
             <div className="hidden md:flex items-center space-x-2 text-gray-600">
