@@ -1,104 +1,132 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { Loader2, AlertTriangle, Github, Chrome } from 'lucide-react';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Loader2, AlertTriangle } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-
       if (res.ok) {
-        router.push('/dashboard');
+        toast.success("Login successful!", {
+          style: {
+            borderRadius: "10px",
+            background: "#d4edda",
+            color: "#155724",
+          },
+        });
+        router.push("/dashboard");
       } else {
         const data = await res.json();
-        setError(data.message || 'Login failed. Please check your credentials.');
+        setError(
+          data.message || "Login failed. Please check your credentials."
+        );
       }
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 relative overflow-hidden">
-      {/* Background Blobs */}
-      <div className="absolute w-[500px] h-[500px] bg-indigo-600 rounded-full blur-[200px] opacity-20 -top-40 -left-60"></div>
-      <div className="absolute w-[500px] h-[500px] bg-sky-500 rounded-full blur-[200px] opacity-20 -bottom-40 -right-60"></div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <Toaster/>  
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+          {/* Brand accent bar */}
+          <div className="h-2 bg-[#2ac759] w-full"></div>
 
-      {/* Centered Wrapper */}
-      <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="w-full max-w-md animate-fade-in-up">
-          <div className="text-center mb-8">
-            <Image
-              src="/geckoworks.png"
-              alt="GeckoWorks Logo"
-              width={250}
-              height={80}
-              className="mx-auto mb-4"
-              priority
-            />
-            <h1 className="text-4xl font-bold text-white drop-shadow-lg">Welcome Back</h1>
-            <p className="text-white/70 text-md mt-1">Sign in to access the Attendance Portal.</p>
-          </div>
-
-          <div className="backdrop-blur-xl bg-black/20 border border-white/10 shadow-2xl rounded-2xl p-8">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="relative">
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="Email address"
-                  className="peer w-full px-4 pt-6 pb-2 text-white bg-transparent border-b-2 border-white/20 focus:outline-none focus:border-sky-400 placeholder-transparent transition"
-                />
-                <label
-                  htmlFor="email"
-                  className="absolute left-4 top-4 text-white/60 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-xs peer-focus:text-sky-400 transition-all"
-                >
-                  Email address
-                </label>
+          <div className="p-8">
+            <div className="text-center mb-8">
+              <div className="mx-auto mb-6 flex justify-center">
+                <div className="p-2 border-2 border-[#2ac759]/20 rounded-full">
+                  <Image
+                    src="/logo.png"
+                    alt="Attendance System Logo"
+                    width={120}
+                    height={120}
+                    className="w-20 h-20 object-contain"
+                    priority
+                  />
+                </div>
               </div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                Attendance Portal
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Secure access to your records
+              </p>
+            </div>
 
-              <div className="relative">
-                <input
-                  type="password"
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="Password"
-                  className="peer w-full px-4 pt-6 pb-2 text-white bg-transparent border-b-2 border-white/20 focus:outline-none focus:border-sky-400 placeholder-transparent transition"
-                />
-                <label
-                  htmlFor="password"
-                  className="absolute left-4 top-4 text-white/60 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-xs peer-focus:text-sky-400 transition-all"
-                >
-                  Password
-                </label>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-5">
+                <div className="relative">
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="peer w-full px-4 pt-5 pb-2 text-gray-800 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#2ac759] focus:border-[#2ac759] transition-all"
+                  />
+                  <label
+                    htmlFor="email"
+                    className="absolute left-4 top-3 text-xs text-gray-500 peer-focus:text-[#2ac759] transition-all pointer-events-none"
+                  >
+                    Email address
+                  </label>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="peer w-full px-4 pt-5 pb-2 text-gray-800 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#2ac759] focus:border-[#2ac759] transition-all pr-10"
+                  />
+                  <label
+                    htmlFor="password"
+                    className="absolute left-4 top-3 text-xs text-gray-500 peer-focus:text-[#2ac759] transition-all pointer-events-none"
+                  >
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  >
+                    {showPassword ? (
+                      <span>👁️</span> // You can use an icon here like EyeOffIcon if available
+                    ) : (
+                      <span>👁️‍🗨️</span>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {error && (
-                <div className="flex items-center justify-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-2 rounded-lg">
+                <div className="flex items-center justify-center gap-2 text-red-500 text-sm bg-red-50 border border-red-100 p-3 rounded-lg">
                   <AlertTriangle className="h-4 w-4" />
                   <span>{error}</span>
                 </div>
@@ -107,32 +135,39 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out flex items-center justify-center hover:shadow-lg hover:shadow-sky-500/30 hover:scale-105 active:scale-100 disabled:opacity-50"
+                className="w-full bg-[#2ac759] hover:bg-[#25b04f] text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[#2ac759]/50 focus:ring-offset-2 disabled:opacity-50"
               >
-                {loading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Sign In'}
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                    Signing In...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
               </button>
-
-              <div className="flex items-center my-6">
-                <hr className="w-full border-t border-white/10" />
-                <span className="px-4 text-white/40 text-sm">OR</span>
-                <hr className="w-full border-t border-white/10" />
-              </div>
-
-              <div className="space-y-4">
-                <button type="button" className="w-full flex items-center justify-center gap-3 bg-white/90 text-gray-800 font-medium py-2.5 px-4 rounded-lg hover:bg-white transition-transform hover:scale-105">
-                  <Chrome className="h-5 w-5" /> Continue with Google
-                </button>
-                <button type="button" className="w-full flex items-center justify-center gap-3 bg-gray-800 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-gray-700 transition-transform hover:scale-105">
-                  <Github className="h-5 w-5" /> Continue with GitHub
-                </button>
-              </div>
             </form>
-          </div>
 
-          <div className="text-center text-sm text-white/60 mt-8">
-            <a href="#" className="hover:text-white transition duration-150 underline underline-offset-2">
-              Forgot your password?
-            </a>
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toast("Please contact HR at hr@geckoworksnepal.com", {
+                    icon: "⚠️",
+                    style: {
+                      borderRadius: "10px",
+                      background: "#fff3cd",
+                      color: "#856404",
+                      border: "1px solid #ffeeba",
+                    },
+                  });
+                }}
+                className="text-sm text-gray-600 hover:text-[#2ac759] transition duration-150 hover:underline underline-offset-2 focus:outline-none"
+              >
+                Forgot your password?
+              </button>
+            </div>
           </div>
         </div>
       </div>

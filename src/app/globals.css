@@ -5,10 +5,4 @@
 @tailwind components;
 @tailwind utilities;
 
-/* --- ADD THIS CODE --- */
-/* This sets the background for your entire application */
-body {
-  margin: 0;
-  background: linear-gradient(to right bottom, #111827, #1f2937, #374151);
-}
 

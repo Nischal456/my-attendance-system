@@ -5,16 +5,22 @@ import User from '../../models/User';
 import Attendance from '../../models/Attendance';
 import dbConnect from '../../lib/dbConnect';
 import NepaliDate from 'nepali-date-converter';
+import Image from 'next/image';
+import { LogOut, Clock, Calendar, Coffee, CheckCircle, AlertCircle } from 'react-feather';
 
 // --- Helper Functions ---
-
 const toNepaliDate = (gregorianDate, includeTime = false) => {
   if (!gregorianDate) return '-';
   const date = new Date(gregorianDate);
   const nepaliDate = new NepaliDate(date).format('DD MMMM, YYYY');
-  const time = date.toLocaleTimeString();
+  const time = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
   return includeTime ? `${nepaliDate} at ${time}` : nepaliDate;
 };
+
 
 const formatDuration = (totalSeconds) => {
   if (totalSeconds === null || totalSeconds === undefined || totalSeconds < 0) return '-';
@@ -41,7 +47,6 @@ const formatElapsedTime = (startTime) => {
 };
 
 // --- Main Dashboard Component ---
-
 export default function Dashboard({ user, initialAttendance, activeCheckIn, initialIsOnBreak }) {
   const [attendance, setAttendance] = useState(initialAttendance);
   const [description, setDescription] = useState(activeCheckIn?.description || '');
@@ -52,23 +57,11 @@ export default function Dashboard({ user, initialAttendance, activeCheckIn, init
   const [isOnBreak, setIsOnBreak] = useState(initialIsOnBreak || false);
 
   const router = useRouter();
-  const MIN_WORK_SECONDS = 21600;
 
+  const MIN_WORK_SECONDS = 21600; // 6 hours in seconds
   const completedDays = attendance.filter(att => att.checkOutTime);
   const totalWorkSeconds = completedDays.reduce((acc, att) => acc + (att.duration || 0), 0);
   const daysMeetingTarget = completedDays.filter(day => day.duration >= MIN_WORK_SECONDS).length;
-
-  const getDurationStyle = (attendanceEntry) => {
-    const style = { padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' };
-    if (attendanceEntry.checkOutTime) {
-      if (attendanceEntry.duration >= MIN_WORK_SECONDS) {
-        style.color = '#28a745';
-      } else {
-        style.color = '#dc3545';
-      }
-    }
-    return style;
-  };
 
   useEffect(() => {
     if (checkInTime) {
@@ -125,7 +118,7 @@ export default function Dashboard({ user, initialAttendance, activeCheckIn, init
     try {
       const res = await fetch('/api/attendance/break-in', { method: 'POST' });
       const { message } = await res.json();
-      if (!res.ok) throw new Error(message);
+      if (!res.ok) throw new Error(message || 'Failed to start break');
       setIsOnBreak(true);
     } catch (err) {
       setError(err.message);
@@ -137,7 +130,7 @@ export default function Dashboard({ user, initialAttendance, activeCheckIn, init
     try {
       const res = await fetch('/api/attendance/break-out', { method: 'POST' });
       const { message } = await res.json();
-      if (!res.ok) throw new Error(message);
+      if (!res.ok) throw new Error(message || 'Failed to end break');
       setIsOnBreak(false);
     } catch (err) {
       setError(err.message);
@@ -150,85 +143,205 @@ export default function Dashboard({ user, initialAttendance, activeCheckIn, init
   };
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Welcome, {user.name} ({user.role})</h1>
-      <h3>Today's Date: {toNepaliDate(new Date(), true)}</h3>
-      <button onClick={handleLogout}>Logout</button>
-      {error && <p style={{ color: 'red', fontWeight: 'bold' }}>{error}</p>}
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <Image src="/logo.png" alt="Gecko Logo" width={40} height={40} className="rounded-full" />
+            <h1 className="text-xl font-bold text-gray-800">Gecko Attendance</h1>
+          </div>
+          <div className="flex items-center space-x-6">
+            <div className="hidden md:flex items-center space-x-2 text-gray-600">
+              <Calendar size={18} />
+              <span>{toNepaliDate(new Date(), true)}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-700 font-medium">{user.name}</span>
+              <span className="bg-[#2ac759]/10 text-[#2ac759] px-2 py-1 rounded-full text-xs">
+                {user.role}
+              </span>
+            </div>
+            <button onClick={handleLogout} className="flex items-center space-x-1 text-gray-500 hover:text-gray-700">
+              <LogOut size={18} />
+              <span className="hidden md:inline">Logout</span>
+            </button>
+          </div>
+        </div>
+      </header>
 
-      <hr />
-
-      <div>
-        <h3>Log your work</h3>
-        {!checkInTime ? (
-          <button onClick={handleCheckIn}>Check-In</button>
-        ) : (
-          <div>
-            <h3>
-              Currently Checked In
-              {isOnBreak && <span style={{ color: 'orange', marginLeft: '10px' }}>(On Break)</span>}
-            </h3>
-            <h2>Timer: {elapsedTime}</h2>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What did you work on?"
-              rows="4"
-              cols="50"
-              disabled={isOnBreak}
-            ></textarea>
-            <br />
-            {!isOnBreak ? (
-              <>
-                <button onClick={handleBreakIn} style={{ backgroundColor: 'orange', color: 'white' }}>Start Break</button>
-                <button onClick={handleCheckOut}>Check-Out</button>
-              </>
-            ) : (
-              <button onClick={handleBreakOut} style={{ backgroundColor: 'green', color: 'white' }}>End Break</button>
-            )}
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && (
+          <div className="mb-6 flex items-center bg-red-50 border-l-4 border-red-500 p-4 rounded">
+            <AlertCircle className="text-red-500 mr-3" />
+            <div className="text-red-700">{error}</div>
           </div>
         )}
-      </div>
 
-      <hr />
-
-      <div>
-        <h2>Your Attendance History</h2>
-        <div style={{ background: '#f8f9fa', padding: '10px', border: '1px solid #dee2e6', borderRadius: '5px', marginBottom: '15px' }}>
-          <h3 style={{ margin: '0 0 5px 0' }}>Summary</h3>
-          <div><strong>Total Logged Time:</strong> {formatDuration(totalWorkSeconds)}</div>
-          <div><strong>Days Meeting 6-Hour Target:</strong> {daysMeetingTarget} / {completedDays.length}</div>
+        {/* Time Tracking Card */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8 border border-gray-100">
+          <div className="p-6 md:p-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">Today's Work</h2>
+            {!checkInTime ? (
+              <div className="text-center py-8">
+                <button
+                  onClick={handleCheckIn}
+                  className="bg-[#2ac759] hover:bg-[#25b04f] text-white font-medium py-3 px-8 rounded-lg transition-all hover:shadow-lg"
+                >
+                  Check In
+                </button>
+                <p className="mt-3 text-gray-500">Start tracking your work hours</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-700">
+                      Currently Checked In
+                      {isOnBreak && (
+                        <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                          <Coffee className="mr-1" size={12} /> On Break
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Checked in at {toNepaliDate(checkInTime, true)}
+                    </p>
+                  </div>
+                  <div className="mt-4 md:mt-0">
+                    <div className="text-3xl font-bold text-gray-900 flex items-center">
+                      <Clock className="mr-2 text-[#2ac759]" size={24} />
+                      {elapsedTime}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                    Work Description
+                  </label>
+                  <textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What did you work on today?"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2ac759] focus:border-transparent"
+                    disabled={isOnBreak}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {!isOnBreak ? (
+                    <>
+                      <button
+                        onClick={handleBreakIn}
+                        className="flex items-center bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 px-4 rounded-lg transition-all"
+                      >
+                        <Coffee className="mr-2" size={16} /> Start Break
+                      </button>
+                      <button
+                        onClick={handleCheckOut}
+                        className="flex items-center bg-[#2ac759] hover:bg-[#25b04f] text-white font-medium py-2 px-4 rounded-lg transition-all"
+                      >
+                        <CheckCircle className="mr-2" size={16} /> Check Out
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleBreakOut}
+                      className="flex items-center bg-[#2ac759] hover:bg-[#25b04f] text-white font-medium py-2 px-4 rounded-lg transition-all"
+                    >
+                      <CheckCircle className="mr-2" size={16} /> End Break
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <table style={{ width: "100%", borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date ( Time )</th>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Break Duration</th>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Net Work Time</th>
-              <th style={{ padding: '8px', border: '1px solid #ddd' }}>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {attendance.map(att => (
-              <tr key={att._id}>
-                <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                  Check-In: {toNepaliDate(att.checkInTime, true)}<br />
-                  Check-Out: {att.checkOutTime ? toNepaliDate(att.checkOutTime, true) : 'In Progress...'}
-                </td>
-                <td style={{ padding: '8px', border: '1px solid #ddd' }}>{formatDuration(att.totalBreakDuration)}</td>
-                <td style={getDurationStyle(att)}>{formatDuration(att.duration)}</td>
-                <td style={{ padding: '8px', border: '1px solid #ddd' }}>{att.description || '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h3 className="text-sm font-medium text-gray-500 mb-1">Total Logged Time</h3>
+            <p className="text-2xl font-semibold text-gray-800">{formatDuration(totalWorkSeconds)}</p>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h3 className="text-sm font-medium text-gray-500 mb-1">Completed Days</h3>
+            <p className="text-2xl font-semibold text-gray-800">{completedDays.length}</p>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h3 className="text-sm font-medium text-gray-500 mb-1">Target Met Days</h3>
+            <p className="text-2xl font-semibold text-gray-800">
+              {daysMeetingTarget} <span className="text-sm text-gray-500">/ {completedDays.length}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Attendance History */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+          <div className="px-6 py-5 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-800">Your Attendance History</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date & Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Break
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Work Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {attendance.map((att) => (
+                  <tr key={att._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="font-medium">{toNepaliDate(att.checkInTime)}</div>
+                      <div className="text-gray-500 text-xs">
+                        {att.checkInTime && new Date(att.checkInTime).toLocaleTimeString()}
+                        {att.checkOutTime && ` - ${new Date(att.checkOutTime).toLocaleTimeString()}`}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDuration(att.totalBreakDuration)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span
+                        className={`font-medium ${
+                          att.checkOutTime
+                            ? att.duration >= MIN_WORK_SECONDS
+                              ? 'text-green-600'
+                              : 'text-red-600'
+                            : 'text-blue-600'
+                        }`}
+                      >
+                        {formatDuration(att.duration)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                      {att.description || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
 
 // --- Server-Side Props ---
-
 export async function getServerSideProps(context) {
   await dbConnect();
   const { token } = context.req.cookies;
@@ -242,15 +355,14 @@ export async function getServerSideProps(context) {
     if (!user) {
       return { redirect: { destination: '/login', permanent: false } };
     }
-
     if (user.role === 'HR') {
       return { redirect: { destination: '/hr/dashboard', permanent: false } };
     }
 
     const attendanceHistory = await Attendance.find({ user: user._id }).sort({ checkInTime: -1 });
     const activeCheckIn = attendanceHistory.find(att => !att.checkOutTime) || null;
-
     let initialIsOnBreak = false;
+
     if (activeCheckIn) {
       initialIsOnBreak = activeCheckIn.breaks.some(b => !b.breakOutTime);
     }
