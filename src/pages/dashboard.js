@@ -7,8 +7,9 @@ import Task from '../../models/Task'; // Import the Task model
 import dbConnect from '../../lib/dbConnect';
 import NepaliDate from 'nepali-date-converter';
 import Image from 'next/image';
-import { LogOut, Clock, Calendar, Coffee, CheckCircle, AlertCircle, Play, Star, List, Bell, Edit } from 'react-feather';
 
+import { LogOut, Clock, Calendar, Coffee, CheckCircle, AlertCircle, Play, Star, List, Bell, Edit } from 'react-feather';
+import { ChevronDown  } from 'lucide-react';
 // --- Helper Functions ---
 
 const formatEnglishDate = (dateString, includeTime = false) => {
@@ -96,7 +97,15 @@ export default function Dashboard({ user, initialAttendance, initialTasks, activ
   const completedDays = attendance.filter(att => att.checkOutTime);
   const totalWorkSeconds = completedDays.reduce((acc, att) => acc + (att.duration || 0), 0);
   const daysMeetingTarget = completedDays.filter(day => day.duration >= MIN_WORK_SECONDS).length;
-
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   useEffect(() => {
     if (checkInTime) {
       const timerInterval = setInterval(() => { setElapsedTime(formatElapsedTime(checkInTime)); }, 1000);
@@ -230,34 +239,145 @@ export default function Dashboard({ user, initialAttendance, initialTasks, activ
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <Image src="/geckoworks.png" alt="GeckoWorks Logo" width={40} height={40} className="rounded-full" />
-            <h1 className="text-xl font-bold text-gray-800">{user.name}'s Dashboard</h1>
-          </div>
-          <div className="flex items-center space-x-6">
-            <div className="hidden md:flex items-center space-x-2 text-gray-600">
-              <Calendar size={18} />
-              <span>{formatEnglishDate(new Date())}</span>
-              <span className="text-gray-300">|</span>
-              <Clock size={18} />
-              <span>{currentTime.toLocaleTimeString('en-US')}</span>
+        <header className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/95 backdrop-blur-sm shadow-md' : 'bg-white'}`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo and Dashboard Title */}
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0 flex items-center">
+              <Image
+                src="/geckoworks.png"
+                alt="GeckoWorks Logo"
+                width={64}
+                height={86}
+                className="rounded-full border-2 border-white shadow-sm"
+              />
             </div>
-            <div className="flex items-center space-x-3">
-              <Image src={profileUser.avatar} alt={profileUser.name} width={36} height={36} className="rounded-full object-cover"/>
-              <div>
-                <span className="text-gray-800 font-semibold">{profileUser.name}</span>
-                <span className="block text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full w-fit">{profileUser.role}</span>
+            <h1 className="text-lg font-semibold text-gray-900 hidden sm:block">
+              {user.name}'s Dashboard
+            </h1>
+          </div>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-6">
+            {/* Date and Time */}
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Calendar className="h-4 w-4 text-indigo-500" />
+              <span>{formatEnglishDate(new Date())}</span>
+              <span className="mx-1 text-gray-300">|</span>
+              <Clock className="h-4 w-4 text-indigo-500" />
+              <span>
+                {currentTime.toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
+
+            {/* Notifications */}
+            <button className="p-1 rounded-full text-gray-400 hover:text-gray-500 relative">
+              <Bell className="h-5 w-5" />
+              <span className="sr-only">View notifications</span>
+              <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
+            </button>
+
+            {/* Profile Dropdown */}
+            <div className="relative ml-3">
+              <div className="flex items-center space-x-2">
+                <div className="relative">
+                  <Image
+                    src={profileUser.avatar}
+                    alt={profileUser.name}
+                    width={36}
+                    height={36}
+                    className="rounded-full border-2 border-white shadow-sm"
+                  />
+                  <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-white"></span>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-gray-900 line-clamp-1 max-w-[120px]">
+                    {profileUser.name}
+                  </p>
+                  <p className="text-xs text-gray-500">{profileUser.role}</p>
+                </div>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
               </div>
             </div>
-            <button onClick={handleLogout} className="flex items-center space-x-1 text-gray-500 hover:text-gray-700">
-              <LogOut size={18} />
-              <span className="hidden md:inline">Logout</span>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors"
+            >
+              <LogOut className="h-5 w-5 mr-1" />
+              Logout
             </button>
           </div>
+
+          {/* Mobile Menu Button */}
+          <div className="flex md:hidden items-center space-x-4">
+            <button className="p-1 rounded-full text-gray-400 hover:text-gray-500 relative">
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
+            </button>
+
+            <div className="relative">
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center space-x-1"
+              >
+                <Image
+                  src={profileUser.avatar}
+                  alt={profileUser.name}
+                  width={32}
+                  height={32}
+                  className="rounded-full border-2 border-white shadow-sm"
+                />
+                <ChevronDown
+                  className={`h-4 w-4 text-gray-400 transition-transform ${
+                    isDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Mobile Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 py-1 z-10">
+                  <div className="px-4 py-2 border-b">
+                    <p className="text-sm font-medium text-gray-900">
+                      {profileUser.name}
+                    </p>
+                    <p className="text-xs text-gray-500">{profileUser.role}</p>
+                  </div>
+                  <div className="px-4 py-2 text-xs text-gray-500">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-3 w-3 text-indigo-500" />
+                      <span>{formatEnglishDate(new Date())}</span>
+                    </div>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Clock className="h-3 w-3 text-indigo-500" />
+                      <span>
+                        {currentTime.toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </header>
+      </div>
+    </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (<div className="mb-6 flex items-center bg-red-50 border-l-4 border-red-500 p-4 rounded"><AlertCircle className="text-red-500 mr-3" /><div className="text-red-700">{error}</div></div>)}
