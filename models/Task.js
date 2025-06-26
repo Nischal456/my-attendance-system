@@ -36,6 +36,11 @@ const TaskSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    
+    deadline: {
+      type: Date,
+      required: false, // Make it optional, not all tasks may have a hard deadline
+    },
 
     // A specific timestamp for when the task was marked as 'Completed'
     completedAt: {

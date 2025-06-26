@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     }
 
     // 5. Validate the incoming data
-    const { title, description, assignedTo } = req.body;
+    const { title, description, assignedTo, deadline } = req.body;
     if (!title || !assignedTo) {
       return res.status(400).json({ message: 'Task title and an assigned employee are required.' });
     }
@@ -40,7 +40,8 @@ export default async function handler(req, res) {
       title,
       description,
       assignedTo, // The ID of the employee receiving the task
-      assignedBy: userMakingRequest._id, // The ID of the Project Manager assigning it
+      assignedBy: userMakingRequest._id,
+      deadline: deadline || null, // The ID of the Project Manager assigning it
     });
 
     await newTask.save();
