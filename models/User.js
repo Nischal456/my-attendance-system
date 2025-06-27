@@ -30,6 +30,10 @@ const UserSchema = new mongoose.Schema({
     // A default avatar for new users or those without a picture
     default: 'https://res.cloudinary.com/demo/image/upload/v1620297675/samples/people/smiling-man.jpg',
   },
+  readNotifications: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Notification'
+  }]
 });
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);

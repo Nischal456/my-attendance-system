@@ -8,7 +8,7 @@ import dbConnect from "../../../lib/dbConnect";
 import User from "../../../models/User";
 import Attendance from "../../../models/Attendance";
 import NepaliDate from "nepali-date-converter";
-import { Trash2, AlertTriangle } from 'react-feather';
+import { Send, Trash2, AlertTriangle } from 'react-feather';
 
 const toNepaliDate = (gregorianDate) => {
   if (!gregorianDate) return '-';
@@ -51,8 +51,12 @@ export default function HRDashboard({ user, initialAttendance }) {
   const [selectedUser, setSelectedUser] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
+  const [notificationContent, setNotificationContent] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
   const [error, setError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  
 
   const uniqueUsers = useMemo(() => {
     const userMap = new Map();
@@ -118,6 +122,31 @@ export default function HRDashboard({ user, initialAttendance }) {
     }
   };
 
+  const handleSendNotification = async (e) => {
+    e.preventDefault();
+    if (!notificationContent.trim()) return;
+    setIsSending(true);
+    setNotificationMessage('');
+    setError('');
+    try {
+      const res = await fetch('/api/hr/send-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: notificationContent }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setNotificationMessage('Notification sent successfully!');
+      setNotificationContent('');
+      setTimeout(() => setNotificationMessage(''), 3000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -155,7 +184,37 @@ export default function HRDashboard({ user, initialAttendance }) {
         </div>
         
         {error && <p className="text-red-500 bg-red-100 p-2 rounded-md my-4">{error}</p>}
-
+        <div className="bg-white p-6 rounded-xl shadow-sm mb-8 border border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Send Company-Wide Notification</h2>
+          <form onSubmit={handleSendNotification} className="space-y-4">
+            <div>
+              <label htmlFor="notification-content" className="block text-sm font-medium text-gray-700 mb-1">
+                Message
+              </label>
+              <textarea
+                id="notification-content"
+                value={notificationContent}
+                onChange={(e) => setNotificationContent(e.target.value)}
+                placeholder="Type your announcement here..."
+                rows="4"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+            <div className="flex items-center justify-between">
+                <button
+                    type="submit"
+                    disabled={isSending}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors duration-200 flex items-center gap-2 disabled:opacity-50"
+                >
+                    <Send size={16} />
+                    {isSending ? 'Sending...' : 'Send Notification'}
+                </button>
+                {/* Display success message */}
+                {notificationMessage && <p className="text-sm text-green-600 font-semibold">{notificationMessage}</p>}
+            </div>
+          </form>
+        </div>
         {/* --- RESTORED: Filter Section --- */}
         <div className="bg-white p-6 rounded-xl shadow-sm mb-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Attendance Filters</h2>
