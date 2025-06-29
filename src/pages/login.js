@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link"; // The Link component is needed
 import { Loader2, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -25,6 +26,9 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
+      
+      const data = await res.json();
+
       if (res.ok) {
         toast.success("Login successful!", {
           style: {
@@ -33,9 +37,16 @@ export default function LoginPage() {
             color: "#155724",
           },
         });
-        router.push("/dashboard");
+        
+        // Redirect based on role
+        if (data.role === 'HR') {
+            router.push('/hr/dashboard');
+        } else if (data.role === 'Project Manager') {
+            router.push('/pm/dashboard');
+        } else {
+            router.push("/dashboard");
+        }
       } else {
-        const data = await res.json();
         setError(
           data.message || "Login failed. Please check your credentials."
         );
@@ -52,7 +63,6 @@ export default function LoginPage() {
       <Toaster/>  
       <div className="w-full max-w-md">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-          {/* Brand accent bar */}
           <div className="h-2 bg-[#2ac759] w-full"></div>
 
           <div className="p-8">
@@ -148,26 +158,16 @@ export default function LoginPage() {
               </button>
             </form>
 
+            {/* --- UPDATED SECTION --- */}
             <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  toast("Please contact HR at hr@geckoworksnepal.com", {
-                    icon: "⚠️",
-                    style: {
-                      borderRadius: "10px",
-                      background: "#fff3cd",
-                      color: "#856404",
-                      border: "1px solid #ffeeba",
-                    },
-                  });
-                }}
-                className="text-sm text-gray-600 hover:text-[#2ac759] transition duration-150 hover:underline underline-offset-2 focus:outline-none"
-              >
-                Forgot your password?
-              </button>
+              <Link href="/forgot-password" legacyBehavior>
+                <a className="text-sm text-gray-600 hover:text-[#2ac759] transition duration-150 hover:underline underline-offset-2 focus:outline-none">
+                  Forgot your password?
+                </a>
+              </Link>
             </div>
+            {/* --- END OF UPDATED SECTION --- */}
+            
           </div>
         </div>
       </div>
