@@ -16,7 +16,6 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    // --- MODIFIED: Added 'Project Manager' to the list ---
     enum: ['Staff', 'Intern', 'Manager', 'Project Manager', 'HR'], 
     default: 'Staff',
   },
@@ -27,13 +26,22 @@ const UserSchema = new mongoose.Schema({
   },
   avatar: {
     type: String,
-    // A default avatar for new users or those without a picture
     default: 'https://res.cloudinary.com/demo/image/upload/v1620297675/samples/people/smiling-man.jpg',
   },
   readNotifications: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Notification'
-  }]
+  }],
+  // --- NEW FIELDS FOR PASSWORD RESET ---
+  passwordResetToken: {
+    type: String,
+  },
+  passwordResetExpires: {
+    type: Date,
+  },
+}, { 
+  // This is a professional enhancement that automatically adds `createdAt` and `updatedAt` fields
+  timestamps: true 
 });
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);
