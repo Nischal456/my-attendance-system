@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link"; // The Link component is needed
+import Link from "next/link";
 import { Loader2, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -12,8 +12,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,30 +26,33 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      
+
       const data = await res.json();
 
       if (res.ok) {
-        toast.success("Login successful!", {
+        toast.success("Login successful! Redirecting...", {
+          duration: 2000,
+          position: "top-center",
           style: {
-            borderRadius: "10px",
-            background: "#d4edda",
-            color: "#155724",
+            background: "#F0FFF4", // Light green background
+            color: "#2F855A",       // Dark green text
+            border: '1px solid #9AE6B4',
           },
         });
-        
-        // Redirect based on role
-        if (data.role === 'HR') {
+
+        // Redirect based on role after a short delay
+        setTimeout(() => {
+          if (data.role === 'HR') {
             router.push('/hr/dashboard');
-        } else if (data.role === 'Project Manager') {
+          } else if (data.role === 'Project Manager') {
             router.push('/pm/dashboard');
-        } else {
+          } else {
             router.push("/dashboard");
-        }
+          }
+        }, 1500);
+
       } else {
-        setError(
-          data.message || "Login failed. Please check your credentials."
-        );
+        setError(data.message || "Login failed. Please check your credentials.");
       }
     } catch (err) {
       setError("An unexpected error occurred. Please try again.");
@@ -59,116 +62,114 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Toaster/>  
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-          <div className="h-2 bg-[#2ac759] w-full"></div>
+    <div className="flex min-h-screen w-full items-center justify-center bg-gray-100 p-4 font-sans antialiased">
+      <Toaster />
+      <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+        
+        {/* Header with decorative accent */}
+        <div className="h-2 bg-[#2ac759]"></div>
 
-          <div className="p-8">
-            <div className="text-center mb-8">
-              <div className="mx-auto mb-6 flex justify-center">
-                <div className="p-2 border-2 border-[#2ac759]/20 rounded-full">
-                  <Image
-                    src="/logo.png"
-                    alt="Attendance System Logo"
-                    width={120}
-                    height={120}
-                    className="w-20 h-20 object-contain"
-                    priority
-                  />
-                </div>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-800">
-                Attendance Portal
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Secure access to your records
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-5">
-                <div className="relative">
-                  <input
-                    type="email"
-                    id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="peer w-full px-4 pt-5 pb-2 text-gray-800 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#2ac759] focus:border-[#2ac759] transition-all"
-                  />
-                  <label
-                    htmlFor="email"
-                    className="absolute left-4 top-3 text-xs text-gray-500 peer-focus:text-[#2ac759] transition-all pointer-events-none"
-                  >
-                    Email address
-                  </label>
-                </div>
-
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="peer w-full px-4 pt-5 pb-2 text-gray-800 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#2ac759] focus:border-[#2ac759] transition-all pr-10"
-                  />
-                  <label
-                    htmlFor="password"
-                    className="absolute left-4 top-3 text-xs text-gray-500 peer-focus:text-[#2ac759] transition-all pointer-events-none"
-                  >
-                    Password
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 focus:outline-none"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" aria-label="Hide password" />
-                    ) : (
-                      <Eye className="h-5 w-5" aria-label="Show password" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <div className="flex items-center justify-center gap-2 text-red-500 text-sm bg-red-50 border border-red-100 p-3 rounded-lg">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-[#2ac759] hover:bg-[#25b04f] text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[#2ac759]/50 focus:ring-offset-2 disabled:opacity-50"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                    Signing In...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
-              </button>
-            </form>
-
-            {/* --- UPDATED SECTION --- */}
-            <div className="mt-6 text-center">
-              <Link href="/forgot-password" legacyBehavior>
-                <a className="text-sm text-gray-600 hover:text-[#2ac759] transition duration-150 hover:underline underline-offset-2 focus:outline-none">
-                  Forgot your password?
-                </a>
-              </Link>
-            </div>
-            {/* --- END OF UPDATED SECTION --- */}
-            
+        <div className="p-8 sm:p-10">
+          {/* Logo and Title */}
+          <div className="mb-8 text-center">
+            <Image
+              src="/logo.png" // Ensure this path is correct in your `public` folder
+              alt="Company Logo"
+              width={80}
+              height={80}
+              className="mx-auto mb-4 rounded-full border border-gray-200/50 shadow-md"
+              priority
+            />
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+              Welcome Back
+            </h1>
+            <p className="mt-2 text-gray-600">
+              Sign in to access the Office Management System.
+            </p>
           </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Email Input */}
+            <div className="space-y-2">
+              <label
+                htmlFor="email"
+                className="text-sm font-medium text-gray-700"
+              >
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                className="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 shadow-sm transition-colors duration-200 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              />
+            </div>
+
+            {/* Password Input */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-medium text-emerald-600 hover:text-emerald-500 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 shadow-sm transition-colors duration-200 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="flex items-center gap-x-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+                <span className="font-medium">{error}</span>
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full items-center justify-center rounded-md bg-[#2ac759] px-4 py-3 text-base font-semibold text-white shadow-sm transition-all duration-200 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Signing In...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </button>
+          </form>
         </div>
       </div>
     </div>

@@ -33,9 +33,9 @@ export default function ForgotPasswordPage() {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8">
                 <div>
-                    <Link href="/login" legacyBehavior><a><Image className="mx-auto h-12 w-auto rounded-full cursor-pointer" src="/geckoworks.png" alt="Company Logo" width={48} height={48} /></a></Link>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Forgot Password</h2>
-                    <p className="mt-2 text-center text-sm text-gray-600">Enter your email and we'll send a reset link.</p>
+                    <Link href="/login" legacyBehavior><a><Image className="mx-auto h-36 w-auto  cursor-pointer" src="/logo.png" alt="Company Logo" width={100} height={200} /></a></Link>
+                    <h2 className=" text-center text-3xl font-extrabold text-gray-900">Forgot Password</h2>
+                    <p className="mt-1 text-center text-sm text-gray-600">Enter your email and we'll send a reset link.</p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                     <div>
@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
                     {message && <p className="text-sm font-medium text-green-600 text-center">{message}</p>}
                     {error && <p className="text-sm font-medium text-red-600 text-center">{error}</p>}
                     <div>
-                        <button type="submit" disabled={isSubmitting || !!message} className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
+                        <button type="submit" disabled={isSubmitting || !!message} className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#2ac759] hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2ac759]/50 disabled:opacity-50">
                             {isSubmitting ? 'Sending...' : 'Send Password Reset Email'}
                         </button>
                     </div>

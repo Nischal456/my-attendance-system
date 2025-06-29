@@ -11,7 +11,7 @@ export default function HomePage() {
           <div className="h-2 bg-[#2ac759] w-full"></div>
           
           <div className="p-8 md:p-10 flex flex-col items-center text-center">
-            <div className="mb-6 p-1 rounded-full border-4 border-[#2ac759]/20">
+            <div className="mb-6 p-1 rounded-full border-2 border-[#2ac759]/20">
               <Image
                 src="/logo.png"
                 alt="GeckoWorks Logo"
@@ -23,7 +23,7 @@ export default function HomePage() {
             </div>
 
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              Gecko Attendance
+              Gecko Works Nepal
             </h1>
             <p className="text-gray-600 mb-8 max-w-xs">
               Smart, Simple, and Seamless Tracking for Your Entire Team
@@ -37,7 +37,7 @@ export default function HomePage() {
               </Link>
               <Link href="/login" passHref className="block">
                 <button className="w-full py-3 px-6 bg-white border border-gray-300 hover:border-[#2ac759] text-gray-700 hover:text-[#2ac759] font-medium rounded-lg transition-all duration-200">
-                  HR Admin Login
+                  Admin Login
                 </button>
               </Link>
             </div>

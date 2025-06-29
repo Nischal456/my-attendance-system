@@ -256,7 +256,7 @@ export default function Dashboard({ user, initialAttendance, initialTasks, initi
                 <div className="lg:col-span-1 space-y-8">
                     <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 flex items-center space-x-6">
                         <div className="relative"><Image src={profileUser.avatar} alt="Profile Picture" width={80} height={80} className="rounded-full object-cover border-4 border-white shadow-lg" /><label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-green-500 text-white rounded-full p-1.5 cursor-pointer hover:bg-green-600 transition"><input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />{isUploading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Edit size={14} />}</label></div>
-                        <div><h2 className="text-2xl font-bold text-gray-800">{profileUser.name}</h2><p className="text-gray-600">{profileUser.role}</p></div>
+                        <div><h2 className="text-2xl font-bold text-gray-800">{profileUser.name}</h2><p className="text-green-600">{profileUser.role}</p></div>
                     </div>
                     <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
                         <div className="p-6 md:p-8"><h2 className="text-xl font-semibold text-gray-800 mb-6">Today's Work</h2>
