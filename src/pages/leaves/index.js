@@ -19,7 +19,7 @@ export default function MyLeaveHub({ balance, takenLeave }) {
         <div className="max-w-4xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-800">My Leave Portal</h1>
           <Link href="/dashboard" legacyBehavior>
-            <a className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+            <a className="text-sm text-[#2ac759] hover:text-green-800 flex items-center gap-1">
               <ArrowLeft size={16} />
               Back to Dashboard
             </a>
@@ -52,7 +52,7 @@ export default function MyLeaveHub({ balance, takenLeave }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Link href="/leaves/apply" legacyBehavior>
-              <a className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center justify-center gap-2 transition-transform hover:scale-105">
+              <a className="bg-[#2ac759] hover:bg-green-800 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center justify-center gap-2 transition-transform hover:scale-105">
                 <FilePlus size={20} />
                 <span>Apply for Leave</span>
               </a>

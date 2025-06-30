@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import jwt from 'jsonwebtoken';
@@ -102,6 +102,9 @@ export default function Dashboard({ user, initialAttendance, initialTasks, initi
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMarkingRead, setIsMarkingRead] = useState(false);
 
+  const notificationDropdownRef = useRef(null);
+  const userDropdownRef = useRef(null);
+
   const unreadNotifications = useMemo(() => {
     return notifications.filter(n => !n.isRead);
   }, [notifications]);
@@ -109,6 +112,21 @@ export default function Dashboard({ user, initialAttendance, initialTasks, initi
   useEffect(() => { const handleScroll = () => { setIsScrolled(window.scrollY > 10); }; window.addEventListener('scroll', handleScroll); return () => window.removeEventListener('scroll', handleScroll); }, []);
   useEffect(() => { if (checkInTime) { const timerInterval = setInterval(() => { setElapsedTime(formatElapsedTime(checkInTime)); }, 1000); return () => clearInterval(timerInterval); } else { setElapsedTime(''); } }, [checkInTime]);
   useEffect(() => { const timerId = setInterval(() => { setCurrentTime(new Date()); }, 1000); return () => clearInterval(timerId); }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target)) {
+        setIsNotificationOpen(false);
+      }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleCheckIn = async () => { setError(''); try { const res = await fetch('/api/attendance/checkin', { method: 'POST' }); if (!res.ok) throw new Error(await handleApiError(res)); const { data } = await res.json(); setActiveAttendanceId(data._id); setCheckInTime(data.checkInTime); setAttendance([data, ...attendance]); } catch (err) { setError(err.message); }};
   const handleCheckOut = async () => { if (!description.trim()) { setError('Please provide a description of your work.'); return; } setError(''); try { const res = await fetch('/api/attendance/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description, attendanceId: activeAttendanceId }), }); if (!res.ok) throw new Error(await handleApiError(res)); const { data } = await res.json(); setActiveAttendanceId(null); setCheckInTime(null); setDescription(''); setIsOnBreak(false); setAttendance(attendance.map(att => att._id === data._id ? data : att)); } catch (err) { setError(err.message); }};
@@ -157,17 +175,17 @@ export default function Dashboard({ user, initialAttendance, initialTasks, initi
 
                   <div className="flex items-center space-x-2 sm:space-x-4">
                       <div className="hidden md:flex items-center space-x-2 text-sm text-gray-600">
-                          <Calendar className="h-4 w-4 text-indigo-500" />
+                          <Calendar className="h-4 w-4 text-[#2ac759]" />
                           <span>{currentTime.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
                           <span className="mx-1 text-gray-300">|</span>
-                          <Clock className="h-4 w-4 text-indigo-500" />
+                          <Clock className="h-4 w-4 text-[#2ac759]" />
                           <span>{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</span>
                       </div>
-                      <div className="relative">
+                      <div ref={notificationDropdownRef} className="relative">
                           <button
                               disabled={isMarkingRead}
                               onClick={() => { setIsNotificationOpen(prev => !prev); if (!isNotificationOpen) { handleMarkAsRead(); } }}
-                              className="relative p-2 text-gray-600 hover:text-indigo-600 focus:outline-none disabled:opacity-50"
+                              className="relative p-2 text-gray-600 hover:text-[#2ac759] focus:outline-none disabled:opacity-50"
                           >
                               <Bell className="h-6 w-6" />
                               {unreadNotifications.length > 0 && (
@@ -217,7 +235,7 @@ export default function Dashboard({ user, initialAttendance, initialTasks, initi
                           )}
                       </div>
                       
-                      <div className="relative">
+                      <div ref={userDropdownRef} className="relative">
                           <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center space-x-2">
                               <Image src={profileUser.avatar} alt={profileUser.name} width={36} height={36} className="rounded-full border-2 border-white shadow-sm object-cover" />
                               <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -256,7 +274,7 @@ export default function Dashboard({ user, initialAttendance, initialTasks, initi
                 <div className="lg:col-span-1 space-y-8">
                     <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 flex items-center space-x-6">
                         <div className="relative"><Image src={profileUser.avatar} alt="Profile Picture" width={80} height={80} className="rounded-full object-cover border-4 border-white shadow-lg" /><label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-green-500 text-white rounded-full p-1.5 cursor-pointer hover:bg-green-600 transition"><input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />{isUploading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Edit size={14} />}</label></div>
-                        <div><h2 className="text-2xl font-bold text-gray-800">{profileUser.name}</h2><p className="text-green-600">{profileUser.role}</p></div>
+                        <div><h2 className="text-2xl font-bold text-gray-800">{profileUser.name}</h2><p className="text-gray-600">{profileUser.role}</p></div>
                     </div>
                     <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
                         <div className="p-6 md:p-8"><h2 className="text-xl font-semibold text-gray-800 mb-6">Today's Work</h2>
@@ -288,13 +306,13 @@ export async function getServerSideProps(context) {
         if (user.role === 'Project Manager') { return { redirect: { destination: '/pm/dashboard', permanent: false } }; }
         
         const [attendanceHistory, tasks, notes, userNotifications] = await Promise.all([
-            Attendance.find({ user: user._id }).sort({ checkInTime: -1 }),
-            Task.find({ assignedTo: user._id }).sort({ createdAt: -1 }),
-            Note.find({ user: user._id }).sort({ createdAt: -1 }),
-            Notification.find({ recipient: user._id }).sort({ createdAt: -1 })
+            Attendance.find({ user: user._id }).sort({ checkInTime: -1 }).limit(50),
+            Task.find({ assignedTo: user._id }).sort({ createdAt: -1 }).limit(50),
+            Note.find({ user: user._id }).sort({ createdAt: -1 }).limit(50),
+            Notification.find({ recipient: user._id }).sort({ createdAt: -1 }).limit(50)
         ]);
 
-        const activeCheckIn = attendanceHistory.find(att => !att.checkOutTime) || null;
+        const activeCheckIn = await Attendance.findOne({ user: user._id, checkOutTime: null });
         let initialIsOnBreak = activeCheckIn ? activeCheckIn.breaks.some(b => !b.breakOutTime) : false;
         
         return {
@@ -310,7 +328,6 @@ export async function getServerSideProps(context) {
         };
     } catch (error) {
         console.error("Dashboard getServerSideProps Error:", error.message);
-        context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
         return { redirect: { destination: '/login', permanent: false } };
     }
 }

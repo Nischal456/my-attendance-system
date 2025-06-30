@@ -46,7 +46,7 @@ export default function ApplyLeavePage() {
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
             <Link href="/leaves" legacyBehavior>
-                <a className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                <a className="text-sm text-[#2ac759] hover:text-green-800 flex items-center gap-1">
                     <ArrowLeft size={16} />
                     Back to Leave Portal
                 </a>
@@ -80,7 +80,7 @@ export default function ApplyLeavePage() {
                   <p className={`text-sm p-3 rounded-md ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{message.content}</p>
               )}
               <div className="pt-2 flex justify-end">
-                  <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-6 py-2 bg-indigo-600 text-white rounded-md disabled:opacity-50 hover:bg-indigo-700 flex items-center justify-center gap-2">
+                  <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-6 py-2 bg-[#2ac759] text-white rounded-md disabled:opacity-50 hover:bg-green-700 flex items-center justify-center gap-2">
                       <Send size={16} />
                       {isSubmitting ? 'Submitting...' : 'Submit for Approval'}
                   </button>
