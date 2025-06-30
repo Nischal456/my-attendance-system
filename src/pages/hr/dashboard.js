@@ -80,6 +80,9 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   const [isSubmittingLeaveAction, setIsSubmittingLeaveAction] = useState(false);
   const [activeView, setActiveView] = useState('attendance');
 
+  const [targetType, setTargetType] = useState('all');
+  const [targetUser, setTargetUser] = useState('');
+
   useEffect(() => {
     let result = allAttendance;
     if (selectedRole !== "All") result = result.filter((att) => att.user?.role === selectedRole);
@@ -100,8 +103,7 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
     setError(''); setIsDeleting(true);
     try {
       const res = await fetch('/api/hr/delete-attendance', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attendanceId: recordToDelete }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (!res.ok) { const data = await res.json(); throw new Error(data.message); }
       setAllAttendance(prev => prev.filter(att => att._id !== recordToDelete));
       setFilteredAttendance(prev => prev.filter(att => att._id !== recordToDelete));
       setNotificationMessage("Attendance record deleted successfully.");
@@ -116,12 +118,17 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   const handleSendNotification = async (e) => {
     e.preventDefault();
     if (!notificationContent.trim()) return;
+    if (targetType === 'individual' && !targetUser) {
+        setError('Please select a specific employee to notify.');
+        setTimeout(() => setError(''), 3000);
+        return;
+    }
     setIsSending(true); setNotificationMessage(''); setError('');
     try {
-      const res = await fetch('/api/hr/send-notification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: notificationContent }) });
+      const res = await fetch('/api/hr/send-notification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: notificationContent, targetType, targetUser: targetType === 'individual' ? targetUser : null }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      setNotificationMessage(data.message); setNotificationContent('');
+      setNotificationMessage(data.message); setNotificationContent(''); setTargetUser(''); setTargetType('all');
       setTimeout(() => setNotificationMessage(''), 3000);
     } catch (err) {
       setError(err.message);
@@ -175,7 +182,7 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
         sanitizeField(checkOutTime),
         workDurationHours,
         breakDurationMinutes,
-        sanitizeField(att.description || ''), // Assumes description is on the attendance model
+        sanitizeField(att.description || ''),
       ].join(',');
     });
     const csvContent = [headers, ...rows].join('\n');
@@ -195,8 +202,9 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
 
   return (
     <>
-      {isLeaveModalOpen && currentLeaveItem && ( <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"><div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg animate-fade-in-up"><h3 className="text-xl font-semibold mb-4 text-gray-800">Manage Leave Request</h3><div className="text-sm space-y-2 p-4 bg-gray-50 rounded-md mb-4 border"><p><strong>Employee:</strong> {currentLeaveItem.user.name}</p><p><strong>Dates:</strong> {formatDateForLeave(currentLeaveItem.startDate)} to {formatDateForLeave(currentLeaveItem.endDate)}</p><p><strong>Type:</strong> {currentLeaveItem.leaveType}</p><p><strong>Reason:</strong> {currentLeaveItem.reason}</p></div><div><label htmlFor="hrComments" className="block text-sm font-medium text-gray-700">Add or Edit HR Comments</label><textarea id="hrComments" value={hrComments} onChange={(e) => setHrComments(e.target.value)} rows="3" className="w-full mt-1 p-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>{error && <p className="text-red-500 text-sm mt-2">{error}</p>}<div className="mt-6 flex justify-end gap-3"><button onClick={closeLeaveModal} disabled={isSubmittingLeaveAction} className="px-4 py-2 bg-gray-200 rounded-md">Cancel</button><button onClick={() => handleManageLeave('Rejected')} disabled={isSubmittingLeaveAction} className="px-4 py-2 bg-red-600 text-white rounded-md flex items-center gap-2 disabled:opacity-50"><XIcon size={16}/> Reject</button><button onClick={() => handleManageLeave('Approved')} disabled={isSubmittingLeaveAction} className="px-4 py-2 bg-green-600 text-white rounded-md flex items-center gap-2 disabled:opacity-50"><Check size={16}/> Approve</button></div></div></div> )}
-      {isDeleteModalOpen && ( <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"><div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-fade-in-up"><div className="flex items-start"><div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10"><AlertTriangle className="h-6 w-6 text-red-600" /></div><div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left"><h3 className="text-lg leading-6 font-medium text-gray-900">Delete Attendance Record</h3><p className="text-sm text-gray-500 mt-2">Are you sure? This action is permanent.</p></div></div><div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse"><button onClick={handleConfirmDelete} disabled={isDeleting} className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50">{isDeleting ? 'Deleting...' : 'Confirm Delete'}</button><button onClick={closeDeleteModal} disabled={isDeleting} className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm">Cancel</button></div></div></div> )}
+      {isLeaveModalOpen && currentLeaveItem && (<div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"><div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg animate-fade-in-up"><h3 className="text-xl font-semibold mb-4 text-gray-800">Manage Leave Request</h3><div className="text-sm space-y-2 p-4 bg-gray-50 rounded-md mb-4 border"><p><strong>Employee:</strong> {currentLeaveItem.user.name}</p><p><strong>Dates:</strong> {formatDateForLeave(currentLeaveItem.startDate)} to {formatDateForLeave(currentLeaveItem.endDate)}</p><p><strong>Type:</strong> {currentLeaveItem.leaveType}</p><p><strong>Reason:</strong> {currentLeaveItem.reason}</p></div><div><label htmlFor="hrComments" className="block text-sm font-medium text-gray-700">Add or Edit HR Comments</label><textarea id="hrComments" value={hrComments} onChange={(e) => setHrComments(e.target.value)} rows="3" className="w-full mt-1 p-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>{error && <p className="text-red-500 text-sm mt-2">{error}</p>}<div className="mt-6 flex justify-end gap-3"><button onClick={closeLeaveModal} disabled={isSubmittingLeaveAction} className="px-4 py-2 bg-gray-200 rounded-md">Cancel</button><button onClick={() => handleManageLeave('Rejected')} disabled={isSubmittingLeaveAction} className="px-4 py-2 bg-red-600 text-white rounded-md flex items-center gap-2 disabled:opacity-50"><XIcon size={16}/> Reject</button><button onClick={() => handleManageLeave('Approved')} disabled={isSubmittingLeaveAction} className="px-4 py-2 bg-green-600 text-white rounded-md flex items-center gap-2 disabled:opacity-50"><Check size={16}/> Approve</button></div></div></div>)}
+      {isDeleteModalOpen && (<div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"><div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-fade-in-up"><div className="flex items-start"><div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10"><AlertTriangle className="h-6 w-6 text-red-600" /></div><div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left"><h3 className="text-lg leading-6 font-medium text-gray-900">Delete Attendance Record</h3><p className="text-sm text-gray-500 mt-2">Are you sure? This action is permanent.</p></div></div><div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse"><button onClick={handleConfirmDelete} disabled={isDeleting} className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50">{isDeleting ? 'Deleting...' : 'Confirm Delete'}</button><button onClick={closeDeleteModal} disabled={isDeleting} className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm">Cancel</button></div></div></div>)}
+      
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
@@ -206,19 +214,29 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
               <button onClick={handleLogout} className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg shadow-sm flex items-center gap-1"><LogOut size={16} />Logout</button>
             </div>
           </div>
+          
           {notificationMessage && <p className="text-green-600 bg-green-100 p-3 rounded-md my-4">{notificationMessage}</p>}
           {error && <p className="text-red-500 bg-red-100 p-2 rounded-md my-4">{error}</p>}
+          
           <div className="bg-white p-6 rounded-xl shadow-sm mb-8 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Send Company-Wide Notification</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Send Notification</h2>
             <form onSubmit={handleSendNotification} className="space-y-4">
+              <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Send To</label>
+                  <div className="flex items-center gap-6"><label className="flex items-center gap-2"><input type="radio" name="targetType" value="all" checked={targetType === 'all'} onChange={(e) => setTargetType(e.target.value)} className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"/>All Employees</label><label className="flex items-center gap-2"><input type="radio" name="targetType" value="individual" checked={targetType === 'individual'} onChange={(e) => setTargetType(e.target.value)} className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"/>Specific Employee</label></div>
+              </div>
+              {targetType === 'individual' && (<div><label htmlFor="targetUser" className="block text-sm font-medium text-gray-700 mb-1">Select Employee</label><select id="targetUser" value={targetUser} onChange={(e) => setTargetUser(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="" disabled>-- Select an employee --</option>{allUsers.map((u) => (<option key={u._id} value={u._id}>{u.name} ({u.role})</option>))}</select></div>)}
               <div><label htmlFor="notification-content" className="block text-sm font-medium text-gray-700 mb-1">Message</label><textarea id="notification-content" value={notificationContent} onChange={(e) => setNotificationContent(e.target.value)} placeholder="Type your announcement here..." rows="4" className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required /></div>
               <div className="flex justify-end"><button type="submit" disabled={isSending} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm flex items-center gap-2 disabled:opacity-50"><Send size={16} />{isSending ? 'Sending...' : 'Send Notification'}</button></div>
             </form>
           </div>
+          
           <div className="mb-8"><div className="border-b border-gray-200"><nav className="-mb-px flex space-x-6" aria-label="Tabs"><button onClick={() => setActiveView('attendance')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeView === 'attendance' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}><Calendar size={16}/> Attendance Management</button><button onClick={() => setActiveView('leaves')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeView === 'leaves' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}><Briefcase size={16}/> Leave Management</button></nav></div></div>
+          
           {activeView === 'leaves' && (
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"><h2 className="text-xl font-semibold text-gray-800 mb-4">Leave Request Management</h2><div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dates & Type</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th><th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th><th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{leaveRequests.map(req => (<tr key={req._id}><td className="px-6 py-4"><div className="text-sm font-medium text-gray-900">{req.user?.name || 'N/A'}</div><div className="text-xs text-gray-500">{req.user?.role || ''}</div></td><td className="px-6 py-4"><div className="text-sm text-gray-900">{formatDateForLeave(req.startDate)} to {formatDateForLeave(req.endDate)}</div><div className="text-xs text-gray-500 font-medium">{req.leaveType}</div></td><td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={req.reason}>{req.reason}</td><td className="px-6 py-4 text-center"><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(req.status)}`}>{req.status}</span></td><td className="px-6 py-4 text-center">{req.status === 'Pending' && (<button onClick={() => openLeaveModal(req)} className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-full" title="Manage Request"><MessageSquare size={20} /></button>)}</td></tr>))}{leaveRequests.length === 0 && (<tr><td colSpan="5" className="text-center py-8 text-gray-500">No pending leave requests.</td></tr>)}</tbody></table></div></div>
           )}
+          
           {activeView === 'attendance' && (
             <div className="space-y-8">
                 <div className="bg-white p-6 rounded-xl shadow-sm"><h2 className="text-xl font-semibold text-gray-800 mb-4">Attendance Filters</h2><div className="flex flex-col md:flex-row gap-4"><div className="flex-1"><label htmlFor="role-filter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Role</label><select id="role-filter" value={selectedRole} onChange={(e) => { setSelectedRole(e.target.value); setSelectedUser("All"); }} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="All">All Roles</option><option value="Staff">Staff</option><option value="Intern">Intern</option><option value="Manager">Manager</option><option value="Project Manager">Project Manager</option></select></div><div className="flex-1"><label htmlFor="user-filter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Employee</label><select id="user-filter" value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="All">All Employees</option>{allUsers.filter((u) => selectedRole === "All" || u.role === selectedRole).map((u) => (<option key={u._id} value={u._id}>{u.name}</option>))}</select></div></div></div>
@@ -245,20 +263,17 @@ export async function getServerSideProps(context) {
   await dbConnect();
   const { token } = context.req.cookies;
   if (!token) { return { redirect: { destination: "/login", permanent: false } }; }
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId).select("-password");
     if (!user || user.role !== "HR") {
       return { redirect: { destination: "/dashboard", permanent: false } };
     }
-    
     const [allAttendance, leaveRequests, allUsers] = await Promise.all([
         Attendance.find({}).populate("user", "name role phoneNumber avatar").sort({ checkInTime: -1 }).limit(100),
         LeaveRequest.find({ status: 'Pending' }).populate('user', 'name role').sort({ createdAt: -1 }),
         User.find({ role: { $ne: 'HR' } }).select('name role').sort({ name: 1 })
     ]);
-
     return {
       props: {
         user: JSON.parse(JSON.stringify(user)),
