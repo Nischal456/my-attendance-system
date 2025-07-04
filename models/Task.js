@@ -2,53 +2,47 @@ import mongoose from 'mongoose';
 
 const TaskSchema = new mongoose.Schema(
   {
-    // The main title of the task
     title: {
       type: String,
       required: [true, 'Please provide a title for the task.'],
       trim: true,
       maxlength: [200, 'Title cannot be more than 200 characters'],
     },
-
-    // A more detailed description of the task (optional)
     description: {
       type: String,
       trim: true,
     },
-
-    // The current status of the task
     status: {
       type: String,
       enum: ['To Do', 'In Progress', 'Completed'],
       default: 'To Do',
     },
-
-    // A reference to the employee the task is assigned to
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
-
-    // A reference to the Project Manager who assigned the task
     assignedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
-    
     deadline: {
       type: Date,
-      required: false, // Make it optional, not all tasks may have a hard deadline
+      required: false,
     },
-
-    // A specific timestamp for when the task was marked as 'Completed'
+    // --- NEW FIELDS ---
+    startTime: {
+        type: String, // Storing as a string like "10:30"
+    },
+    endTime: {
+        type: String, // Storing as a string like "17:00"
+    },
     completedAt: {
       type: Date,
     },
   },
   {
-    // Automatically adds `createdAt` and `updatedAt` timestamps
     timestamps: true,
   }
 );
