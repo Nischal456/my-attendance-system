@@ -9,21 +9,27 @@ const NotificationSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
-  // NEW: The user who should receive this notification
   recipient: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   },
-  // NEW: To track if the specific user has read it
   isRead: {
     type: Boolean,
     default: false,
   },
-  // NEW: An optional link for when the user clicks the notification
   link: {
     type: String,
   },
-}, { timestamps: true });
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    expires: '7d', 
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
 
 export default mongoose.models.Notification || mongoose.model('Notification', NotificationSchema);
