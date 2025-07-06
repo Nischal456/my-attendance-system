@@ -2,62 +2,118 @@ import Link from 'next/link';
 import jwt from 'jsonwebtoken';
 import LeaveRequest from '../../../models/LeaveRequest';
 import dbConnect from '../../../lib/dbConnect';
-import { ArrowLeft } from 'react-feather';
+import { ArrowLeft, Calendar, CheckCircle, Clock, FileText, Type, XCircle } from 'react-feather';
 
-const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-CA');
+// Helper function to format dates professionally
+const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'UTC' 
+    });
+};
 
-const getStatusBadge = (status) => {
+// Helper for status styling and icons
+const getStatusInfo = (status) => {
     switch (status) {
-        case 'Approved': return 'bg-green-100 text-green-800';
-        case 'Rejected': return 'bg-red-100 text-red-800';
-        default: return 'bg-yellow-100 text-yellow-800';
+        case 'Approved':
+            return {
+                badge: 'bg-green-100 text-green-700 border-green-200',
+                icon: <CheckCircle className="text-green-500" size={20} />,
+                timeline: 'border-green-300 bg-green-500',
+            };
+        case 'Rejected':
+            return {
+                badge: 'bg-red-100 text-red-700 border-red-200',
+                icon: <XCircle className="text-red-500" size={20} />,
+                timeline: 'border-red-300 bg-red-500',
+            };
+        default: // Pending
+            return {
+                badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                icon: <Clock className="text-yellow-500" size={20} />,
+                timeline: 'border-yellow-300 bg-yellow-500',
+            };
     }
-}
+};
 
+// Main Component for the Leave Report
 export default function LeaveReportPage({ leaveHistory }) {
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-5xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 font-sans">
+      <header className="bg-white/80 backdrop-blur-xl shadow-sm sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto py-5 px-4 sm:px-6 lg:px-8">
             <Link href="/leaves" legacyBehavior>
-                <a className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mb-4">
+                <a className="text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center gap-1.5 mb-2 transition-colors">
                     <ArrowLeft size={16} />
                     Back to Leave Portal
                 </a>
             </Link>
-          <h1 className="text-2xl font-bold text-gray-800">Your Leave History</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Leave History</h1>
+          <p className="text-slate-500 mt-1">A log of all your past leave requests and their status.</p>
         </div>
       </header>
       <main className="py-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Leave Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date Range</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">HR Comments</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {leaveHistory.map(req => (
-                    <tr key={req._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{req.leaveType}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(req.startDate)} to {formatDate(req.endDate)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-sm truncate" title={req.reason}>{req.reason}</td>
-                      <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(req.status)}`}>{req.status}</span></td>
-                      <td className="px-6 py-4 text-sm text-gray-500 italic">{req.hrComments || '-'}</td>
-                    </tr>
-                  ))}
-                  {leaveHistory.length === 0 && (
-                    <tr><td colSpan="5" className="text-center py-10 text-gray-500">You have not submitted any leave requests.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+          <div className="space-y-8">
+              {leaveHistory.length > 0 ? leaveHistory.map((req, index) => {
+                const statusInfo = getStatusInfo(req.status);
+                const isLast = index === leaveHistory.length - 1;
+                return (
+                    <div key={req._id} className="flex items-start gap-x-4 sm:gap-x-6 relative">
+                        {/* Timeline Visual */}
+                        <div className="flex flex-col items-center h-full">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusInfo.badge}`}>
+                                {statusInfo.icon}
+                            </div>
+                            {!isLast && (
+                                <div className={`w-0.5 flex-1 ${statusInfo.timeline} opacity-30 my-2`}></div>
+                            )}
+                        </div>
+
+                        {/* Card Content */}
+                        <div className="flex-1 pt-1.5 min-w-0">
+                            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80">
+                                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                                    <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-3">
+                                        <Type size={18} className="text-slate-400"/>
+                                        {req.leaveType}
+                                    </h2>
+                                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${statusInfo.badge}`}>
+                                        {req.status}
+                                    </span>
+                                </div>
+
+                                <div className="mt-4 border-t border-slate-100 pt-4 space-y-4">
+                                    <div className="flex items-center gap-3 text-sm text-slate-600">
+                                        <Calendar size={16} className="text-slate-400 flex-shrink-0" />
+                                        <span>
+                                            From <span className="font-semibold text-slate-800">{formatDate(req.startDate)}</span> to <span className="font-semibold text-slate-800">{formatDate(req.endDate)}</span>
+                                        </span>
+                                    </div>
+                                    <div className="flex items-start gap-3 text-sm text-slate-600">
+                                        <FileText size={16} className="text-slate-400 flex-shrink-0 mt-0.5" />
+                                        <p className="text-sm text-slate-600 break-words">{req.reason}</p>
+                                    </div>
+                                    {req.hrComments && (
+                                        <div className="border-l-4 border-slate-200 pl-4 mt-4">
+                                            <p className="text-xs font-semibold text-slate-500">HR Comments:</p>
+                                            <p className="text-sm text-slate-700 italic">"{req.hrComments}"</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+              }) : (
+                <div className="text-center py-20 bg-white rounded-lg shadow-sm border border-slate-200/80">
+                    <FileText size={48} className="mx-auto text-slate-300"/>
+                    <h2 className="mt-4 text-xl font-semibold text-slate-700">No History Found</h2>
+                    <p className="mt-1 text-slate-500">You have not submitted any leave requests yet.</p>
+                </div>
+              )}
           </div>
         </div>
       </main>
@@ -65,6 +121,7 @@ export default function LeaveReportPage({ leaveHistory }) {
   );
 }
 
+// Fetch user's leave history on the server
 export async function getServerSideProps(context) {
     await dbConnect();
     const { token } = context.req.cookies;
