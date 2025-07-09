@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
-import dbConnect from '../../../lib/dbConnect';
-import User from '../../../models/User';
-import Transaction from '../../../models/Transaction';
-import BankAccount from '../../../models/BankAccount';
+import dbConnect from '../../../../lib/dbConnect';
+import User from '../../../../models/User';
+import Transaction from '../../../../models/Transaction';
+import BankAccount from '../../../../models/BankAccount';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
