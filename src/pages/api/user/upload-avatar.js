@@ -12,6 +12,14 @@ cloudinary.config({
   secure: true, // It's good practice to set this to true
 });
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb', // Allow up to 10mb for file uploads
+    },
+  },
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });

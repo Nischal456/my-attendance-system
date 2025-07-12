@@ -1,5 +1,11 @@
 import mongoose from 'mongoose';
 
+const AttachmentSchema = new mongoose.Schema({
+  url: { type: String, required: true },
+  filename: { type: String, required: true },
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+});
+
 const TaskSchema = new mongoose.Schema(
   {
     title: {
@@ -33,13 +39,18 @@ const TaskSchema = new mongoose.Schema(
     },
     // --- NEW FIELDS ---
     startTime: {
-        type: String, // Storing as a string like "10:30"
+      type: String, // Storing as a string like "10:30"
     },
     endTime: {
-        type: String, // Storing as a string like "17:00"
+      type: String, // Storing as a string like "17:00"
     },
     completedAt: {
       type: Date,
+    },
+    attachments: [AttachmentSchema],
+    submissionDescription: {
+      type: String,
+      trim: true,
     },
   },
   {

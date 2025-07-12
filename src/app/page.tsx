@@ -29,7 +29,7 @@ export default function HomePage() {
         <div className={`w-full lg:w-1/2 flex flex-col justify-center text-center lg:text-left p-6 lg:p-8 lg:pl-20 transition-all duration-700 ease-out ${isMounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
             <div className={`mb-6 p-6`}>
                <Image
-                src="/geckoworks.png" // Using your new WIDE logo
+                src="/logo.png" // Using your new WIDE logo
                 alt="Company Logo"
                 width={180} // Adjusted width for the wide logo
                 height={100}  // Adjusted height
