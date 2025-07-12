@@ -11,11 +11,12 @@ import {
   EyeOff,
   Mail,
   Lock,
+  Users,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { motion } from "framer-motion";
 
-export default function LoginPage() {
+export default function ClientLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,67 +29,58 @@ export default function LoginPage() {
     setIsMounted(true);
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+  try {
+    const res = await fetch("/api/auth/client-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      toast.success("Client login successful! Redirecting...", {
+        duration: 2000,
+        position: "top-center",
+        style: {
+          background: "#F0FFF4",
+          color: "#2F855A",
+          border: "1px solid #9AE6B4",
+          boxShadow: "0 4px 14px 0 rgba(0, 0, 0, 0.1)",
+        },
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
-        toast.success("Login successful! Redirecting...", {
-          duration: 2000,
-          position: "top-center",
-          style: {
-            background: "#F0FFF4",
-            color: "#2F855A",
-            border: "1px solid #9AE6B4",
-            boxShadow: "0 4px 14px 0 rgba(0, 0, 0, 0.1)",
-          },
-          iconTheme: {
-            primary: "#2F855A",
-            secondary: "#F0FFF4",
-          },
-        });
-
-        setTimeout(() => {
-          if (data.role === "HR") {
-            router.push("/hr/dashboard");
-          } else if (data.role === "Project Manager") {
-            router.push("/pm/dashboard");
-          } else {
-            router.push("/dashboard");
-          }
-        }, 1500);
-      } else {
-        setError(data.message || "Login failed. Please check your credentials.");
-      }
-    } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
+      setTimeout(() => {
+        router.push("/client/dashboard");
+      }, 1500);
+    } else {
+      setError(data.message || "Login failed. Please check your credentials.");
     }
-  };
+  } catch (err) {
+    setError("An unexpected error occurred. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex flex-col lg:grid lg:grid-cols-2 font-sans antialiased bg-white">
       <Toaster />
 
-      {/* Left Side - Now visible on mobile */}
+      {/* Left Side */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={isMounted ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.7 }}
         className="flex flex-col items-center justify-center bg-green-600 text-white p-8 sm:p-12 relative"
       >
-        <div className="absolute inset-0 bg-cover bg-center opacity-10" style={{ backgroundImage: "url('https://www.toptal.com/designers/subtlepatterns/uploads/double-bubble-outline.png ')" }}></div>
+        <div className="absolute inset-0 bg-cover bg-center opacity-10" style={{ backgroundImage: "url('https://www.toptal.com/designers/subtlepatterns/uploads/double-bubble-outline.png')" }}></div>
 
         <div className="relative z-10 text-center">
           <Link href="/" className="block mb-6">
@@ -103,17 +95,17 @@ export default function LoginPage() {
               />
             </div>
           </Link>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Office Management System</h1>
-          <p className="mt-4 text-base sm:text-lg text-green-100 max-w-sm mx-auto">
-            Welcome to the Gecko Works OMS Portal 🙏🏻
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Client Portal</h1>
+          <p className="mt-4 text-base sm:text-lg text-blue-100 max-w-sm mx-auto">
+            Welcome back to Gecko Works Client Access 💼
           </p>
         </div>
-        <div className="absolute bottom-4 text-xs sm:text-sm text-green-200/80">
+        <div className="absolute bottom-4 text-xs sm:text-sm text-blue-200/80">
           © {new Date().getFullYear()} Gecko Works. All Rights Reserved.
         </div>
       </motion.div>
 
-      {/* Right Side - Full screen on mobile */}
+      {/* Right Side */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={isMounted ? { opacity: 1, y: 0 } : {}}
@@ -122,8 +114,11 @@ export default function LoginPage() {
       >
         <div className="w-full max-w-md">
           <div className="text-left mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Sign In</h1>
-            <p className="mt-2 text-slate-600">Welcome back! Please enter your credentials.</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2">
+              <Users className="text-green-600" />
+              Client Login
+            </h1>
+            <p className="mt-2 text-slate-600">Access your dashboard with your credentials.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -136,18 +131,15 @@ export default function LoginPage() {
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder="client@example.com"
                   required
-                  className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-11 pr-4 text-slate-900 placeholder-slate-400 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                  className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-11 pr-4 text-slate-900 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-sm font-semibold text-slate-700">Password</label>
-                <Link href="/forgot-password" className="text-sm font-medium text-green-600 hover:text-green-500 hover:underline">Forgot password?</Link>
-              </div>
+              <label htmlFor="password" className="text-sm font-semibold text-slate-700">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <input
@@ -157,7 +149,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-11 pr-12 text-slate-900 placeholder-slate-400 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                  className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-11 pr-12 text-slate-900 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
                 <button
                   type="button"
@@ -180,7 +172,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center rounded-lg bg-green-600 px-4 py-3 text-base font-bold text-white shadow-lg transition-all hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-60"
+              className="flex w-full items-center justify-center rounded-lg bg-green-600 px-4 py-3 text-base font-bold text-white shadow-lg transition-all hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60"
             >
               {loading ? (
                 <>
@@ -188,7 +180,7 @@ export default function LoginPage() {
                   Signing In...
                 </>
               ) : (
-                "Sign In"
+                "Login as Client"
               )}
             </button>
           </form>
