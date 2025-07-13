@@ -28,6 +28,10 @@ const TaskSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+     assistedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
     assignedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

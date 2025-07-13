@@ -23,12 +23,13 @@ export default async function handler(req, res) {
         }
 
         const [attendanceHistory, tasks, notes, userNotifications, activeCheckIn] = await Promise.all([
-            Attendance.find({ user: user._id }).sort({ checkInTime: -1 }).limit(50).lean(),
-            Task.find({ assignedTo: user._id })
-                .populate('assignedBy', 'name') // Populate PM's name
-                .populate('assignedTo', 'name') // Populate user's name
-                .populate('attachments.uploadedBy', 'name') // Populate who uploaded files
-                .sort({ status: 1, createdAt: -1 })
+            Attendance.find({ user: user._id }).sort({ checkInTime: -1 }).limit(10).lean(),
+            Task.find({ $or: [{ assignedTo: user._id }, { assistedBy: user._id }] })
+                .populate('assignedBy', 'name')
+                .populate('assignedTo', 'name avatar')
+                .populate('assistedBy', 'name avatar')
+                .populate('attachments.uploadedBy', 'name')
+                .sort({ createdAt: -1 })
                 .lean(),
             Note.find({ user: user._id }).sort({ createdAt: -1 }).limit(50).lean(),
             Notification.find({ recipient: user._id }).sort({ createdAt: -1 }).limit(50).lean(),

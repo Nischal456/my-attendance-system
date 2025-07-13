@@ -97,7 +97,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
           </Link>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Client Portal</h1>
           <p className="mt-4 text-base sm:text-lg text-blue-100 max-w-sm mx-auto">
-            Welcome back to Gecko Works Client Access 💼
+            Welcome back to Gecko Works Client Access 
           </p>
         </div>
         <div className="absolute bottom-4 text-xs sm:text-sm text-blue-200/80">
@@ -131,7 +131,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="client@example.com"
+                  placeholder="client@geckoworksnepal.com"
                   required
                   className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-11 pr-4 text-slate-900 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
