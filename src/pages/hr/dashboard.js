@@ -2,11 +2,19 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Image from 'next/image';
-import { Send, Trash2, AlertTriangle, LogOut, Check, X as XIcon, UserPlus, Briefcase, Download, Archive, ThumbsUp, ChevronDown, Bell, Users, BarChart2, Clock, Menu, ChevronLeft, ChevronRight } from 'react-feather';
+import { Send, Trash2, AlertTriangle, LogOut, Check, X as XIcon, UserPlus, Briefcase, Download, ChevronDown, Bell, Users, BarChart2, Clock, Menu, ChevronLeft, ChevronRight } from 'react-feather';
 import toast, { Toaster } from 'react-hot-toast';
 import { Bar } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Imports moved from getServerSideProps
+import jwt from 'jsonwebtoken';
+import dbConnect from '../../../lib/dbConnect';
+import User from '../../../models/User';
+import Attendance from '../../../models/Attendance';
+import LeaveRequest from '../../../models/LeaveRequest';
+
 
 // Register Chart.js components
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -612,15 +620,9 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   );
 }
 
-//getServerSideProps remains the same
 export async function getServerSideProps(context) {
-  const jwt = require('jsonwebtoken');
-  const dbConnect = require('../../../lib/dbConnect').default;
-  const User = require('../../../models/User').default;
-  const Attendance = require('../../../models/Attendance').default;
-  const LeaveRequest = require('../../../models/LeaveRequest').default;
-
   await dbConnect();
+  
   const { token } = context.req.cookies;
   if (!token) { return { redirect: { destination: "/login", permanent: false } }; }
   try {
