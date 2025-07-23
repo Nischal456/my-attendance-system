@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
                 <div>
                     <Link href="/login" legacyBehavior><a><Image className="mx-auto h-36 w-auto  cursor-pointer" src="/logo.png" alt="Company Logo" width={100} height={200} /></a></Link>
                     <h2 className=" text-center text-3xl font-extrabold text-gray-900">Forgot Password</h2>
-                    <p className="mt-1 text-center text-sm text-gray-600">Enter your email and we'll send a reset link.</p>
+                    <p className="mt-1 text-center text-sm text-gray-600">Enter your email and we&apos;ll send a reset link.</p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                     <div>

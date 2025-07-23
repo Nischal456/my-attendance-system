@@ -99,7 +99,7 @@ export default function LeaveReportPage({ leaveHistory }) {
                                     {req.hrComments && (
                                         <div className="border-l-4 border-slate-200 pl-4 mt-4">
                                             <p className="text-xs font-semibold text-slate-500">HR Comments:</p>
-                                            <p className="text-sm text-slate-700 italic">"{req.hrComments}"</p>
+                                            <p className="text-sm text-slate-700 italic">&quot;{req.hrComments}&quot;</p>
                                         </div>
                                     )}
                                 </div>

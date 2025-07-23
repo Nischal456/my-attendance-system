@@ -63,17 +63,17 @@ export default function LeaveReportPage({ leaveHistory }) {
                 return (
                     <div key={req._id} className="flex items-start gap-x-4 sm:gap-x-6 relative">
                         {/* Timeline Visual */}
-                        <div className="flex flex-col items-center">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${statusInfo.badge}`}>
+                        <div className="flex flex-col items-center h-full">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusInfo.badge}`}>
                                 {statusInfo.icon}
                             </div>
                             {!isLast && (
-                                <div className={`w-0.5 flex-1 ${statusInfo.timeline} opacity-30`}></div>
+                                <div className={`w-0.5 flex-1 ${statusInfo.timeline} opacity-30 my-2`}></div>
                             )}
                         </div>
 
                         {/* Card Content */}
-                        <div className="flex-1 pt-1.5">
+                        <div className="flex-1 pt-1.5 min-w-0">
                             <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80">
                                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
                                     <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-3">
@@ -94,12 +94,12 @@ export default function LeaveReportPage({ leaveHistory }) {
                                     </div>
                                     <div className="flex items-start gap-3 text-sm text-slate-600">
                                         <FileText size={16} className="text-slate-400 flex-shrink-0 mt-0.5" />
-                                        <p className="text-sm text-slate-600">{req.reason}</p>
+                                        <p className="text-sm text-slate-600 break-words">{req.reason}</p>
                                     </div>
                                     {req.hrComments && (
                                         <div className="border-l-4 border-slate-200 pl-4 mt-4">
                                             <p className="text-xs font-semibold text-slate-500">HR Comments:</p>
-                                            <p className="text-sm text-slate-700 italic">"{req.hrComments}"</p>
+                                            <p className="text-sm text-slate-700 italic">&quot;{req.hrComments}&quot;</p>
                                         </div>
                                     )}
                                 </div>
@@ -126,7 +126,6 @@ export async function getServerSideProps(context) {
     await dbConnect();
     const { token } = context.req.cookies;
     if (!token) return { redirect: { destination: '/login', permanent: false } };
-
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const leaveHistory = await LeaveRequest.find({ user: decoded.userId }).sort({ createdAt: -1 });
