@@ -1,4 +1,3 @@
-"use client";
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import jwt from 'jsonwebtoken';
@@ -7,6 +6,11 @@ import Image from 'next/image';
 import { Edit, Trash2, AlertTriangle, Clock, X as XIcon, LogOut, Plus, Calendar, Paperclip, CheckCircle, MessageSquare, FileText, Users, ChevronRight } from 'react-feather';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
+
+// Imports moved from getServerSideProps
+import dbConnect from '../../../lib/dbConnect';
+import User from '../../../models/User';
+import Task from '../../../models/Task';
 
 // --- Helper Functions ---
 const formatDeadline = (dateString, includeTime = true) => {
@@ -73,7 +77,7 @@ const TaskDetailsModal = ({ task, onClose }) => {
                     <div><h4 className="font-bold text-slate-600 mb-2">Description</h4><p className="text-slate-700 whitespace-pre-wrap p-4 bg-slate-50 rounded-lg">{task.description || "No description provided."}</p></div>
                     {task.status === 'Completed' && task.submissionDescription && (
                         <div className="p-4 bg-emerald-50/70 rounded-lg border border-emerald-200">
-                            <div className="flex items-center gap-3 mb-2"><MessageSquare size={18} className="text-emerald-600" /><h4 className="font-bold text-emerald-800">User's Submission Note</h4></div>
+                            <div className="flex items-center gap-3 mb-2"><MessageSquare size={18} className="text-emerald-600" /><h4 className="font-bold text-emerald-800">User&apos;s Submission Note</h4></div>
                             <p className="text-slate-700 whitespace-pre-wrap pl-1">{task.submissionDescription}</p>
                         </div>
                     )}
@@ -193,10 +197,6 @@ export default function PMDashboard({ pmUser, allUsers, initialTasks }) {
 }
 
 export async function getServerSideProps(context) {
-    const dbConnect = require('../../../lib/dbConnect').default;
-    const User = require('../../../models/User').default;
-    const Task = require('../../../models/Task').default;
-    const jwt = require('jsonwebtoken');
     await dbConnect();
     const { token } = context.req.cookies;
     if (!token) return { redirect: { destination: '/login', permanent: false } };

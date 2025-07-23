@@ -1,7 +1,14 @@
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
-import { LogOut, CheckCircle, MessageSquare, Paperclip, Users } from 'react-feather';
+import { LogOut, CheckCircle, MessageSquare, Users } from 'react-feather';
+
+// Imports moved from getServerSideProps
+import jwt from 'jsonwebtoken';
+import dbConnect from '../../../lib/dbConnect';
+import User from '../../../models/User';
+import Task from '../../../models/Task';
+
 
 // Helper Function
 const formatEnglishDate = (dateString) => {
@@ -96,11 +103,6 @@ export default function CompletedTasksPage({ user, completedTasks }) {
 }
 
 export async function getServerSideProps(context) {
-    const jwt = require('jsonwebtoken');
-    const dbConnect = require('../../../lib/dbConnect').default;
-    const User = require('../../../models/User').default;
-    const Task = require('../../../models/Task').default;
-
     await dbConnect();
     const { token } = context.req.cookies;
     if (!token) return { redirect: { destination: '/login', permanent: false } };
