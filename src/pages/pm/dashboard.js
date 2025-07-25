@@ -1,18 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import jwt from 'jsonwebtoken';
-import Link from 'next/link'; 
+import Link from 'next/link';
 import Image from 'next/image';
-import { Edit, Trash2, AlertTriangle, Clock, X as XIcon, LogOut, Plus, Calendar, Paperclip, CheckCircle, MessageSquare, FileText, Users, ChevronRight } from 'react-feather';
+import { Edit, Trash2, AlertTriangle, Clock, X as XIcon, LogOut, Plus, Calendar, Paperclip, CheckCircle, MessageSquare, FileText, Users, ChevronRight, User as UserIcon } from 'react-feather';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 
-// Imports moved from getServerSideProps
-import dbConnect from '../../../lib/dbConnect';
-import User from '../../../models/User';
-import Task from '../../../models/Task';
-
-// --- Helper Functions ---
+// Helper Functions
 const formatDeadline = (dateString, includeTime = true) => {
   if (!dateString) return 'No deadline';
   const options = { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' };
@@ -23,11 +18,13 @@ const formatDeadline = (dateString, includeTime = true) => {
   }
   return new Date(dateString).toLocaleString('en-US', options);
 };
+
 const getDeadlineInfo = (task) => {
   if (task.status === 'Completed' || !task.deadline) return { style: 'text-slate-500' };
   if (new Date(task.deadline) < new Date()) return { style: 'text-red-600 font-semibold' };
   return { style: 'text-slate-500' };
 };
+
 const getStatusPill = (status) => {
     switch (status) {
         case 'In Progress': return 'bg-amber-100 text-amber-700';
@@ -38,13 +35,9 @@ const getStatusPill = (status) => {
 
 // --- Sub-Components ---
 const TaskDetailsModal = ({ task, onClose }) => {
-    // --- FIX: Added a safer check for filtering attachments ---
-    const pmAttachments = (task.attachments || []).filter(
-        att => att.uploadedBy?._id && task.assignedBy?._id && att.uploadedBy._id.toString() === task.assignedBy._id.toString()
-    );
-    const userAttachments = (task.attachments || []).filter(
-        att => att.uploadedBy?._id && task.assignedTo?._id && att.uploadedBy._id.toString() === task.assignedTo._id.toString()
-    );
+    const pmAttachments = (task.attachments || []).filter(att => att.uploadedBy?._id.toString() === task.assignedBy?._id.toString());
+    const userAttachments = (task.attachments || []).filter(att => att.uploadedBy?._id.toString() === task.assignedTo?._id.toString());
+    const isSelfAssigned = task.assignedBy?._id.toString() === task.assignedTo?._id.toString();
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4" onClick={onClose}>
@@ -61,6 +54,7 @@ const TaskDetailsModal = ({ task, onClose }) => {
                         <div>
                             <h4 className="font-bold text-slate-600 mb-2 flex items-center gap-2"><Users size={16} /> Team</h4>
                             <div className="space-y-3">
+                                <div className="flex items-center gap-3"><Image src={task.assignedBy?.avatar || '/default-avatar.png'} width={32} height={32} className="rounded-full aspect-square object-cover" alt="" /><span className="font-semibold text-slate-700">{task.assignedBy?.name}</span><span className="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">Assigned By</span></div>
                                 <div className="flex items-center gap-3"><Image src={task.assignedTo?.avatar || '/default-avatar.png'} width={32} height={32} className="rounded-full aspect-square object-cover" alt="" /><span className="font-semibold text-slate-700">{task.assignedTo?.name}</span><span className="text-xs bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full">Lead</span></div>
                                 {task.assistedBy?.map(assistant => (<div key={assistant._id} className="flex items-center gap-3"><Image src={assistant.avatar || '/default-avatar.png'} width={32} height={32} className="rounded-full aspect-square object-cover" alt="" /><span className="font-semibold text-slate-700">{assistant.name}</span><span className="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">Assist</span></div>))}
                             </div>
@@ -97,11 +91,18 @@ const TaskDetailsModal = ({ task, onClose }) => {
 };
 
 const TaskCard = ({ task, onEdit, onDelete, onOpenDetails }) => {
-    const deadlineInfo = getDeadlineInfo(task);
     const isCompleted = task.status === 'Completed';
+    const isSelfAssigned = task.assignedBy?._id.toString() === task.assignedTo?._id.toString();
     return (
-        <motion.div layoutId={task._id} className={`bg-white border rounded-xl p-4 shadow-sm group ${isCompleted ? 'cursor-pointer hover:border-green-300' : 'cursor-grab hover:border-indigo-300'}`} onClick={isCompleted ? () => onOpenDetails(task) : undefined}>
-            <div className="flex justify-between items-start gap-4"><h3 className={`font-bold text-slate-800 ${isCompleted && 'text-slate-500'}`}>{task.title}</h3><div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">{!isCompleted && <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-full" title="Edit Task"><Edit size={16} /></button>}<button onClick={(e) => { e.stopPropagation(); onDelete(task._id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded-full" title="Delete Task"><Trash2 size={16} /></button></div></div>
+        <motion.div layoutId={task._id} className={`bg-white border rounded-xl p-4 shadow-sm group ${isCompleted ? 'cursor-pointer hover:border-green-300' : 'cursor-grab hover:border-indigo-300'}`} onClick={() => onOpenDetails(task)}>
+            <div className="flex justify-between items-start gap-4">
+                <h3 className={`font-bold text-slate-800 ${isCompleted && 'text-slate-500'}`}>{task.title}</h3>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    {!isCompleted && <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-full" title="Edit Task"><Edit size={16} /></button>}
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(task._id); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded-full" title="Delete Task"><Trash2 size={16} /></button>
+                </div>
+            </div>
+            {isSelfAssigned && <div className="mt-2"><span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1.5 w-fit"><UserIcon size={12}/> Personal Task</span></div>}
             <div className="mt-4 pt-4 border-t space-y-3">
                 <div className="flex justify-between items-center gap-2">
                     <div className="flex items-center -space-x-2">
@@ -114,6 +115,7 @@ const TaskCard = ({ task, onEdit, onDelete, onOpenDetails }) => {
         </motion.div>
     );
 };
+
 const TaskFormModal = ({ mode, taskData, onClose, allUsers, setTasks }) => {
     const isEditMode = mode === 'edit';
     const formatForInput = (date) => date ? new Date(new Date(date).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
@@ -167,8 +169,7 @@ export default function PMDashboard({ pmUser, allUsers, initialTasks }) {
   const [editingTask, setEditingTask] = useState(null);
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [selectedTaskDetails, setSelectedTaskDetails] = useState(null);
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => { setIsMounted(true); }, []);
+  useEffect(() => { }, []);
   const handleLogout = async () => { await fetch('/api/auth/logout'); router.push('/login'); };
   const taskColumns = useMemo(() => { const columns = { 'To Do': [], 'In Progress': [], 'Completed': [] }; tasks.forEach(task => { if (columns[task.status]) columns[task.status].push(task); }); return columns; }, [tasks]);
   const openEditModal = (task) => { setEditingTask(task); setIsEditModalOpen(true); };
@@ -197,17 +198,50 @@ export default function PMDashboard({ pmUser, allUsers, initialTasks }) {
 }
 
 export async function getServerSideProps(context) {
+    const dbConnect = require('../../../lib/dbConnect').default;
+    const User = require('../../../models/User').default;
+    const Task = require('../../../models/Task').default;
+    const jwt = require('jsonwebtoken');
+
     await dbConnect();
     const { token } = context.req.cookies;
     if (!token) return { redirect: { destination: '/login', permanent: false } };
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const pmUser = await User.findById(decoded.userId).select('-password');
-        if (!pmUser || pmUser.role !== 'Project Manager') { return { redirect: { destination: '/dashboard', permanent: false } }; }
+        if (!pmUser || pmUser.role !== 'Project Manager') {
+            return { redirect: { destination: '/dashboard', permanent: false } };
+        }
+        
         const allUsers = await User.find({}).select("name role avatar").sort({ name: 1 }).lean();
-        const assignedTasks = await Task.find({ assignedBy: pmUser._id }).populate('assignedTo', 'name avatar').populate('assistedBy', 'name avatar').populate('attachments.uploadedBy', 'name').sort({ 'status': 1, 'createdAt': -1 }).lean();
-        return { props: { pmUser: JSON.parse(JSON.stringify(pmUser)), allUsers: JSON.parse(JSON.stringify(allUsers)), initialTasks: JSON.parse(JSON.stringify(assignedTasks)) } };
+        
+        // Find all non-admin users to define the "team"
+        const teamMemberIds = allUsers
+            .filter(u => u.role !== 'HR' && u.role !== 'Project Manager' && u.role !== 'Finance')
+            .map(u => u._id);
+
+        // Fetch tasks assigned BY the PM or assigned TO anyone on their team
+        const assignedTasks = await Task.find({
+            $or: [
+                { assignedBy: pmUser._id },
+                { assignedTo: { $in: teamMemberIds } }
+            ]
+        }).populate('assignedTo', 'name avatar')
+          .populate('assignedBy', 'name avatar')
+          .populate('assistedBy', 'name avatar')
+          .populate('attachments.uploadedBy', 'name')
+          .sort({ 'status': 1, 'createdAt': -1 }).lean();
+        
+        return { 
+            props: { 
+                pmUser: JSON.parse(JSON.stringify(pmUser)), 
+                allUsers: JSON.parse(JSON.stringify(allUsers)), 
+                initialTasks: JSON.parse(JSON.stringify(assignedTasks)) 
+            } 
+        };
     } catch (error) {
+        console.error("Error in PM dashboard getServerSideProps:", error);
         return { redirect: { destination: '/login', permanent: false } };
     }
 }
