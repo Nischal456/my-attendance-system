@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     await activeEntry.save();
 
     res.status(200).json({ success: true, data: activeEntry });
-  } catch (error) {
+  } catch {
     res.status(500).json({ message: 'Internal Server Error' });
-  }
+}
 }
