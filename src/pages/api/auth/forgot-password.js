@@ -1,6 +1,6 @@
-import crypto from 'crypto';
 import dbConnect from '../../../../lib/dbConnect';
 import User from '../../../../models/User';
+import crypto from 'crypto';
 import { sendPasswordResetEmail } from '../../../../lib/email';
 
 export default async function handler(req, res) {
