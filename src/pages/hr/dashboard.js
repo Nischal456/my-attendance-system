@@ -7,6 +7,8 @@ import toast, { Toaster } from 'react-hot-toast';
 import { Bar } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 // Imports moved from getServerSideProps
 import jwt from 'jsonwebtoken';
@@ -169,8 +171,7 @@ const DeleteModal = ({ onConfirm, onClose, isDeleting }) => (
 );
 
 const AdjustCheckoutModal = ({ record, onClose, onUpdate, isSubmitting }) => {
-    const formatForInput = (date) => date ? new Date(new Date(date).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
-    const [newCheckoutTime, setNewCheckoutTime] = useState(formatForInput(record.checkOutTime || record.checkInTime));
+    const [newCheckoutTime, setNewCheckoutTime] = useState(record.checkOutTime ? new Date(record.checkOutTime) : new Date(record.checkInTime));
     const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
@@ -199,12 +200,15 @@ const AdjustCheckoutModal = ({ record, onClose, onUpdate, isSubmitting }) => {
                     <form onSubmit={handleSubmit}>
                         <div>
                             <label htmlFor="newCheckoutTime" className="block text-sm font-semibold text-slate-600 mb-1">New Checkout Date & Time</label>
-                            <input
-                                id="newCheckoutTime"
-                                type="datetime-local"
-                                value={newCheckoutTime}
-                                onChange={(e) => setNewCheckoutTime(e.target.value)}
-                                className="w-full mt-1 p-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                             <DatePicker
+                                selected={newCheckoutTime}
+                                onChange={(date) => setNewCheckoutTime(date)}
+                                showTimeSelect
+                                timeFormat="h:mm aa"
+                                timeIntervals={15}
+                                dateFormat="MMMM d, yyyy h:mm aa"
+                                className="w-full mt-1 p-2.5 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                wrapperClassName="w-full"
                             />
                         </div>
                         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
@@ -616,7 +620,7 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   const renderContent = () => {
       switch(activeView) {
           case 'dashboard': return <DashboardView workHoursData={workHoursData} targetHours={MONTHLY_HOUR_TARGET} selectedMonth={selectedMonth} handleMonthChange={handleMonthChange} isLoadingChart={isLoadingChart} />;
-          case 'attendance': return <AttendanceView allUsers={allUsers} attendanceData={attendanceRecords} openDeleteModal={openDeleteModal} openEditModal={openEditModal} />;
+          case 'attendance': return <AttendanceView attendanceData={attendanceRecords} allUsers={allUsers} openDeleteModal={openDeleteModal} openEditModal={openEditModal} />;
           case 'notifications': return <NotificationSender allUsers={allUsers} targetType={targetType} setTargetType={setTargetType} targetUser={targetUser} setTargetUser={setTargetUser} notificationContent={notificationContent} setNotificationContent={setNotificationContent} handleSendNotification={handleSendNotification} isSending={isSending} />;
           case 'leaves': return <LeaveManagementView pending={leaveRequests} approved={approvedLeaves} history={concludedLeaves} onManage={openLeaveModal} />;
           default: return <DashboardView workHoursData={workHoursData} targetHours={MONTHLY_HOUR_TARGET} selectedMonth={selectedMonth} handleMonthChange={handleMonthChange} isLoadingChart={isLoadingChart} />;
@@ -699,6 +703,9 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
              .block.md\\:table-row > td:last-child {
                 border-bottom: none;
             }
+        }
+        .react-datepicker-wrapper {
+            width: 100%;
         }
       `}</style>
     </>
