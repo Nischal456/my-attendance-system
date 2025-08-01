@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
-import { LogOut, Clock, Calendar, Coffee, CheckCircle, AlertCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, DollarSign, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2 } from 'react-feather';
+import { LogOut, Clock, Calendar, Coffee, CheckCircle, AlertCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, DollarSign, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon } from 'react-feather';
 import { ChevronDown } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Bar } from 'react-chartjs-2';
@@ -37,7 +37,6 @@ const getSenderUI = (author) => { const lowerCaseAuthor = author?.toLowerCase() 
 
 // --- Reusable & Sub-Components ---
 
-// Notification Panel Content (Shared Logic for Mobile & Desktop)
 const NotificationContent = ({ notifications, onLinkClick }) => (
     <>
         {notifications.length > 0 ? (
@@ -46,8 +45,7 @@ const NotificationContent = ({ notifications, onLinkClick }) => (
                     const senderUI = getSenderUI(notif.author);
                     const isUnread = !notif.isRead;
                     return (
-                        <Link key={notif._id} href={notif.link || '#'} passHref>
-                            <a onClick={onLinkClick} className={`block`}>
+                        <Link key={notif._id} href={notif.link || '#'} onClick={onLinkClick} className={`block`}>
                                 <div className={`flex items-start gap-4 p-4 transition-colors ${isUnread ? 'bg-sky-50/70 hover:bg-sky-100/60' : 'hover:bg-slate-100/70'}`}>
                                     <div className={`flex-shrink-0 mt-0.5 w-9 h-9 flex items-center justify-center rounded-full shadow-inner ${senderUI.iconBg}`}>
                                         <senderUI.Icon size={18}/>
@@ -58,7 +56,6 @@ const NotificationContent = ({ notifications, onLinkClick }) => (
                                     </div>
                                     {isUnread && (<div className="mt-1 w-2.5 h-2.5 bg-sky-500 rounded-full flex-shrink-0" title="Unread"></div>)}
                                 </div>
-                            </a>
                         </Link>
                     );
                 })}
@@ -72,7 +69,6 @@ const NotificationContent = ({ notifications, onLinkClick }) => (
         )}
     </>
 );
-// Mobile Notification Overlay
 const MobileNotificationPanel = ({ notifications, unreadCount, handleMarkAsRead, onClose }) => {
     useEffect(() => {
         document.body.style.overflow = 'hidden';
@@ -93,7 +89,6 @@ const MobileNotificationPanel = ({ notifications, unreadCount, handleMarkAsRead,
         </motion.div>
     );
 };
-// Desktop Notification Dropdown
 const DesktopNotificationPanel = ({ notifications, unreadCount, handleMarkAsRead, onClose }) => {
     return (
         <motion.div initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.95 }} transition={{ duration: 0.2, ease: "easeOut" }} className="absolute top-full right-0 mt-3 w-full max-w-sm sm:w-[26rem] bg-white/80 backdrop-blur-xl border border-slate-200/80 rounded-xl shadow-2xl z-20 overflow-hidden origin-top-right">
@@ -142,7 +137,67 @@ const PersonalTaskModal = ({ onClose, onTaskCreated }) => {
             onClose();
         } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmitting(false); }
     };
-    return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-xl p-8 w-full max-w-lg"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold">Add Personal Task</h3><button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100"><X size={20} /></button></div><form onSubmit={handleSubmit} className="space-y-5"><div><label htmlFor="title" className="font-medium text-slate-700">Task Title *</label><input id="title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full mt-1 border-slate-300 rounded-lg" required/></div><div><label htmlFor="description" className="font-medium text-slate-700">Description (Optional)</label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full mt-1 border-slate-300 rounded-lg"/></div>{error && <p className="text-sm text-red-600">{error}</p>}<div className="mt-8 pt-4 border-t flex justify-end gap-4"><button type="button" onClick={onClose} className="px-5 py-2.5 bg-slate-200 rounded-lg font-semibold">Cancel</button><button type="submit" disabled={isSubmitting} className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg">{isSubmitting ? 'Adding...' : 'Add Task'}</button></div></form></motion.div></motion.div>);
+    return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-xl p-8 w-full max-w-lg"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold">Add Personal Task</h3><button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100"><X size={20} /></button></div><form onSubmit={handleSubmit} className="space-y-6">
+    {/* Task Title Input */}
+    <div>
+      <label htmlFor="title" className="block text-sm font-semibold text-slate-700">
+        Task Title <span className="text-red-500">*</span>
+      </label>
+      <input
+        id="title"
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400
+                   focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
+                   transition"
+        required
+      />
+    </div>
+
+    {/* Description Textarea */}
+    <div>
+      <label htmlFor="description" className="block text-sm font-semibold text-slate-700">
+        Description <span className="font-normal text-slate-500">(Optional)</span>
+      </label>
+      <textarea
+        id="description"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        rows={4}
+        className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400
+                   focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
+                   transition"
+      />
+    </div>
+
+    {/* Error Message */}
+    {error && <p className="text-sm text-red-600">{error}</p>}
+
+    {/* Action Buttons */}
+    <div className="pt-6 border-t border-slate-200 flex items-center justify-end gap-4">
+      <button
+        type="button"
+        onClick={onClose}
+        className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-md shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed transition"
+      >
+        {isSubmitting && (
+          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        )}
+        {isSubmitting ? 'Adding...' : 'Add Task'}
+      </button>
+    </div>
+  </form></motion.div></motion.div>);
 };
 const WorkHoursChartCard = () => {
     const [hoursData, setHoursData] = useState({ totalHours: 0 });
@@ -243,55 +298,53 @@ const TaskColumn = ({ title, tasks, onUpdateTaskStatus, onOpenSubmitModal }) => 
         </div>
     );
 };
+const MyStatsWidget = ({ tasks, attendance }) => {
+    const stats = useMemo(() => {
+        const now = new Date();
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        startOfWeek.setHours(0, 0, 0, 0);
 
-// --- Loading Skeleton Components (Integrated) ---
-const SkeletonCard = ({ className }) => (
-    <div className={`bg-white rounded-2xl shadow-sm p-6 ${className}`}>
-        <div className="animate-pulse flex space-x-4">
-            <div className="flex-1 space-y-4 py-1">
-                <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-                <div className="space-y-2">
-                    <div className="h-3 bg-slate-200 rounded"></div>
-                    <div className="h-3 bg-slate-200 rounded w-5/6"></div>
-                </div>
-                 <div className="h-8 bg-slate-200 rounded w-1/2 mt-4"></div>
-            </div>
-        </div>
-    </div>
-);
-const SkeletonTable = () => (
-    <div className="bg-white rounded-2xl shadow-sm p-6">
-        <div className="animate-pulse space-y-3">
-            {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-5 bg-slate-200 rounded"></div>
-            ))}
-        </div>
-    </div>
-);
-const DashboardSkeleton = () => {
+        const completedThisWeek = tasks.filter(task => 
+            task.status === 'Completed' && new Date(task.completedAt) >= startOfWeek
+        ).length;
+
+        const overdueTasks = tasks.filter(task => 
+            task.status !== 'Completed' && task.deadline && new Date(task.deadline) < new Date()
+        ).length;
+        
+        const totalWorkSeconds = attendance.reduce((acc, att) => acc + (att.duration || 0), 0);
+        const totalDays = attendance.length > 0 ? attendance.length : 1;
+        const avgDailyHours = (totalWorkSeconds / 3600) / totalDays;
+
+        return { completedThisWeek, overdueTasks, avgDailyHours };
+    }, [tasks, attendance]);
+
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-            <div className="xl:col-span-4 space-y-8">
-                {/* Profile Card Skeleton */}
-                <div className="bg-white rounded-2xl shadow-sm p-6">
-                     <div className="animate-pulse flex items-center flex-col sm:flex-row sm:space-x-5">
-                        <div className="rounded-full bg-slate-200 h-24 w-24 mb-4 sm:mb-0"></div>
-                        <div className="flex-1 space-y-3 text-center sm:text-left">
-                            <div className="h-6 bg-slate-200 rounded w-3/4 mx-auto sm:mx-0"></div>
-                            <div className="h-4 bg-slate-200 rounded w-1/2 mx-auto sm:mx-0"></div>
-                            <div className="h-12 bg-slate-200 rounded-lg mt-4"></div>
-                        </div>
-                    </div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
+            <div className="px-6 py-5 border-b border-slate-200/80">
+                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><TrendingUp className="text-green-600"/>My Weekly Stats</h2>
+            </div>
+            <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-600">Tasks Completed</span>
+                    <span className="font-bold text-lg text-green-600">{stats.completedThisWeek}</span>
                 </div>
-                <SkeletonCard />
+                <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-600">Avg. Daily Hours</span>
+                    <span className="font-bold text-lg text-slate-800">{stats.avgDailyHours.toFixed(1)} hrs</span>
+                </div>
+                <div className={`flex items-center justify-between p-3 rounded-lg ${stats.overdueTasks > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
+                    <span className={`font-semibold ${stats.overdueTasks > 0 ? 'text-red-600' : 'text-slate-600'}`}>Overdue Tasks</span>
+                    <span className={`font-bold text-lg flex items-center gap-2 ${stats.overdueTasks > 0 ? 'text-red-600' : 'text-slate-800'}`}>
+                        {stats.overdueTasks > 0 && <AlertOctagon size={16} />}
+                        {stats.overdueTasks}
+                    </span>
+                </div>
             </div>
-            <div className="xl:col-span-8 space-y-8">
-                <SkeletonCard className="h-96" />
-                <SkeletonTable />
-            </div>
-        </div>
+        </motion.div>
     );
 };
+
 
 // --- Main Component ---
 export default function Dashboard({ user }) {
@@ -325,7 +378,6 @@ export default function Dashboard({ user }) {
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const fetchDashboardData = useCallback(async () => {
-      setIsDataLoading(true);
       try {
           const res = await fetch('/api/dashboard/data');
           if (!res.ok) throw new Error('Failed to fetch dashboard data');
@@ -382,16 +434,12 @@ export default function Dashboard({ user }) {
     <>
       <Toaster position="top-center" />
       
-      {/* --- MODALS & OVERLAYS --- */}
-      {/* This section now handles all overlays, including the mobile notification panel */}
       <AnimatePresence>
         {taskToSubmit && <SubmitWorkModal task={taskToSubmit} onClose={() => setTaskToSubmit(null)} onWorkSubmitted={fetchDashboardData} />}
       </AnimatePresence>
       <AnimatePresence>
         {isPersonalTaskModalOpen && <PersonalTaskModal onClose={() => setIsPersonalTaskModalOpen(false)} onTaskCreated={fetchDashboardData} />}
       </AnimatePresence>
-
-      {/* CORRECTED: Mobile notification panel is rendered at the top level to avoid CSS stacking issues */}
       <AnimatePresence>
           {!isDesktop && isNotificationOpen && (
               <MobileNotificationPanel
@@ -414,7 +462,6 @@ export default function Dashboard({ user }) {
                       <Bell className="h-6 w-6"/>
                       {unreadNotifications.length > 0 && (<span className="absolute top-1.5 right-1.5 flex h-5 w-5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">{unreadNotifications.length}</span></span>)}
                   </button>
-                  {/* CORRECTED: Only the desktop panel is rendered inside the header */}
                   <AnimatePresence>
                       {isDesktop && isNotificationOpen && (
                           <DesktopNotificationPanel
@@ -432,11 +479,12 @@ export default function Dashboard({ user }) {
 
           <main className={`max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10`}>
               {isDataLoading ? (
-                <DashboardSkeleton />
+                <div className="text-center py-20 text-slate-500">Loading Dashboard...</div>
               ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
                     <motion.div className="xl:col-span-4 space-y-8" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden"><div className="p-6 flex flex-col items-center sm:flex-row sm:items-center sm:space-x-5"><div className="relative flex-shrink-0 mb-4 sm:mb-0"><Image src={profileUser.avatar} alt="Profile Picture" width={88} height={88} className="rounded-full object-cover aspect-square shadow-md" /><label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 bg-green-600 text-white rounded-full p-2 cursor-pointer hover:bg-green-700 transition shadow-sm border-2 border-white transform hover:scale-110"><input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} /><>{isUploading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Edit size={16} />}</></label></div><div className="text-center sm:text-left"><h2 className="text-2xl font-bold text-slate-900">{profileUser.name}</h2><p className="text-slate-500 font-medium">{profileUser.role}</p></div></div><div className="bg-slate-50/70 p-6 border-t border-slate-200/80">{!checkInTime ? (<div className="text-center py-4"><button onClick={handleCheckIn} disabled={isAttendanceLoading || isDataLoading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-8 rounded-xl transition-all transform hover:scale-[1.02] shadow-lg shadow-green-500/20 hover:shadow-green-600/30 focus:outline-none focus:ring-4 focus:ring-green-500/50 disabled:opacity-70"><div className="flex items-center justify-center gap-2"><Play size={20}/><span>{isDataLoading ? 'Loading...' : 'Check In'}</span></div></button><p className="mt-3 text-sm text-slate-500">You are currently checked out.</p></div>) : (<div className="space-y-5"><div className="flex justify-between items-center"><h3 className="text-lg font-semibold text-slate-800">Work Session Active</h3>{isOnBreak && <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800"><Coffee className="mr-1.5" size={14} /> On Break</span>}</div><div className={`text-center bg-white rounded-lg p-4 border border-green-200 shadow-inner relative overflow-hidden`}><div className="absolute inset-0 bg-green-500/10 animate-pulse"></div><p className="text-sm text-slate-500 relative">Elapsed Time</p><div className="text-3xl sm:text-5xl font-bold text-green-600 tracking-tighter my-1 relative">{elapsedTime}</div><p className="text-xs text-slate-400 relative">Checked in at {new Date(checkInTime).toLocaleTimeString()}</p></div><div><label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">Work Description</label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What are you working on?" rows={4} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/80 focus:border-transparent transition" disabled={isOnBreak} /></div><div className="grid grid-cols-2 gap-3">{!isOnBreak ? (<><button onClick={handleBreakIn} disabled={isAttendanceLoading} className="flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200/80 text-amber-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><Coffee size={16} /> Start Break</button><button onClick={handleCheckOut} disabled={isAttendanceLoading} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><LogOut size={16} /> Check Out</button></>) : (<button onClick={handleBreakOut} disabled={isAttendanceLoading} className="col-span-2 flex items-center justify-center gap-2 bg-green-100 hover:bg-green-200/80 text-green-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><CheckCircle size={16} /> Resume Work</button>)}</div></div>)}</div></div>
+                        <MyStatsWidget tasks={tasks} attendance={attendance} />
                         <WorkHoursChartCard />
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80"><div className="px-6 py-5 border-b border-slate-200/80"><h2 className="text-xl font-semibold text-slate-800">Daily Notes</h2></div><div className="p-6"><form onSubmit={handleCreateNote} className="space-y-3 mb-6"><textarea value={newNoteContent} onChange={(e) => setNewNoteContent(e.target.value)} placeholder="Write down a quick note..." rows="3" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/80"/><button type="submit" disabled={isSubmittingNote || !newNoteContent.trim()} className="px-5 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2">{isSubmittingNote ? 'Saving...' : 'Save Note'}</button></form><div className="space-y-4 max-h-96 overflow-y-auto pr-2 -mr-2">{notes.map((note) => (<div key={note._id} className="p-4 bg-slate-50/70 rounded-lg group">{editingNote?._id === note._id ? (<div className="space-y-3"><textarea value={editingNote.content} onChange={(e) => setEditingNote({...editingNote, content: e.target.value})} className="w-full px-2 py-1 border border-slate-300 rounded-md" rows="3"/><div className="flex items-center gap-2"><button onClick={handleUpdateNote} disabled={isSubmittingNote} className="p-2 text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50"><Save size={18} /></button><button onClick={() => setEditingNote(null)} className="p-2 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-md"><X size={18} /></button></div></div>) : (<div><p className="text-slate-700 whitespace-pre-wrap">{note.content}</p><div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200"><p className="text-xs text-slate-400">{formatEnglishDate(note.createdAt, true)}</p><div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => setEditingNote(note)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-full hover:text-blue-600" title="Edit Note"><Edit size={15} /></button><button onClick={() => handleDeleteNote(note._id)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-full hover:text-red-600" title="Delete Note"><Trash2 size={15} /></button></div></div></div>)}</div>))}{notes.length === 0 && <p className="text-center text-slate-500 py-8">No notes for today.</p>}</div></div></div>
                     </motion.div>
@@ -444,7 +492,7 @@ export default function Dashboard({ user }) {
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
                             <div className="px-6 py-5 border-b border-slate-200/80 flex justify-between items-center">
                                 <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><Briefcase className="text-green-600"/>My Task Board</h2>
-                                <button onClick={() => setIsPersonalTaskModalOpen(true)} className="flex items-center gap-2 text-sm font-semibold bg-indigo-100 text-indigo-600 px-3 py-2 rounded-lg hover:bg-indigo-200 transition-colors">
+                                <button onClick={() => setIsPersonalTaskModalOpen(true)} className="flex items-center gap-2 text-sm font-semibold bg-green-200 text-green-600 px-3 py-2 rounded-lg hover:bg-indigo-200 transition-colors">
                                     <Plus size={16} /> Add Personal Task
                                 </button>
                             </div>
