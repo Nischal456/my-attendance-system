@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Image from 'next/image';
-import { Send, Trash2, AlertTriangle, LogOut, Check, X as XIcon, UserPlus, Briefcase, Download, ChevronDown, Bell, Users, BarChart2, Clock, Menu, ChevronLeft, ChevronRight } from 'react-feather';
+import { Send, Trash2, AlertTriangle, LogOut, Check, X as XIcon, UserPlus, Briefcase, Download, ChevronDown, Bell, Users, BarChart2, Clock, Menu, ChevronLeft, ChevronRight, Edit } from 'react-feather';
 import toast, { Toaster } from 'react-hot-toast';
 import { Bar } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
@@ -168,6 +168,60 @@ const DeleteModal = ({ onConfirm, onClose, isDeleting }) => (
     </AnimatePresence>
 );
 
+const AdjustCheckoutModal = ({ record, onClose, onUpdate, isSubmitting }) => {
+    const formatForInput = (date) => date ? new Date(new Date(date).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+    const [newCheckoutTime, setNewCheckoutTime] = useState(formatForInput(record.checkOutTime || record.checkInTime));
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (!newCheckoutTime) {
+            setError('Please select a valid date and time.');
+            return;
+        }
+        if (new Date(newCheckoutTime) <= new Date(record.checkInTime)) {
+            setError('Checkout time must be after check-in time.');
+            return;
+        }
+        onUpdate({ attendanceId: record._id, newCheckoutTime });
+    };
+
+    return (
+        <AnimatePresence>
+            <motion.div variants={modalBackdrop} initial="initial" animate="animate" exit="exit" className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+                <motion.div variants={modalContent} className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-lg">
+                    <h3 className="text-2xl font-bold mb-6 text-slate-800">Adjust Checkout Time</h3>
+                    <div className="text-sm space-y-3 p-4 bg-slate-50 rounded-lg mb-5 border">
+                        <p><strong>Employee:</strong> <span className="font-medium text-slate-700">{record.user.name}</span></p>
+                        <p><strong>Checked In:</strong> <span className="font-medium text-slate-700">{new Date(record.checkInTime).toLocaleString()}</span></p>
+                    </div>
+                    <form onSubmit={handleSubmit}>
+                        <div>
+                            <label htmlFor="newCheckoutTime" className="block text-sm font-semibold text-slate-600 mb-1">New Checkout Date & Time</label>
+                            <input
+                                id="newCheckoutTime"
+                                type="datetime-local"
+                                value={newCheckoutTime}
+                                onChange={(e) => setNewCheckoutTime(e.target.value)}
+                                className="w-full mt-1 p-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                            />
+                        </div>
+                        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                        <div className="mt-8 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                            <motion.button whileTap={{ scale: 0.95 }} type="button" onClick={onClose} disabled={isSubmitting} className="px-5 py-2.5 bg-slate-200 text-slate-800 font-semibold rounded-lg hover:bg-slate-300 disabled:opacity-50">Cancel</motion.button>
+                            <motion.button whileTap={{ scale: 0.95 }} type="submit" disabled={isSubmitting} className="px-5 py-2.5 bg-green-600 text-white font-semibold rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 disabled:opacity-50">
+                                {isSubmitting ? 'Saving...' : 'Save Changes'}
+                            </motion.button>
+                        </div>
+                    </form>
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>
+    );
+};
+
+
 // --- Page Views ---
 
 const DashboardView = ({ workHoursData, targetHours, selectedMonth, handleMonthChange, isLoadingChart }) => (
@@ -183,7 +237,7 @@ const DashboardView = ({ workHoursData, targetHours, selectedMonth, handleMonthC
     </motion.div>
 );
 
-const AttendanceView = ({ attendanceData, allUsers, openDeleteModal }) => {
+const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditModal }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
@@ -208,7 +262,6 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal }) => {
         const sanitizeField = (field) => {
             if (field === null || field === undefined) return '""';
             const str = String(field);
-            // Escape double quotes by doubling them
             return `"${str.replace(/"/g, '""')}"`;
         };
     
@@ -226,7 +279,7 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal }) => {
         ].join(','));
     
         const csv = [headers, ...rows].join('\n');
-        const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }); // Add BOM for Excel compatibility
+        const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }); 
     
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
@@ -291,7 +344,12 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal }) => {
                                     <td data-label="Break" className="flex justify-between items-center md:table-cell px-2 py-2 md:px-6 md:py-4">{formatDuration(att.totalBreakDuration)}</td>
                                     <td data-label="Work Time" className={`flex justify-between items-center md:table-cell px-2 py-2 md:px-6 md:py-4 ${getDurationStyle(att)}`}>{formatDuration(att.duration)}</td>
                                     <td data-label="Description" className="flex justify-between items-center md:table-cell px-2 py-2 md:px-6 md:py-4 max-w-full md:max-w-sm"><p className="whitespace-pre-wrap break-words text-right md:text-left">{att.description || '–'}</p></td>
-                                    <td data-label="Actions" className="flex justify-end items-center md:table-cell md:text-center px-2 py-2 md:px-6 md:py-4"><button onClick={() => openDeleteModal(att._id)} className="text-slate-400 hover:text-red-600 p-2 rounded-full transition-colors"><Trash2 size={18} /></button></td>
+                                    <td data-label="Actions" className="flex justify-end items-center md:table-cell md:text-center px-2 py-2 md:px-6 md:py-4">
+                                        <div className="flex items-center justify-center md:justify-end gap-1">
+                                            <button onClick={() => openEditModal(att)} className="text-slate-400 hover:text-green-600 p-2 rounded-full transition-colors"><Edit size={18} /></button>
+                                            <button onClick={() => openDeleteModal(att._id)} className="text-slate-400 hover:text-red-600 p-2 rounded-full transition-colors"><Trash2 size={18} /></button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                             {filteredAttendance.length === 0 && (<tr><td colSpan="7" className="text-center py-10 text-slate-500">No records found.</td></tr>)}
@@ -412,6 +470,9 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const MONTHLY_HOUR_TARGET = 120;
 
   // --- Data Fetching & Side Effects ---
@@ -458,13 +519,11 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
          
          const updatedLeave = result.data;
 
-         // Update state immutably
          setLeaveRequests(prev => prev.filter(req => req._id !== currentLeaveItem._id));
          
          if (newStatus === 'Approved' && new Date(updatedLeave.endDate) >= new Date()) {
             setApprovedLeaves(prev => [updatedLeave, ...prev].sort((a,b) => new Date(a.startDate) - new Date(b.startDate)));
          } else {
-            // Also remove from approved if it was there and is now rejected
             setApprovedLeaves(prev => prev.filter(req => req._id !== currentLeaveItem._id));
          }
          
@@ -527,11 +586,37 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
         closeDeleteModal();
     }
   };
+  
+  const openEditModal = (record) => { setEditingRecord(record); setIsEditModalOpen(true); };
+  const closeEditModal = () => { setEditingRecord(null); setIsEditModalOpen(false); };
+
+  const handleUpdateAttendance = async ({ attendanceId, newCheckoutTime }) => {
+    setIsSubmittingEdit(true);
+    const loadingToast = toast.loading('Updating record...');
+    try {
+        const res = await fetch('/api/hr/adjust-checkout', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ attendanceId, newCheckoutTime })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message);
+        
+        setAttendanceRecords(prev => prev.map(rec => rec._id === attendanceId ? result.data : rec));
+        
+        toast.success(result.message, { id: loadingToast });
+        closeEditModal();
+    } catch (err) {
+        toast.error(err.message || 'Failed to update record.', { id: loadingToast });
+    } finally {
+        setIsSubmittingEdit(false);
+    }
+  };
 
   const renderContent = () => {
       switch(activeView) {
           case 'dashboard': return <DashboardView workHoursData={workHoursData} targetHours={MONTHLY_HOUR_TARGET} selectedMonth={selectedMonth} handleMonthChange={handleMonthChange} isLoadingChart={isLoadingChart} />;
-          case 'attendance': return <AttendanceView allUsers={allUsers} attendanceData={attendanceRecords} openDeleteModal={openDeleteModal} />;
+          case 'attendance': return <AttendanceView allUsers={allUsers} attendanceData={attendanceRecords} openDeleteModal={openDeleteModal} openEditModal={openEditModal} />;
           case 'notifications': return <NotificationSender allUsers={allUsers} targetType={targetType} setTargetType={setTargetType} targetUser={targetUser} setTargetUser={setTargetUser} notificationContent={notificationContent} setNotificationContent={setNotificationContent} handleSendNotification={handleSendNotification} isSending={isSending} />;
           case 'leaves': return <LeaveManagementView pending={leaveRequests} approved={approvedLeaves} history={concludedLeaves} onManage={openLeaveModal} />;
           default: return <DashboardView workHoursData={workHoursData} targetHours={MONTHLY_HOUR_TARGET} selectedMonth={selectedMonth} handleMonthChange={handleMonthChange} isLoadingChart={isLoadingChart} />;
@@ -550,10 +635,10 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   return (
     <>
       <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
-      <AnimatePresence>
-        {isLeaveModalOpen && <ManageLeaveModal item={currentLeaveItem} comments={hrComments} setComments={setHrComments} error={error} onClose={closeLeaveModal} onSubmit={handleManageLeave} isSubmitting={isSubmittingLeaveAction} />}
-        {isDeleteModalOpen && <DeleteModal onConfirm={handleConfirmDelete} onClose={closeDeleteModal} isDeleting={isDeleting} />}
-      </AnimatePresence>
+      
+      {isLeaveModalOpen && <ManageLeaveModal item={currentLeaveItem} comments={hrComments} setComments={setHrComments} error={error} onClose={closeLeaveModal} onSubmit={handleManageLeave} isSubmitting={isSubmittingLeaveAction} />}
+      {isDeleteModalOpen && <DeleteModal onConfirm={handleConfirmDelete} onClose={closeDeleteModal} isDeleting={isDeleting} />}
+      {isEditModalOpen && <AdjustCheckoutModal record={editingRecord} onClose={closeEditModal} onUpdate={handleUpdateAttendance} isSubmitting={isSubmittingEdit} />}
       
       {/* Mobile Menu Overlay & Sidebar */}
       <AnimatePresence>
@@ -638,10 +723,8 @@ export async function getServerSideProps(context) {
     ]);
     
     const now = new Date();
-    // Filter requests on the server to pass down cleaner initial state
     const pendingLeaveRequests = allLeaveRequests.filter(l => l.status === 'Pending');
     const concludedLeaveRequests = allLeaveRequests.filter(l => l.status === 'Approved' || l.status === 'Rejected').sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-    // Approved leaves are those that are approved AND are either ongoing or in the future
     const approvedLeaves = allLeaveRequests.filter(l => l.status === 'Approved' && new Date(l.endDate) >= now).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
     return {
@@ -656,7 +739,6 @@ export async function getServerSideProps(context) {
     };
   } catch (error) {
     console.error("HR Dashboard getServerSideProps Error:", error);
-    // In case of error, destroy the invalid cookie and redirect to login
     context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
     return { redirect: { destination: "/login", permanent: false } };
   }
