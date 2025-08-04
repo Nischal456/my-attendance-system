@@ -1,16 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import jwt from 'jsonwebtoken';
-import Link from 'next/link';
+import Link from 'next/link'; 
 import Image from 'next/image';
 import { Edit, Trash2, AlertTriangle, Clock, X as XIcon, LogOut, Plus, Calendar, Paperclip, CheckCircle, MessageSquare, FileText, Users, ChevronRight, User as UserIcon } from 'react-feather';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
-
-// Server-side models (for getServerSideProps)
-import dbConnect from '../../../lib/dbConnect';
-import User from '../../../models/User';
-import Task from '../../../models/Task';
 
 // --- Helper Functions ---
 const formatDeadline = (dateString, includeTime = true) => {
@@ -23,27 +17,23 @@ const formatDeadline = (dateString, includeTime = true) => {
   }
   return new Date(dateString).toLocaleString('en-US', options);
 };
-
 const getDeadlineInfo = (task) => {
   if (task.status === 'Completed' || !task.deadline) return { style: 'text-slate-500' };
   if (new Date(task.deadline) < new Date()) return { style: 'text-red-600 font-semibold' };
   return { style: 'text-slate-500' };
 };
-
 const getStatusPill = (status) => {
     switch (status) {
         case 'In Progress': return 'bg-amber-100 text-amber-700';
         case 'Completed': return 'bg-green-100 text-green-700';
         default: return 'bg-sky-100 text-sky-700';
     }
-};
+}
 
 // --- Sub-Components ---
 const TaskDetailsModal = ({ task, onClose }) => {
-    const pmAttachments = (task.attachments || []).filter(att => att.uploadedBy?._id.toString() === task.assignedBy?._id.toString());
-    const userAttachments = (task.attachments || []).filter(att => att.uploadedBy?._id.toString() === task.assignedTo?._id.toString());
-    const isSelfAssigned = task.assignedBy?._id.toString() === task.assignedTo?._id.toString();
-
+    const pmAttachments = (task.attachments || []).filter(att => att.uploadedBy?._id?.toString() === task.assignedBy?._id?.toString());
+    const userAttachments = (task.attachments || []).filter(att => att.uploadedBy?._id?.toString() === task.assignedTo?._id?.toString());
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4" onClick={onClose}>
             <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ ease: "easeOut", duration: 0.3 }} className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -59,9 +49,9 @@ const TaskDetailsModal = ({ task, onClose }) => {
                         <div>
                             <h4 className="font-bold text-slate-600 mb-2 flex items-center gap-2"><Users size={16} /> Team</h4>
                             <div className="space-y-3">
-                                <div className="flex items-center gap-3"><Image src={task.assignedBy?.avatar || '/default-avatar.png'} width={32} height={32} className="rounded-full aspect-square object-cover" alt="" /><span className="font-semibold text-slate-700">{task.assignedBy?.name}</span><span className="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">Assigned By</span></div>
-                                <div className="flex items-center gap-3"><Image src={task.assignedTo?.avatar || '/default-avatar.png'} width={32} height={32} className="rounded-full aspect-square object-cover" alt="" /><span className="font-semibold text-slate-700">{task.assignedTo?.name}</span><span className="text-xs bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full">Lead</span></div>
-                                {task.assistedBy?.map(assistant => (<div key={assistant._id} className="flex items-center gap-3"><Image src={assistant.avatar || '/default-avatar.png'} width={32} height={32} className="rounded-full aspect-square object-cover" alt="" /><span className="font-semibold text-slate-700">{assistant.name}</span><span className="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">Assist</span></div>))}
+                                <div className="flex items-center gap-3"><Image src={task.assignedBy?.avatar || '/default-avatar.png'} width={32} height={32} className="rounded-full aspect-square object-cover" alt={task.assignedBy?.name || ''} /><span className="font-semibold text-slate-700">{task.assignedBy?.name}</span><span className="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">Assigned By</span></div>
+                                <div className="flex items-center gap-3"><Image src={task.assignedTo?.avatar || '/default-avatar.png'} width={32} height={32} className="rounded-full aspect-square object-cover" alt={task.assignedTo?.name || ''} /><span className="font-semibold text-slate-700">{task.assignedTo?.name}</span><span className="text-xs bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full">Lead</span></div>
+                                {task.assistedBy?.map(assistant => (<div key={assistant._id} className="flex items-center gap-3"><Image src={assistant.avatar || '/default-avatar.png'} width={32} height={32} className="rounded-full aspect-square object-cover" alt={assistant.name} /><span className="font-semibold text-slate-700">{assistant.name}</span><span className="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">Assist</span></div>))}
                             </div>
                         </div>
                         <div>
@@ -97,9 +87,9 @@ const TaskDetailsModal = ({ task, onClose }) => {
 
 const TaskCard = ({ task, onEdit, onDelete, onOpenDetails }) => {
     const isCompleted = task.status === 'Completed';
-    const isSelfAssigned = task.assignedBy?._id.toString() === task.assignedTo?._id.toString();
+    const isSelfAssigned = task.assignedBy?._id?.toString() === task.assignedTo?._id?.toString();
     return (
-        <motion.div layoutId={task._id} className={`bg-white border rounded-xl p-4 shadow-sm group ${isCompleted ? 'cursor-pointer hover:border-green-300' : 'cursor-pointer hover:border-indigo-300'}`} onClick={() => onOpenDetails(task)}>
+        <motion.div layoutId={task._id} className={`bg-white border rounded-xl p-4 shadow-sm group cursor-pointer hover:border-indigo-300`} onClick={() => onOpenDetails(task)}>
             <div className="flex justify-between items-start gap-4">
                 <h3 className={`font-bold text-slate-800 ${isCompleted && 'text-slate-500'}`}>{task.title}</h3>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
@@ -140,7 +130,6 @@ const TaskFormModal = ({ mode, taskData, onClose, allUsers, setTasks }) => {
             const res = await fetch(endpoint, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
             const result = await res.json();
             if (!res.ok) throw new Error(result.message);
-            // Instead of re-fetching, we can update the state locally for better UX
             if (isEditMode) {
                 setTasks(prev => prev.map(t => t._id === result.data._id ? result.data : t));
             } else {
@@ -153,13 +142,11 @@ const TaskFormModal = ({ mode, taskData, onClose, allUsers, setTasks }) => {
     const availableAssistants = allUsers.filter(u => u.role !== 'HR' && u.role !== 'Project Manager' && u._id !== formData.assignedTo);
     return ( <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"><div className="bg-white rounded-xl p-8 w-full max-w-2xl max-h-[90vh] flex flex-col"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold">{isEditMode ? 'Edit Task' : 'Assign New Task'}</h3><button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100"><XIcon size={20} /></button></div><form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto pr-2 -mr-2"><div><label className="font-medium text-slate-700">Title</label><input type="text" name="title" value={formData.title} onChange={handleChange} required className="w-full mt-1 p-2 border rounded-lg"/></div><div><label className="font-medium text-slate-700">Description</label><textarea name="description" value={formData.description || ''} onChange={handleChange} className="w-full mt-1 p-2 border rounded-lg" rows="3"/></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label className="font-medium text-slate-700">Assign To (Lead)</label><select name="assignedTo" value={formData.assignedTo} onChange={handleChange} required className="w-full mt-1 p-2 border rounded-lg bg-white">{allUsers.filter(u => u.role !== 'HR' && u.role !== 'Project Manager').map(e => (<option key={e._id} value={e._id}>{e.name}</option>))}</select></div><div><label className="font-medium text-slate-700">Deadline</label><input type="datetime-local" name="deadline" value={formData.deadline} onChange={handleChange} className="w-full mt-1 p-2 border rounded-lg"/></div></div><div><label className="block font-medium text-slate-700 mb-1">Add Assistants</label><div className="max-h-40 overflow-y-auto space-y-2 p-3 bg-slate-50 rounded-lg border">{availableAssistants.length > 0 ? availableAssistants.map(user => (<label key={user._id} className="flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 cursor-pointer"><input type="checkbox" checked={formData.assistedBy.includes(user._id)} onChange={() => handleAssistantChange(user._id)} className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500"/><Image src={user.avatar || '/default-avatar.png'} width={24} height={24} className="rounded-full aspect-square object-cover" alt={user.name}/><span className="text-sm">{user.name}</span></label>)) : <p className="text-xs text-center text-slate-500 p-2">No other team members available.</p>}</div></div><div><label className="block font-medium text-slate-700">Attach Files</label><input type="file" multiple onChange={handleFileChange} className="w-full mt-2 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/></div>{attachments.length > 0 && (<div><p className="text-xs font-semibold">New files to upload:</p><div className="flex flex-wrap gap-2 mt-1">{attachments.map((f, i) => <span key={i} className="bg-slate-100 text-xs px-2 py-1 rounded">{f.filename}</span>)}</div></div>)}{error && <p className="text-sm text-red-600">{error}</p>}<div className="mt-8 pt-4 border-t flex justify-end gap-4"><button type="button" onClick={onClose} className="px-5 py-2.5 bg-slate-200 rounded-lg font-semibold">Cancel</button><button type="submit" disabled={isSubmitting} className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg">{isSubmitting ? 'Saving...' : 'Save Task'}</button></div></form></div></div> );
 };
-
 const DeleteModal = ({ taskId, onClose, setTasks }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const handleConfirmDelete = async () => { if (!taskId) return; setIsSubmitting(true); try { const res = await fetch('/api/tasks/delete', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId }) }); if (!res.ok) { const result = await res.json(); throw new Error(result.message); } setTasks(prev => prev.filter(t => t._id !== taskId)); toast.success('Task deleted.'); onClose(); } catch (err) { console.error(err); toast.error(err.message); } finally { setIsSubmitting(false); } };
     return (<div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"><div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md"><div className="flex items-start"><div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10"><AlertTriangle className="h-6 w-6 text-red-600" /></div><div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left"><h3 className="text-lg font-bold text-slate-900">Delete Task</h3><p className="text-sm text-slate-500 mt-2">Are you sure you want to delete this task? This action cannot be undone.</p></div></div><div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3"><button onClick={onClose} disabled={isSubmitting} className="w-full sm:w-auto px-5 py-2.5 bg-slate-200 rounded-lg font-semibold">Cancel</button><button onClick={handleConfirmDelete} disabled={isSubmitting} className="w-full sm:w-auto px-5 py-2.5 bg-red-600 text-white font-semibold rounded-lg">{isSubmitting ? 'Deleting...' : 'Delete Task'}</button></div></div></div>);
 };
-
 const TaskColumn = ({ title, tasks, onEdit, onDelete, onOpenDetails }) => {
     let titleColor = 'text-slate-600';
     if (title === 'To Do') titleColor = 'text-sky-600';
@@ -215,6 +202,11 @@ export default function PMDashboard({ pmUser, allUsers, initialTasks }) {
 }
 
 export async function getServerSideProps(context) {
+    const dbConnect = require('../../../lib/dbConnect').default;
+    const User = require('../../../models/User').default;
+    const Task = require('../../../models/Task').default;
+    const jwt = require('jsonwebtoken');
+
     await dbConnect();
     const { token } = context.req.cookies;
     if (!token) return { redirect: { destination: '/login', permanent: false } };
@@ -240,11 +232,12 @@ export async function getServerSideProps(context) {
                 { assignedBy: pmUser._id },
                 { assignedTo: { $in: teamMemberIds } }
             ]
-        }).populate('assignedTo', 'name avatar')
-          .populate('assignedBy', 'name avatar')
-          .populate('assistedBy', 'name avatar')
-          .populate({ path: 'attachments.uploadedBy', select: 'name' })
-          .sort({ 'status': 1, 'createdAt': -1 }).lean();
+        })
+        .populate('assignedTo', 'name avatar')
+        .populate('assignedBy', 'name avatar')
+        .populate('assistedBy', 'name avatar')
+        .populate({ path: 'attachments.uploadedBy', select: 'name' })
+        .sort({ 'createdAt': -1 }).lean();
         
         return { 
             props: { 
@@ -255,8 +248,7 @@ export async function getServerSideProps(context) {
         };
     } catch (error) {
         console.error("Error in PM dashboard getServerSideProps:", error);
-        // Clear the invalid cookie and redirect to login
         context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
         return { redirect: { destination: '/login', permanent: false } };
     }
-}
+} 
