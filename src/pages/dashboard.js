@@ -8,6 +8,10 @@ import toast, { Toaster } from 'react-hot-toast';
 import { Bar } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DndContext, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
 
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -137,67 +141,7 @@ const PersonalTaskModal = ({ onClose, onTaskCreated }) => {
             onClose();
         } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmitting(false); }
     };
-    return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-xl p-8 w-full max-w-lg"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold">Add Personal Task</h3><button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100"><X size={20} /></button></div><form onSubmit={handleSubmit} className="space-y-6">
-    {/* Task Title Input */}
-    <div>
-      <label htmlFor="title" className="block text-sm font-semibold text-slate-700">
-        Task Title <span className="text-red-500">*</span>
-      </label>
-      <input
-        id="title"
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400
-                   focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
-                   transition"
-        required
-      />
-    </div>
-
-    {/* Description Textarea */}
-    <div>
-      <label htmlFor="description" className="block text-sm font-semibold text-slate-700">
-        Description <span className="font-normal text-slate-500">(Optional)</span>
-      </label>
-      <textarea
-        id="description"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        rows={4}
-        className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400
-                   focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
-                   transition"
-      />
-    </div>
-
-    {/* Error Message */}
-    {error && <p className="text-sm text-red-600">{error}</p>}
-
-    {/* Action Buttons */}
-    <div className="pt-6 border-t border-slate-200 flex items-center justify-end gap-4">
-      <button
-        type="button"
-        onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition"
-      >
-        Cancel
-      </button>
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-md shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed transition"
-      >
-        {isSubmitting && (
-          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        )}
-        {isSubmitting ? 'Adding...' : 'Add Task'}
-      </button>
-    </div>
-  </form></motion.div></motion.div>);
+    return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-xl p-8 w-full max-w-lg"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold">Add Personal Task</h3><button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100"><X size={20} /></button></div><form onSubmit={handleSubmit} className="space-y-6"><div><label htmlFor="title" className="block text-sm font-semibold text-slate-700">Task Title <span className="text-red-500">*</span></label><input id="title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition" required /></div><div><label htmlFor="description" className="block text-sm font-semibold text-slate-700">Description <span className="font-normal text-slate-500">(Optional)</span></label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"/></div>{error && <p className="text-sm text-red-600">{error}</p>}<div className="pt-6 border-t border-slate-200 flex items-center justify-end gap-4"><button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition">Cancel</button><button type="submit" disabled={isSubmitting} className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-md shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed transition">{isSubmitting && (<svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>)}{isSubmitting ? 'Adding...' : 'Add Task'}</button></div></form></motion.div></motion.div>);
 };
 const WorkHoursChartCard = () => {
     const [hoursData, setHoursData] = useState({ totalHours: 0 });
@@ -219,44 +163,36 @@ const WorkHoursChartCard = () => {
         };
         fetchHours();
     }, [selectedMonth]);
-    const chartData = {
-        labels: ['Your Progress'],
-        datasets: [ { label: 'Hours Worked', data: [hoursData.totalHours], backgroundColor: 'rgba(34, 197, 94, 0.7)', barThickness: 50, borderRadius: 5 }, { label: 'Target Hours', data: [TARGET_HOURS], backgroundColor: 'rgba(226, 232, 240, 1)', barThickness: 50, borderRadius: 5 } ]
-    };
+    const chartData = { labels: ['Your Progress'], datasets: [ { label: 'Hours Worked', data: [hoursData.totalHours], backgroundColor: 'rgba(34, 197, 94, 0.7)', barThickness: 50, borderRadius: 5 }, { label: 'Target Hours', data: [TARGET_HOURS], backgroundColor: 'rgba(226, 232, 240, 1)', barThickness: 50, borderRadius: 5 } ] };
     const chartOptions = { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, title: { display: false } }, scales: { x: { stacked: true, max: TARGET_HOURS, ticks: { display: false }, grid: { display: false, drawBorder: false } }, y: { stacked: true, ticks: { display: false }, grid: { display: false, drawBorder: false } } } };
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
-            <div className="px-6 py-5 border-b border-slate-200/80">
-                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><BarChart2 className="text-green-600"/>Monthly Work Hours</h2>
-                <p className="text-sm text-slate-500">{selectedMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
-            </div>
-            <div className="p-6">
-                {isLoading ? <div className="h-24 flex items-center justify-center text-slate-400">Loading Chart...</div> : (
-                    <>
-                        <div className="relative h-10 w-full rounded-full overflow-hidden bg-slate-200"><Bar options={chartOptions} data={chartData} /></div>
-                        <div className="text-center mt-3">
-                            <p className="font-bold text-2xl text-green-600">{hoursData.totalHours.toFixed(1)} hours worked</p>
-                            <p className="text-sm text-slate-500">Monthly Goal: {TARGET_HOURS} hrs</p>
-                        </div>
-                    </>
-                )}
-            </div>
+            <div className="px-6 py-5 border-b border-slate-200/80"><h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><BarChart2 className="text-green-600"/>Monthly Work Hours</h2><p className="text-sm text-slate-500">{selectedMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</p></div>
+            <div className="p-6">{isLoading ? <div className="h-24 flex items-center justify-center text-slate-400">Loading Chart...</div> : (<><div className="relative h-10 w-full rounded-full overflow-hidden bg-slate-200"><Bar options={chartOptions} data={chartData} /></div><div className="text-center mt-3"><p className="font-bold text-2xl text-green-600">{hoursData.totalHours.toFixed(1)} hours worked</p><p className="text-sm text-slate-500">Monthly Goal: {TARGET_HOURS} hrs</p></div></>)}</div>
         </motion.div>
     );
 };
-const TaskCard = ({ task, onUpdateTaskStatus, onOpenSubmitModal }) => {
+const DraggableTaskCard = ({ task, onUpdateTaskStatus, onOpenSubmitModal }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task._id });
+    const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : 'auto', opacity: isDragging ? 0.8 : 1 };
+
     const deadlineInfo = getDeadlineInfo(task);
     const pmAttachments = task.attachments?.filter(att => att.uploadedBy?._id?.toString() === task.assignedBy?._id?.toString()) || [];
+    const isSelfAssigned = task.assignedBy?._id === task.assignedTo?._id;
+
     return (
-        <div className="p-4 border border-slate-200 bg-white rounded-lg transition-shadow hover:shadow-md">
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="p-4 border border-slate-200 bg-white rounded-lg transition-shadow hover:shadow-md touch-none">
             <div className="flex justify-between items-start gap-4">
-                <div><h4 className="font-semibold text-slate-800">{task.title}</h4><p className="text-sm text-slate-600 mt-1">{task.description}</p></div>
+                <div><h4 className="font-semibold text-slate-800">{task.title}</h4></div>
+                {isSelfAssigned && <span className="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">Personal</span>}
             </div>
+            {task.description && <p className="text-sm text-slate-600 mt-1 line-clamp-2">{task.description}</p>}
+            
             <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
                 <div className="flex items-center gap-2">
                     <Users size={14} className="text-slate-400 flex-shrink-0" />
                     <div className="flex items-center -space-x-2">
-                            <Image src={task.assignedTo?.avatar || '/default-avatar.png'} width={24} height={24} className="rounded-full object-cover aspect-square border-2 border-white ring-2 ring-indigo-500" alt={task.assignedTo?.name || ''} title={`Lead: ${task.assignedTo?.name}`} />
+                        <Image src={task.assignedTo?.avatar || '/default-avatar.png'} width={24} height={24} className="rounded-full object-cover aspect-square border-2 border-white ring-2 ring-indigo-500" alt={task.assignedTo?.name || ''} title={`Lead: ${task.assignedTo?.name}`} />
                         {task.assistedBy?.map(assistant => ( <Image key={assistant._id} src={assistant.avatar || '/default-avatar.png'} width={24} height={24} className="rounded-full object-cover aspect-square border-2 border-white" alt={assistant.name} title={`Assist: ${assistant.name}`} />))}
                     </div>
                 </div>
@@ -294,7 +230,15 @@ const TaskColumn = ({ title, tasks, onUpdateTaskStatus, onOpenSubmitModal }) => 
     return (
         <div className="bg-white/60 p-4 rounded-xl shadow-sm h-full flex flex-col">
             <h2 className={`font-bold text-lg mb-4 flex items-center gap-2 ${titleColor}`}>{icon}{title}<span className="text-sm font-mono bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">{tasks.length}</span></h2>
-            <div className="space-y-4 h-full overflow-y-auto pr-2 -mr-2">{tasks.length > 0 ? tasks.map(task => <TaskCard key={task._id} task={task} onUpdateTaskStatus={onUpdateTaskStatus} onOpenSubmitModal={onOpenSubmitModal} />) : <div className="text-center py-10"><Inbox className="mx-auto h-12 w-12 text-slate-300"/><p className="mt-2 text-sm text-slate-500">No tasks here.</p></div>}</div>
+             <SortableContext items={tasks.map(t => t._id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-4 h-full overflow-y-auto pr-2 -mr-2 rounded-lg">
+                    {tasks.length > 0 ? (
+                        tasks.map(task => <DraggableTaskCard key={task._id} task={task} onUpdateTaskStatus={onUpdateTaskStatus} onOpenSubmitModal={onOpenSubmitModal} />)
+                    ) : (
+                        <div className="text-center py-10"><Inbox className="mx-auto h-12 w-12 text-slate-300"/><p className="mt-2 text-sm text-slate-500">No tasks here.</p></div>
+                    )}
+                </div>
+            </SortableContext>
         </div>
     );
 };
@@ -303,43 +247,20 @@ const MyStatsWidget = ({ tasks, attendance }) => {
         const now = new Date();
         const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
         startOfWeek.setHours(0, 0, 0, 0);
-
-        const completedThisWeek = tasks.filter(task => 
-            task.status === 'Completed' && new Date(task.completedAt) >= startOfWeek
-        ).length;
-
-        const overdueTasks = tasks.filter(task => 
-            task.status !== 'Completed' && task.deadline && new Date(task.deadline) < new Date()
-        ).length;
-        
+        const completedThisWeek = tasks.filter(task => task.status === 'Completed' && new Date(task.completedAt) >= startOfWeek).length;
+        const overdueTasks = tasks.filter(task => task.status !== 'Completed' && task.deadline && new Date(task.deadline) < new Date()).length;
         const totalWorkSeconds = attendance.reduce((acc, att) => acc + (att.duration || 0), 0);
         const totalDays = attendance.length > 0 ? attendance.length : 1;
         const avgDailyHours = (totalWorkSeconds / 3600) / totalDays;
-
         return { completedThisWeek, overdueTasks, avgDailyHours };
     }, [tasks, attendance]);
-
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
-            <div className="px-6 py-5 border-b border-slate-200/80">
-                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><TrendingUp className="text-green-600"/>My Weekly Stats</h2>
-            </div>
+            <div className="px-6 py-5 border-b border-slate-200/80"><h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><TrendingUp className="text-green-600"/>My Weekly Stats</h2></div>
             <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-600">Tasks Completed</span>
-                    <span className="font-bold text-lg text-green-600">{stats.completedThisWeek}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-600">Avg. Daily Hours</span>
-                    <span className="font-bold text-lg text-slate-800">{stats.avgDailyHours.toFixed(1)} hrs</span>
-                </div>
-                <div className={`flex items-center justify-between p-3 rounded-lg ${stats.overdueTasks > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
-                    <span className={`font-semibold ${stats.overdueTasks > 0 ? 'text-red-600' : 'text-slate-600'}`}>Overdue Tasks</span>
-                    <span className={`font-bold text-lg flex items-center gap-2 ${stats.overdueTasks > 0 ? 'text-red-600' : 'text-slate-800'}`}>
-                        {stats.overdueTasks > 0 && <AlertOctagon size={16} />}
-                        {stats.overdueTasks}
-                    </span>
-                </div>
+                <div className="flex items-center justify-between"><span className="font-medium text-slate-600">Tasks Completed</span><span className="font-bold text-lg text-green-600">{stats.completedThisWeek}</span></div>
+                <div className="flex items-center justify-between"><span className="font-medium text-slate-600">Avg. Daily Hours</span><span className="font-bold text-lg text-slate-800">{stats.avgDailyHours.toFixed(1)} hrs</span></div>
+                <div className={`flex items-center justify-between p-3 rounded-lg ${stats.overdueTasks > 0 ? 'bg-red-50' : 'bg-slate-50'}`}><span className={`font-semibold ${stats.overdueTasks > 0 ? 'text-red-600' : 'text-slate-600'}`}>Overdue Tasks</span><span className={`font-bold text-lg flex items-center gap-2 ${stats.overdueTasks > 0 ? 'text-red-600' : 'text-slate-800'}`}>{stats.overdueTasks > 0 && <AlertOctagon size={16} />}{stats.overdueTasks}</span></div>
             </div>
         </motion.div>
     );
@@ -410,7 +331,12 @@ export default function Dashboard({ user }) {
   }, [fetchDashboardData]);
 
   const unreadNotifications = useMemo(() => notifications.filter(n => !n.isRead), [notifications]);
-  const taskColumns = useMemo(() => { const columns = { 'To Do': [], 'In Progress': [], 'Completed': [] }; tasks.forEach(task => { if(columns[task.status]) columns[task.status].push(task) }); columns['Completed'].sort((a,b) => new Date(b.completedAt) - new Date(a.completedAt)); return columns; }, [tasks]);
+  const taskColumns = useMemo(() => {
+    const columns = { 'To Do': [], 'In Progress': [], 'Completed': [] };
+    tasks.forEach(task => { if (columns[task.status]) columns[task.status].push(task); });
+    columns['Completed'].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+    return columns;
+  }, [tasks]);
   
   useEffect(() => { const handleScroll = () => setIsScrolled(window.scrollY > 10); window.addEventListener('scroll', handleScroll); return () => window.removeEventListener('scroll', handleScroll); }, []);
   useEffect(() => { if (checkInTime) { const timer = setInterval(() => setElapsedTime(formatElapsedTime(checkInTime)), 1000); return () => clearInterval(timer); } else { setElapsedTime(''); } }, [checkInTime]);
@@ -430,6 +356,59 @@ export default function Dashboard({ user }) {
   const handleDeleteNote = async (noteId) => { if (!window.confirm('Are you sure you want to delete this note?')) return; setError(''); try { const res = await fetch('/api/notes/delete', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ noteId }), }); if (!res.ok) throw new Error(await handleApiError(res)); setNotes(prevNotes => prevNotes.filter(n => n._id !== noteId)); toast.success('Note deleted.'); } catch (err) { setError(err.message); toast.error(err.message); }};
   const handleMarkAsRead = async () => { if (unreadNotifications.length === 0) return; try { await fetch('/api/notification/mark-as-read', { method: 'POST' }); setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))); } catch (err) { console.error(err); toast.error("Failed to mark notifications as read."); } };
 
+  const sensors = useSensors(useSensor(PointerSensor, {
+    activationConstraint: { distance: 8 },
+  }));
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+    
+    const activeTask = tasks.find(t => t._id === active.id);
+    const overTask = tasks.find(t => t._id === over.id);
+
+    if (!activeTask || !overTask) return;
+    
+    const sourceStatus = activeTask.status;
+    const destinationStatus = overTask.status;
+
+    if (sourceStatus === destinationStatus) return; // No status change, do nothing.
+    
+    if (destinationStatus === 'Completed') {
+        toast.error('Please use the "Submit Work" button to complete a task.');
+        return;
+    }
+    if (sourceStatus === 'Completed') {
+        toast.error('Completed tasks cannot be moved.');
+        return;
+    }
+    
+    // Optimistic UI Update
+    const originalTasks = [...tasks];
+    const updatedTasks = tasks.map(t =>
+        t._id === active.id ? { ...t, status: destinationStatus } : t
+    );
+    setTasks(updatedTasks);
+    
+    // API Call
+    try {
+        const res = await fetch('/api/tasks/update-status', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ taskId: active.id, newStatus: destinationStatus }),
+        });
+        
+        if (!res.ok) throw new Error(await handleApiError(res));
+        
+        toast.success(`Task moved to "${destinationStatus}"`);
+        await fetchDashboardData(); // Refresh to ensure data consistency
+    } catch (err) {
+        toast.error(err.message);
+        setTasks(originalTasks); // Revert on failure
+    }
+  };
+
   return (
     <>
       <Toaster position="top-center" />
@@ -442,12 +421,7 @@ export default function Dashboard({ user }) {
       </AnimatePresence>
       <AnimatePresence>
           {!isDesktop && isNotificationOpen && (
-              <MobileNotificationPanel
-                  notifications={notifications}
-                  unreadCount={unreadNotifications.length}
-                  handleMarkAsRead={handleMarkAsRead}
-                  onClose={() => setIsNotificationOpen(false)}
-              />
+              <MobileNotificationPanel notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />
           )}
       </AnimatePresence>
 
@@ -455,26 +429,7 @@ export default function Dashboard({ user }) {
         <div className="w-full h-full absolute inset-0 bg-slate-100 overflow-hidden"><div className="absolute top-0 -left-48 w-[40rem] h-[40rem] bg-green-200/50 rounded-full filter blur-3xl opacity-40 animate-blob"></div><div className="absolute top-0 -right-48 w-[40rem] h-[40rem] bg-sky-200/50 rounded-full filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div><div className="absolute bottom-0 left-1/4 w-[40rem] h-[40rem] bg-rose-200/50 rounded-full filter blur-3xl opacity-40 animate-blob animation-delay-4000"></div></div>
         <div className="relative z-10">
           <header className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-xl shadow-md' : 'bg-white/50'}`}>
-              <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8"><div className="flex justify-between items-center h-20"><div className="flex items-center space-x-4"><Link href="/dashboard" className="flex items-center space-x-3"><Image src="/geckoworks.png" alt="GeckoWorks Logo" width={42} height={42} className="rounded-full" /><h1 className="text-xl font-bold text-slate-900 tracking-tight">{user.name.split(' ')[0]}&apos;s Dashboard</h1></Link></div><div className="flex items-center space-x-2 sm:space-x-4"><div className="hidden md:flex items-center space-x-4 text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full"><div className="flex items-center space-x-2"><Calendar className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span></div><div className="h-4 w-px bg-slate-300"></div><div className="flex items-center space-x-2"><Clock className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div></div>
-              
-              <div ref={notificationDropdownRef} className="relative">
-                  <button onClick={() => setIsNotificationOpen(prev => !prev)} className="relative p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" title="Notifications">
-                      <Bell className="h-6 w-6"/>
-                      {unreadNotifications.length > 0 && (<span className="absolute top-1.5 right-1.5 flex h-5 w-5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">{unreadNotifications.length}</span></span>)}
-                  </button>
-                  <AnimatePresence>
-                      {isDesktop && isNotificationOpen && (
-                          <DesktopNotificationPanel
-                              notifications={notifications}
-                              unreadCount={unreadNotifications.length}
-                              handleMarkAsRead={handleMarkAsRead}
-                              onClose={() => setIsNotificationOpen(false)}
-                          />
-                      )}
-                  </AnimatePresence>
-              </div>
-
-              <div ref={userDropdownRef} className="relative"><button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 bg-white pl-1 pr-2 py-1 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"><Image src={profileUser.avatar} alt={profileUser.name} width={36} height={36} className="rounded-full object-cover aspect-square"/><span className="font-semibold text-sm text-slate-700 hidden sm:block">{profileUser.name.split(' ')[0]}</span><ChevronDown className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} /></button><AnimatePresence>{isDropdownOpen && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className={`absolute top-full right-0 mt-3 w-64 rounded-xl shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-20 origin-top-right`}><div className="p-4 border-b border-slate-100"><div className="flex items-center space-x-4"><Image src={profileUser.avatar} alt={profileUser.name} width={48} height={48} className="rounded-full object-cover aspect-square"/><div><p className="font-bold text-slate-800 truncate">{profileUser.name}</p><p className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full inline-block mt-1">{profileUser.role}</p></div></div></div><div className="p-2"><Link href="/leaves" className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/80 hover:text-green-600 flex items-center gap-3 transition-colors rounded-md"><FileText className="h-5 w-5" /><span>My Leave Requests</span></Link><button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-3 transition-colors rounded-md"><LogOut className="h-5 w-5" /><span>Sign Out</span></button></div></motion.div>)}</AnimatePresence></div></div></div></div>
+              <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8"><div className="flex justify-between items-center h-20"><div className="flex items-center space-x-4"><Link href="/dashboard" className="flex items-center space-x-3"><Image src="/geckoworks.png" alt="GeckoWorks Logo" width={42} height={42} className="rounded-full" /><h1 className="text-xl font-bold text-slate-900 tracking-tight">{user.name.split(' ')[0]}&apos;s Dashboard</h1></Link></div><div className="flex items-center space-x-2 sm:space-x-4"><div className="hidden md:flex items-center space-x-4 text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full"><div className="flex items-center space-x-2"><Calendar className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span></div><div className="h-4 w-px bg-slate-300"></div><div className="flex items-center space-x-2"><Clock className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div></div><div ref={notificationDropdownRef} className="relative"><button onClick={() => setIsNotificationOpen(prev => !prev)} className="relative p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" title="Notifications"><Bell className="h-6 w-6"/>{unreadNotifications.length > 0 && (<span className="absolute top-1.5 right-1.5 flex h-5 w-5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">{unreadNotifications.length}</span></span>)}</button><AnimatePresence>{isDesktop && isNotificationOpen && (<DesktopNotificationPanel notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />)}</AnimatePresence></div><div ref={userDropdownRef} className="relative"><button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 bg-white pl-1 pr-2 py-1 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"><Image src={profileUser.avatar} alt={profileUser.name} width={36} height={36} className="rounded-full object-cover aspect-square"/><span className="font-semibold text-sm text-slate-700 hidden sm:block">{profileUser.name.split(' ')[0]}</span><ChevronDown className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} /></button><AnimatePresence>{isDropdownOpen && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className={`absolute top-full right-0 mt-3 w-64 rounded-xl shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-20 origin-top-right`}><div className="p-4 border-b border-slate-100"><div className="flex items-center space-x-4"><Image src={profileUser.avatar} alt={profileUser.name} width={48} height={48} className="rounded-full object-cover aspect-square"/><div><p className="font-bold text-slate-800 truncate">{profileUser.name}</p><p className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full inline-block mt-1">{profileUser.role}</p></div></div></div><div className="p-2"><Link href="/leaves" className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/80 hover:text-green-600 flex items-center gap-3 transition-colors rounded-md"><FileText className="h-5 w-5" /><span>My Leave Requests</span></Link><button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-3 transition-colors rounded-md"><LogOut className="h-5 w-5" /><span>Sign Out</span></button></div></motion.div>)}</AnimatePresence></div></div></div></div>
           </header>
 
           <main className={`max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10`}>
@@ -492,29 +447,31 @@ export default function Dashboard({ user }) {
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
                             <div className="px-6 py-5 border-b border-slate-200/80 flex justify-between items-center">
                                 <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><Briefcase className="text-green-600"/>My Task Board</h2>
-                                <button onClick={() => setIsPersonalTaskModalOpen(true)} className="flex items-center gap-2 text-sm font-semibold bg-green-200 text-green-600 px-3 py-2 rounded-lg hover:bg-indigo-200 transition-colors">
+                                <button onClick={() => setIsPersonalTaskModalOpen(true)} className="flex items-center gap-2 text-sm font-semibold bg-green-200 text-green-800 px-3 py-2 rounded-lg hover:bg-indigo-200 transition-colors">
                                     <Plus size={16} /> Add Personal Task
                                 </button>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-                                <TaskColumn title="To Do" tasks={taskColumns['To Do']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} />
-                                <TaskColumn title="In Progress" tasks={taskColumns['In Progress']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} />
-                                <div className="bg-white/60 p-4 rounded-xl shadow-sm">
-                                    <h2 className={`font-bold text-lg mb-4 flex items-center gap-2 text-green-800`}><CheckCircle size={16} className="text-green-600"/>Completed<span className="text-sm font-mono bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">{taskColumns['Completed'].length}</span></h2>
-                                    <div className="space-y-4 h-full overflow-y-auto pr-2 -mr-2">
-                                        {taskColumns['Completed'].length > 0 ? (
-                                        <>
-                                            {taskColumns['Completed'].slice(0, 2).map(task => <CompletedTaskCard key={task._id} task={task} />)}
-                                            {taskColumns['Completed'].length > 2 && (
-                                                <Link href="/tasks/completed" className="block text-center mt-4 py-2 text-sm font-semibold text-green-600 hover:text-indigo-800 bg-slate-100 hover:bg-slate-200 rounded-lg">
-                                                    View All {taskColumns['Completed'].length} Completed Tasks
-                                                </Link>
-                                            )}
-                                        </>
-                                        ) : (<div className="text-center py-10"><Star className="mx-auto h-12 w-12 text-slate-300"/><p className="mt-2 text-sm text-slate-500">No tasks completed yet.</p></div>)}
+                            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                                    <TaskColumn title="To Do" tasks={taskColumns['To Do']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} />
+                                    <TaskColumn title="In Progress" tasks={taskColumns['In Progress']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} />
+                                    <div className="bg-white/60 p-4 rounded-xl shadow-sm">
+                                        <h2 className={`font-bold text-lg mb-4 flex items-center gap-2 text-green-800`}><CheckCircle size={16} className="text-green-600"/>Completed<span className="text-sm font-mono bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">{taskColumns['Completed'].length}</span></h2>
+                                        <div className="space-y-4 h-full overflow-y-auto pr-2 -mr-2">
+                                            {taskColumns['Completed'].length > 0 ? (
+                                            <>
+                                                {taskColumns['Completed'].slice(0, 2).map(task => <CompletedTaskCard key={task._id} task={task} />)}
+                                                {taskColumns['Completed'].length > 2 && (
+                                                    <Link href="/tasks/completed" className="block text-center mt-4 py-2 text-sm font-semibold text-green-600 hover:text-indigo-800 bg-slate-100 hover:bg-slate-200 rounded-lg">
+                                                        View All {taskColumns['Completed'].length} Completed Tasks
+                                                    </Link>
+                                                )}
+                                            </>
+                                            ) : (<div className="text-center py-10"><Star className="mx-auto h-12 w-12 text-slate-300"/><p className="mt-2 text-sm text-slate-500">No tasks completed yet.</p></div>)}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </DndContext>
                         </div>
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
                             <div className="px-6 py-5 border-b border-slate-200/80"><h2 className="text-xl font-semibold text-slate-800">Attendance History</h2></div>
