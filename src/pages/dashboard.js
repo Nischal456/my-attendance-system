@@ -781,8 +781,70 @@ export default function Dashboard({ user }) {
         <div className="w-full h-full absolute inset-0 bg-slate-100 overflow-hidden"><div className="absolute top-0 -left-48 w-[40rem] h-[40rem] bg-green-200/50 rounded-full filter blur-3xl opacity-40 animate-blob"></div><div className="absolute top-0 -right-48 w-[40rem] h-[40rem] bg-sky-200/50 rounded-full filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div><div className="absolute bottom-0 left-1/4 w-[40rem] h-[40rem] bg-rose-200/50 rounded-full filter blur-3xl opacity-40 animate-blob animation-delay-4000"></div></div>
         <div className="relative z-10">
           <header className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-xl shadow-md' : 'bg-white/50'}`}>
-              <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8"><div className="flex justify-between items-center h-20"><div className="flex items-center space-x-4"><Link href="/dashboard" className="flex items-center space-x-3"><Image src="/geckoworks.png" alt="GeckoWorks Logo" width={42} height={42} className="rounded-full" style={{ height: 'auto', width: 'auto' }} /><h1 className="text-xl font-bold text-slate-900 tracking-tight">{user.name.split(' ')[0]}&apos;s Dashboard</h1></Link></div><div className="flex items-center space-x-2 sm:space-x-4"><div className="hidden md:flex items-center space-x-4 text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full"><div className="flex items-center space-x-2"><Calendar className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span></div><div className="h-4 w-px bg-slate-300"></div><div className="flex items-center space-x-2"><Clock className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div></div><div ref={notificationDropdownRef} className="relative"><button onClick={() => setIsNotificationOpen(prev => !prev)} className="relative p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" title="Notifications"><Bell className="h-6 w-6"/>{unreadNotifications.length > 0 && (<span className="absolute top-1.5 right-1.5 flex h-5 w-5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">{unreadNotifications.length}</span></span>)}</button><AnimatePresence>{isDesktop && isNotificationOpen && (<DesktopNotificationPanel notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />)}</AnimatePresence></div><div ref={userDropdownRef} className="relative"><button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 bg-white pl-1 pr-2 py-1 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"><Image src={profileUser.avatar} alt={profileUser.name} width={36} height={36} className="rounded-full object-cover aspect-square"/><span className="font-semibold text-sm text-slate-700 hidden sm:block">{profileUser.name.split(' ')[0]}</span><ChevronDown className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} /></button><AnimatePresence>{isDropdownOpen && (<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className={`absolute top-full right-0 mt-3 w-64 rounded-xl shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-20 origin-top-right`}><div className="p-4 border-b border-slate-100"><div className="flex items-center space-x-4"><Image src={profileUser.avatar} alt={profileUser.name} width={48} height={48} className="rounded-full object-cover aspect-square"/><div><p className="font-bold text-slate-800 truncate">{profileUser.name}</p><p className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full inline-block mt-1">{profileUser.role}</p></div></div></div><div className="p-2"><Link href="/leaves" className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/80 hover:text-green-600 flex items-center gap-3 transition-colors rounded-md"><FileText className="h-5 w-5" /><span>My Leave Requests</span></Link><button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-3 transition-colors rounded-md"><LogOut className="h-5 w-5" /><span>Sign Out</span></button></div></motion.div>)}</AnimatePresence></div></div></div></div>
-          </header>
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-20">
+            <div className="flex items-center space-x-4">
+                <Link href="/dashboard" className="flex items-center space-x-3">
+                    <Image src="/geckoworks.png" alt="GeckoWorks Logo" width={42} height={42} className="rounded-full" style={{ height: 'auto', width: 'auto' }} />
+                    <h1 className="text-xl font-bold text-slate-900 tracking-tight">{user.name.split(' ')[0]}&apos;s Dashboard</h1>
+                </Link>
+            </div>
+            <div className="flex items-center space-x-2 sm:space-x-4">
+                <div className="hidden md:flex items-center space-x-4 text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full">
+                    <div className="flex items-center space-x-2"><Calendar className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span></div>
+                    <div className="h-4 w-px bg-slate-300"></div>
+                    <div className="flex items-center space-x-2"><Clock className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+                </div>
+                <div ref={notificationDropdownRef} className="relative">
+                    <button onClick={() => setIsNotificationOpen(prev => !prev)} className="relative p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" title="Notifications">
+                        <Bell className="h-6 w-6"/>
+                        {unreadNotifications.length > 0 && (<span className="absolute top-1.5 right-1.5 flex h-5 w-5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">{unreadNotifications.length}</span></span>)}
+                    </button>
+                    <AnimatePresence>
+                        {isDesktop && isNotificationOpen && (<DesktopNotificationPanel notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />)}
+                    </AnimatePresence>
+                </div>
+                <div ref={userDropdownRef} className="relative">
+                    <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 bg-white pl-1 pr-2 py-1 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        <Image src={profileUser.avatar} alt={profileUser.name} width={36} height={36} className="rounded-full object-cover aspect-square"/>
+                        <span className="font-semibold text-sm text-slate-700 hidden sm:block">{profileUser.name.split(' ')[0]}</span>
+                        <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    <AnimatePresence>
+                        {isDropdownOpen && (
+                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className={`absolute top-full right-0 mt-3 w-64 rounded-xl shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-20 origin-top-right`}>
+                                <div className="p-4 border-b border-slate-100">
+                                    <div className="flex items-center space-x-4">
+                                        <Image src={profileUser.avatar} alt={profileUser.name} width={48} height={48} className="rounded-full object-cover aspect-square"/>
+                                        <div>
+                                            <p className="font-bold text-slate-800 truncate">{profileUser.name}</p>
+                                            <p className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full inline-block mt-1">{profileUser.role}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-2">
+                                    {/* ✅ NEW LINK ADDED HERE */}
+                                    <Link href="/performance" className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/80 hover:text-green-600 flex items-center gap-3 transition-colors rounded-md">
+                                        <TrendingUp className="h-5 w-5" />
+                                        <span>My Performance</span>
+                                    </Link>
+                                    <Link href="/leaves" className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/80 hover:text-green-600 flex items-center gap-3 transition-colors rounded-md">
+                                        <FileText className="h-5 w-5" />
+                                        <span>My Leave Requests</span>
+                                    </Link>
+                                    <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-3 transition-colors rounded-md">
+                                        <LogOut className="h-5 w-5" />
+                                        <span>Sign Out</span>
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
 
           <main className={`max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10`}>
              {isDataLoading ? <DashboardSkeleton /> : (
