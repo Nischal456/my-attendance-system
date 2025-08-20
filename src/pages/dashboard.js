@@ -30,29 +30,29 @@ const useMediaQuery = (query) => {
     return matches;
 };
 
-const formatEnglishDate = (dateString, includeTime = false) => { 
-    if (!dateString) return '-'; 
-    const date = new Date(dateString); 
-    const options = { year: 'numeric', month: 'long', day: 'numeric' }; 
-    if (includeTime) { 
-        options.hour = 'numeric'; 
-        options.minute = '2-digit'; 
-        options.hour12 = true; 
-    } 
-    return date.toLocaleDateString('en-US', options); 
+const formatEnglishDate = (dateString, includeTime = false) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    if (includeTime) {
+        options.hour = 'numeric';
+        options.minute = '2-digit';
+        options.hour12 = true;
+    }
+    return date.toLocaleDateString('en-US', options);
 };
 const formatDuration = (totalSeconds) => { if (totalSeconds === null || totalSeconds === undefined || totalSeconds < 0) return '0m'; if (totalSeconds < 60) return `${totalSeconds}s`; const hours = Math.floor(totalSeconds / 3600); const minutes = Math.floor((totalSeconds % 3600) / 60); const parts = []; if (hours > 0) parts.push(`${hours}h`); if (minutes > 0) parts.push(`${minutes}m`); return parts.join(' ') || '0m'; };
 const formatElapsedTime = (startTime) => { if (!startTime) return '00:00:00'; const now = new Date(); const start = new Date(startTime); const seconds = Math.floor((now - start) / 1000); if (seconds < 0) return '00:00:00'; const h = Math.floor(seconds / 3600).toString().padStart(2, '0'); const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0'); const s = (seconds % 60).toString().padStart(2, '0'); return `${h}:${m}:${s}`; };
-const formatDeadline = (dateString) => { 
-    if (!dateString) return 'No deadline'; 
-    return new Date(dateString).toLocaleString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        hour12: true 
-    }); 
+const formatDeadline = (dateString) => {
+    if (!dateString) return 'No deadline';
+    return new Date(dateString).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
 };
 const MIN_WORK_SECONDS = 21600; // 6 hours
 const getStatusPill = (status) => { switch (status) { case 'In Progress': return 'bg-amber-100 text-amber-800'; case 'Completed': return 'bg-green-100 text-green-800'; default: return 'bg-sky-100 text-sky-800'; } };
@@ -61,6 +61,14 @@ const handleApiError = async (response) => { const contentType = response.header
 const getSenderUI = (author) => { const lowerCaseAuthor = author?.toLowerCase() || ''; if (lowerCaseAuthor.includes('hr')) return { Icon: UserIcon, iconBg: 'bg-rose-100 text-rose-600' }; if (lowerCaseAuthor.includes('project manager')) return { Icon: Briefcase, iconBg: 'bg-purple-100 text-purple-600' }; if (lowerCaseAuthor.includes('finance')) return { Icon: DollarSign, iconBg: 'bg-emerald-100 text-emerald-600' }; return { Icon: Info, iconBg: 'bg-blue-100 text-blue-600' }; };
 
 // --- Reusable & Sub-Components ---
+
+const ButtonLoader = () => (
+    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+);
+
 const NotificationContent = ({ notifications, onLinkClick }) => (
     <>
         {notifications.length > 0 ? (
@@ -146,75 +154,75 @@ const SubmitWorkModal = ({ task, onClose, onWorkSubmitted }) => {
         } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmitting(false); }
     };
     return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-xl p-8 w-full max-w-lg"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold">Submit Work</h3><button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100"><X size={20} /></button></div><p className="text-sm text-slate-500 mb-6">For task: <span className="font-semibold text-slate-700">"{task.title}"</span></p><form
-  onSubmit={handleSubmit}
-  className="space-y-6 p-6 bg-white rounded-xl shadow-xl max-w-2xl mx-auto animate-fade-in"
+    onSubmit={handleSubmit}
+    className="space-y-6"
 >
-  <div>
-    <label
-      htmlFor="submissionDescription"
-      className="block text-sm font-medium text-slate-700"
-    >
-      Work Description <span className="text-red-500">*</span>
-    </label>
-    <textarea
-      id="submissionDescription"
-      value={description}
-      onChange={(e) => setDescription(e.target.value)}
-      rows={4}
-      required
-      className="mt-2 w-full border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
-      placeholder="Describe the task or work completed..."
-    />
-  </div>
-  <div>
-    <label className="block text-sm font-medium text-slate-700">
-      Attach Files <span className="text-slate-400 text-xs">(optional)</span>
-    </label>
-    <input
-      type="file"
-      multiple
-      onChange={handleFileChange}
-      className="mt-2 block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-slate-200 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-300 transition"
-    />
-  </div>
-  {attachments.length > 0 && (
     <div>
-      <p className="text-sm font-semibold text-slate-600">Selected Files:</p>
-      <div className="flex flex-wrap gap-2 mt-2">
-        {attachments.map((f, i) => (
-          <span
-            key={i}
-            className="bg-green-50 text-green-800 px-3 py-1 text-xs rounded-full border border-green-200 shadow-sm"
-          >
-            {f.filename}
-          </span>
-        ))}
-      </div>
+        <label
+            htmlFor="submissionDescription"
+            className="block text-sm font-medium text-slate-700"
+        >
+            Work Description <span className="text-red-500">*</span>
+        </label>
+        <textarea
+            id="submissionDescription"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            required
+            className="mt-2 w-full border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+            placeholder="Describe the task or work completed..."
+        />
     </div>
-  )}
-  {error && (
-    <p className="text-sm text-red-600 font-medium">{error}</p>
-  )}
-  <div className="pt-6 border-t flex justify-end gap-4">
-    <button
-      type="button"
-      onClick={onClose}
-      className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition"
-    >
-      Cancel
-    </button>
-    <button
-      type="submit"
-      disabled={isSubmitting}
-      className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg flex items-center gap-2 transition"
-    >
-      {isSubmitting ? (
-        <span className="animate-pulse">Submitting...</span>
-      ) : (
-        "Submit & Complete"
-      )}
-    </button>
-  </div>
+    <div>
+        <label className="block text-sm font-medium text-slate-700">
+            Attach Files <span className="text-slate-400 text-xs">(optional)</span>
+        </label>
+        <input
+            type="file"
+            multiple
+            onChange={handleFileChange}
+            className="mt-2 block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-slate-200 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-300 transition"
+        />
+    </div>
+    {attachments.length > 0 && (
+        <div>
+            <p className="text-sm font-semibold text-slate-600">Selected Files:</p>
+            <div className="flex flex-wrap gap-2 mt-2">
+                {attachments.map((f, i) => (
+                    <span
+                        key={i}
+                        className="bg-green-50 text-green-800 px-3 py-1 text-xs rounded-full border border-green-200 shadow-sm"
+                    >
+                        {f.filename}
+                    </span>
+                ))}
+            </div>
+        </div>
+    )}
+    {error && (
+        <p className="text-sm text-red-600 font-medium">{error}</p>
+    )}
+    <div className="pt-6 border-t flex justify-end gap-4">
+        <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition"
+        >
+            Cancel
+        </button>
+        <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg flex items-center gap-2 transition"
+        >
+            {isSubmitting ? (
+                <span className="animate-pulse">Submitting...</span>
+            ) : (
+                "Submit & Complete"
+            )}
+        </button>
+    </div>
 </form>
 </motion.div></motion.div>);
 };
@@ -595,6 +603,9 @@ export default function Dashboard({ user }) {
   const [checkInTime, setCheckInTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState('');
   const [isOnBreak, setIsOnBreak] = useState(false);
+  const [activeBreakStartTime, setActiveBreakStartTime] = useState(null);
+  const [elapsedBreakTime, setElapsedBreakTime] = useState('');
+  const [loadingStates, setLoadingStates] = useState({});
   const [currentTime, setCurrentTime] = useState(new Date());
   const [tasks, setTasks] = useState([]);
   const [profileUser, setProfileUser] = useState(user);
@@ -609,7 +620,6 @@ export default function Dashboard({ user }) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [taskToSubmit, setTaskToSubmit] = useState(null);
   const [isPersonalTaskModalOpen, setIsPersonalTaskModalOpen] = useState(false);
-  const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
   const [selectedTaskDetails, setSelectedTaskDetails] = useState(null);
   
   const notificationDropdownRef = useRef(null);
@@ -630,11 +640,13 @@ export default function Dashboard({ user }) {
               setCheckInTime(data.activeCheckIn.checkInTime);
               setDescription(data.activeCheckIn.description || '');
               setIsOnBreak(data.initialIsOnBreak);
+              setActiveBreakStartTime(data.activeBreakStartTime);
           } else {
               setActiveAttendance(null);
               setCheckInTime(null);
               setDescription('');
               setIsOnBreak(false);
+              setActiveBreakStartTime(null);
           }
       } catch (err) {
           setError(err.message);
@@ -660,6 +672,17 @@ export default function Dashboard({ user }) {
   useEffect(() => { const handleScroll = () => setIsScrolled(window.scrollY > 10); window.addEventListener('scroll', handleScroll); return () => window.removeEventListener('scroll', handleScroll); }, []);
   useEffect(() => { if (checkInTime) { const timer = setInterval(() => setElapsedTime(formatElapsedTime(checkInTime)), 1000); return () => clearInterval(timer); } else { setElapsedTime(''); } }, [checkInTime]);
   useEffect(() => { const timer = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(timer); }, []);
+ 
+  useEffect(() => {
+    if (isOnBreak && activeBreakStartTime) {
+        const timer = setInterval(() => {
+            setElapsedBreakTime(formatElapsedTime(activeBreakStartTime));
+        }, 1000);
+        return () => clearInterval(timer);
+    } else {
+        setElapsedBreakTime('');
+    }
+  }, [isOnBreak, activeBreakStartTime]);
   
   useEffect(() => {
     function handleClickOutside(event) {
@@ -674,60 +697,56 @@ export default function Dashboard({ user }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   
-  const handleCheckIn = async (location) => {
-    setIsAttendanceLoading(true);
-    toast.loading(`Checking in from ${location}...`);
+  const handleAction = async (action, actionFn, successMessage) => {
+    setLoadingStates(prev => ({ ...prev, [action]: true }));
+    const toastId = toast.loading(`Processing...`);
     try {
-        const res = await fetch('/api/attendance/checkin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ workLocation: location })
-        });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.message);
-        
-        setActiveAttendance(result.data);
-        setCheckInTime(result.data.checkInTime);
-        setAttendance(prev => [result.data, ...prev]);
-        toast.dismiss();
-        toast.success(result.message);
+        await actionFn();
+        toast.success(successMessage, { id: toastId });
     } catch (err) {
-        toast.dismiss();
-        toast.error(err.message || 'Failed to check in.');
+        toast.error(err.message || `Failed to process ${action}.`, { id: toastId });
     } finally {
-        setIsAttendanceLoading(false);
+        setLoadingStates(prev => ({ ...prev, [action]: false }));
     }
   };
 
-  const handleCheckOut = async () => { 
-    if (!description.trim()) { 
-      toast.error('Work description is required.'); 
-      return; 
-    } 
-    setIsAttendanceLoading(true); 
-    try { 
-      const res = await fetch('/api/attendance/checkout', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ description, attendanceId: activeAttendance._id }), 
-      }); 
-      if (!res.ok) throw new Error(await handleApiError(res)); 
-      const { data } = await res.json(); 
-      setActiveAttendance(null); 
-      setCheckInTime(null); 
-      setDescription(''); 
-      setIsOnBreak(false); 
-      setAttendance(prev => prev.map(att => att._id === data._id ? data : att)); 
-      toast.success("Checked out successfully!"); 
-    } catch (err) { 
-      toast.error(err.message); 
-    } finally { 
-      setIsAttendanceLoading(false); 
-    } 
-  };
+  const handleCheckIn = (location) => handleAction(`check-in`, async () => {
+    const res = await fetch('/api/attendance/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workLocation: location })
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message);
+    
+    setActiveAttendance(result.data);
+    setCheckInTime(result.data.checkInTime);
+    setAttendance(prev => [result.data, ...prev]);
+  }, `Checked in from ${location}!`);
 
-  const handleBreakIn = async () => { setIsAttendanceLoading(true); try { const res = await fetch('/api/attendance/break-in', { method: 'POST' }); if (!res.ok) throw new Error(await handleApiError(res)); setIsOnBreak(true); toast.success("Break started.");} catch (err) { toast.error(err.message);} finally { setIsAttendanceLoading(false); } };
-  const handleBreakOut = async () => { setIsAttendanceLoading(true); try { const res = await fetch('/api/attendance/break-out', { method: 'POST' }); if (!res.ok) throw new Error(await handleApiError(res)); setIsOnBreak(false); toast.success("Resumed work.");} catch (err) { toast.error(err.message);} finally { setIsAttendanceLoading(false); } };
+  const handleCheckOut = () => handleAction('checkout', async () => {
+    if (!description.trim()) throw new Error('Work description is required.');
+    const res = await fetch('/api/attendance/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description, attendanceId: activeAttendance._id }) });
+    if (!res.ok) throw new Error(await handleApiError(res));
+    const { data } = await res.json();
+    setActiveAttendance(null); setCheckInTime(null); setDescription(''); setIsOnBreak(false); setActiveBreakStartTime(null);
+    setAttendance(prev => prev.map(att => att._id === data._id ? data : att));
+  }, 'Checked out successfully!');
+  
+  const handleBreakIn = () => handleAction('break-in', async () => {
+    const res = await fetch('/api/attendance/break-in', { method: 'POST' });
+    if (!res.ok) throw new Error(await handleApiError(res));
+    setIsOnBreak(true);
+    await fetchDashboardData(); // Re-fetch to get the break start time
+  }, 'Break started.');
+  
+  const handleBreakOut = () => handleAction('break-out', async () => {
+    const res = await fetch('/api/attendance/break-out', { method: 'POST' });
+    if (!res.ok) throw new Error(await handleApiError(res));
+    setIsOnBreak(false);
+    setActiveBreakStartTime(null);
+  }, 'Resumed work.');
+
   const handleLogout = async () => { await fetch('/api/auth/logout'); router.push('/login'); };
   const handleUpdateTaskStatus = async (taskId, newStatus) => { setError(''); try { const res = await fetch('/api/tasks/update-status', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId, newStatus }), }); if (!res.ok) throw new Error(await handleApiError(res)); await fetchDashboardData(); toast.success(`Task marked as '${newStatus}'`); } catch (err) { setError(err.message); toast.error(err.message); }};
   const handleAvatarUpload = async (base64Image) => { setIsUploading(true); setError(''); try { const res = await fetch('/api/user/upload-avatar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: base64Image }), }); if (!res.ok) throw new Error(await handleApiError(res)); const data = await res.json(); setProfileUser(prev => ({ ...prev, avatar: data.avatar })); toast.success('Avatar updated!'); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsUploading(false); }};
@@ -893,11 +912,11 @@ export default function Dashboard({ user }) {
                                     <div className="text-center py-4 space-y-4">
                                         <h3 className="font-bold text-slate-800 text-lg">Ready to start your day?</h3>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Office')} disabled={isAttendanceLoading} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-green-200 hover:bg-green-50 rounded-xl transition-colors disabled:opacity-70">
+                                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Office')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-green-200 hover:bg-green-50 rounded-xl transition-colors disabled:opacity-70">
                                                 <Briefcase className="text-green-600" size={24}/>
                                                 <span className="font-semibold text-green-800">Work From Office</span>
                                             </motion.button>
-                                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Home')} disabled={isAttendanceLoading} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-indigo-200 hover:bg-indigo-50 rounded-xl transition-colors disabled:opacity-70">
+                                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Home')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-indigo-200 hover:bg-indigo-50 rounded-xl transition-colors disabled:opacity-70">
                                                 <Home className="text-indigo-600" size={24}/>
                                                 <span className="font-semibold text-indigo-800">Work From Home</span>
                                             </motion.button>
@@ -912,12 +931,19 @@ export default function Dashboard({ user }) {
                                                 {activeAttendance?.workLocation}
                                             </span>
                                         </div>
-                                        {isOnBreak && <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800"><Coffee className="mr-1.5" size={14} /> On Break</span>}
-                                        <div className={`text-center bg-white rounded-lg p-4 border border-green-200 shadow-inner relative overflow-hidden`}>
-                                            <div className="absolute inset-0 bg-green-500/10 animate-pulse"></div>
-                                            <p className="text-sm text-slate-500 relative">Elapsed Time</p>
-                                            <div className="text-3xl sm:text-5xl font-bold text-green-600 tracking-tighter my-1 relative">{elapsedTime}</div>
+                                        <div className={`text-center rounded-lg p-4 border shadow-inner relative overflow-hidden ${isOnBreak ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
+                                            <div className={`absolute inset-0 ${isOnBreak ? 'bg-amber-500/10' : 'bg-green-500/10'} animate-pulse`}></div>
+                                            <p className={`text-sm relative ${isOnBreak ? 'text-amber-600' : 'text-slate-500'}`}>{isOnBreak ? 'Total Elapsed Time' : 'Elapsed Time'}</p>
+                                            <div className={`text-3xl sm:text-5xl font-bold tracking-tighter my-1 relative ${isOnBreak ? 'text-amber-700' : 'text-green-600'}`}>{elapsedTime}</div>
                                             <p className="text-xs text-slate-400 relative">Checked in at {new Date(checkInTime).toLocaleTimeString()}</p>
+                                            <AnimatePresence>
+                                                {isOnBreak && (
+                                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-2 pt-2 border-t border-amber-200/60">
+                                                        <p className="text-sm font-semibold text-slate-600 relative">On Break For</p>
+                                                        <p className="text-xl font-bold text-slate-800 relative">{elapsedBreakTime}</p>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
                                         </div>
                                         <div>
                                             <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">Work Description</label>
@@ -926,11 +952,11 @@ export default function Dashboard({ user }) {
                                         <div className="grid grid-cols-2 gap-3">
                                             {!isOnBreak ? (
                                                 <>
-                                                    <button onClick={handleBreakIn} disabled={isAttendanceLoading} className="flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200/80 text-amber-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><Coffee size={16} /> Start Break</button>
-                                                    <button onClick={handleCheckOut} disabled={isAttendanceLoading} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><LogOut size={16} /> Check Out</button>
+                                                    <button onClick={handleBreakIn} disabled={loadingStates['break-in']} className="flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200/80 text-amber-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70">{loadingStates['break-in'] ? <ButtonLoader /> : <Coffee size={16} />}Start Break</button>
+                                                    <button onClick={handleCheckOut} disabled={loadingStates['checkout']} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70">{loadingStates['checkout'] ? <ButtonLoader /> : <LogOut size={16} />}Check Out</button>
                                                 </>
                                             ) : (
-                                                <button onClick={handleBreakOut} disabled={isAttendanceLoading} className="col-span-2 flex items-center justify-center gap-2 bg-green-100 hover:bg-green-200/80 text-green-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><CheckCircle size={16} /> Resume Work</button>
+                                                <button onClick={handleBreakOut} disabled={loadingStates['break-out']} className="col-span-2 flex items-center justify-center gap-2 bg-green-100 hover:bg-green-200/80 text-green-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70">{loadingStates['break-out'] ? <ButtonLoader /> : <CheckCircle size={16} />}Resume Work</button>
                                             )}
                                         </div>
                                     </div>
