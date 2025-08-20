@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
-import { LogOut, Clock, Calendar, Coffee, CheckCircle, AlertCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, DollarSign, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon } from 'react-feather';
+import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, DollarSign, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home } from 'react-feather';
 import { ChevronDown } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Bar } from 'react-chartjs-2';
@@ -33,7 +33,6 @@ const useMediaQuery = (query) => {
 const formatEnglishDate = (dateString, includeTime = false) => { 
     if (!dateString) return '-'; 
     const date = new Date(dateString); 
-    // ✅ FIX: Removed timeZone: 'UTC' to use the user's local time
     const options = { year: 'numeric', month: 'long', day: 'numeric' }; 
     if (includeTime) { 
         options.hour = 'numeric'; 
@@ -46,7 +45,6 @@ const formatDuration = (totalSeconds) => { if (totalSeconds === null || totalSec
 const formatElapsedTime = (startTime) => { if (!startTime) return '00:00:00'; const now = new Date(); const start = new Date(startTime); const seconds = Math.floor((now - start) / 1000); if (seconds < 0) return '00:00:00'; const h = Math.floor(seconds / 3600).toString().padStart(2, '0'); const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0'); const s = (seconds % 60).toString().padStart(2, '0'); return `${h}:${m}:${s}`; };
 const formatDeadline = (dateString) => { 
     if (!dateString) return 'No deadline'; 
-    // ✅ FIX: Removed timeZone: 'UTC' to use the user's local time
     return new Date(dateString).toLocaleString('en-US', { 
         year: 'numeric', 
         month: 'short', 
@@ -151,7 +149,6 @@ const SubmitWorkModal = ({ task, onClose, onWorkSubmitted }) => {
   onSubmit={handleSubmit}
   className="space-y-6 p-6 bg-white rounded-xl shadow-xl max-w-2xl mx-auto animate-fade-in"
 >
-  {/* Description */}
   <div>
     <label
       htmlFor="submissionDescription"
@@ -169,8 +166,6 @@ const SubmitWorkModal = ({ task, onClose, onWorkSubmitted }) => {
       placeholder="Describe the task or work completed..."
     />
   </div>
-
-  {/* File Upload */}
   <div>
     <label className="block text-sm font-medium text-slate-700">
       Attach Files <span className="text-slate-400 text-xs">(optional)</span>
@@ -182,8 +177,6 @@ const SubmitWorkModal = ({ task, onClose, onWorkSubmitted }) => {
       className="mt-2 block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-slate-200 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-300 transition"
     />
   </div>
-
-  {/* Attachments Preview */}
   {attachments.length > 0 && (
     <div>
       <p className="text-sm font-semibold text-slate-600">Selected Files:</p>
@@ -199,13 +192,9 @@ const SubmitWorkModal = ({ task, onClose, onWorkSubmitted }) => {
       </div>
     </div>
   )}
-
-  {/* Error Message */}
   {error && (
     <p className="text-sm text-red-600 font-medium">{error}</p>
   )}
-
-  {/* Action Buttons */}
   <div className="pt-6 border-t flex justify-end gap-4">
     <button
       type="button"
@@ -457,9 +446,7 @@ const TaskColumn = ({ title, tasks, onUpdateTaskStatus, onOpenSubmitModal, onOpe
 const MyStatsWidget = ({ tasks, attendance }) => {
     const stats = useMemo(() => {
         const now = new Date();
-        // Correctly set to the beginning of the week
-        const firstDayOfWeek = now.getDate() - now.getDay();
-        const startOfWeek = new Date(now.setDate(firstDayOfWeek));
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
         startOfWeek.setHours(0, 0, 0, 0);
 
         const completedThisWeek = tasks.filter(task => 
@@ -470,30 +457,46 @@ const MyStatsWidget = ({ tasks, attendance }) => {
             task.status !== 'Completed' && task.deadline && new Date(task.deadline) < new Date()
         ).length;
         
-        const totalWorkSecondsThisMonth = attendance
-            .filter(att => new Date(att.checkInTime).getMonth() === new Date().getMonth())
+        // Calculate office and home hours for the current month and year
+        const currentMonthRecords = attendance.filter(att => {
+            const checkInDate = new Date(att.checkInTime);
+            const now = new Date();
+            return checkInDate.getMonth() === now.getMonth() && checkInDate.getFullYear() === now.getFullYear();
+        });
+
+        const totalOfficeSeconds = currentMonthRecords
+            .filter(att => att.workLocation === 'Office')
             .reduce((acc, att) => acc + (att.duration || 0), 0);
-        
-        const totalHoursThisMonth = totalWorkSecondsThisMonth / 3600;
+            
+        const totalHomeSeconds = currentMonthRecords
+            .filter(att => att.workLocation === 'Home')
+            .reduce((acc, att) => acc + (att.duration || 0), 0);
 
-        return { completedThisWeek, overdueTasks, totalHoursThisMonth };
+        return { 
+            completedThisWeek, 
+            overdueTasks, 
+            totalHoursOffice: totalOfficeSeconds / 3600,
+            totalHoursHome: totalHomeSeconds / 3600
+        };
     }, [tasks, attendance]);
-
-    const TARGET_HOURS = 120;
 
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
             <div className="px-6 py-5 border-b border-slate-200/80">
-                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><TrendingUp className="text-green-600"/>My Stats</h2>
+                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><TrendingUp className="text-indigo-600"/>My Stats</h2>
             </div>
             <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-600">Tasks Completed (This Week)</span>
-                    <span className="font-bold text-lg text-green-600">{stats.completedThisWeek}</span>
+                    <span className="font-medium text-slate-600 flex items-center gap-2"><Briefcase size={16} className="text-green-600"/> Work Hours (Office)</span>
+                    <span className="font-bold text-lg text-slate-800">{stats.totalHoursOffice.toFixed(1)} hrs</span>
                 </div>
                 <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-600">Work Hours (This Month)</span>
-                    <span className="font-bold text-lg text-slate-800">{stats.totalHoursThisMonth.toFixed(1)} / {TARGET_HOURS} hrs</span>
+                    <span className="font-medium text-slate-600 flex items-center gap-2"><Home size={16} className="text-indigo-600"/> Work Hours (Home)</span>
+                    <span className="font-bold text-lg text-slate-800">{stats.totalHoursHome.toFixed(1)} hrs</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-600">Tasks Completed (This Week)</span>
+                    <span className="font-bold text-lg text-green-600">{stats.completedThisWeek}</span>
                 </div>
                 <div className={`flex items-center justify-between p-3 rounded-lg ${stats.overdueTasks > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
                     <span className={`font-semibold ${stats.overdueTasks > 0 ? 'text-red-600' : 'text-slate-600'}`}>Overdue Tasks</span>
@@ -526,7 +529,7 @@ const WorkHoursChartCard = ({ attendance }) => {
                 const checkInDate = new Date(att.checkInTime);
                 if (checkInDate >= startOfWeek) {
                     const dayIndex = checkInDate.getDay();
-                    data[dayIndex] += att.duration / 3600; // convert seconds to hours
+                    data[dayIndex] += att.duration / 3600; 
                 }
             }
         });
@@ -570,7 +573,7 @@ const WorkHoursChartCard = ({ attendance }) => {
 const DashboardSkeleton = () => (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-pulse">
         <div className="xl:col-span-4 space-y-8">
-            <div className="h-72 bg-white rounded-2xl p-6 space-y-4"><div className="flex items-center space-x-4"><div className="h-24 w-24 bg-slate-200 rounded-full"></div><div className="space-y-2"><div className="h-8 w-40 bg-slate-200 rounded-md"></div><div className="h-5 w-24 bg-slate-200 rounded-md"></div></div></div><div className="h-14 w-full bg-slate-200 rounded-xl mt-6"></div></div>
+            <div className="h-72 bg-white rounded-2xl p-6 space-y-4"><div className="flex items-center space-x-4"><div className="h-24 w-24 bg-slate-200 rounded-full"></div><div className="space-y-2"><div className="h-8 w-40 bg-slate-200 rounded-md"></div><div className="h-5 w-24 bg-slate-200 rounded-md"></div></div></div><div className="h-20 w-full bg-slate-200 rounded-xl mt-6"></div></div>
             <div className="h-48 bg-white rounded-2xl p-6 space-y-4"><div className="h-6 w-3/4 bg-slate-200 rounded-md"></div><div className="h-6 w-full bg-slate-200 rounded-md"></div><div className="h-6 w-1/2 bg-slate-200 rounded-md"></div></div>
         </div>
         <div className="xl:col-span-8 space-y-8">
@@ -588,7 +591,7 @@ export default function Dashboard({ user }) {
   const [attendance, setAttendance] = useState([]);
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
-  const [activeAttendanceId, setActiveAttendanceId] = useState(null);
+  const [activeAttendance, setActiveAttendance] = useState(null);
   const [checkInTime, setCheckInTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState('');
   const [isOnBreak, setIsOnBreak] = useState(false);
@@ -608,7 +611,6 @@ export default function Dashboard({ user }) {
   const [isPersonalTaskModalOpen, setIsPersonalTaskModalOpen] = useState(false);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
   const [selectedTaskDetails, setSelectedTaskDetails] = useState(null);
-  const [isMounted, setIsMounted] = useState(false);
   
   const notificationDropdownRef = useRef(null);
   const userDropdownRef = useRef(null);
@@ -624,12 +626,12 @@ export default function Dashboard({ user }) {
           setNotes(data.initialNotes || []);
           setNotifications(data.initialNotifications || []);
           if (data.activeCheckIn) {
-              setActiveAttendanceId(data.activeCheckIn._id);
+              setActiveAttendance(data.activeCheckIn);
               setCheckInTime(data.activeCheckIn.checkInTime);
               setDescription(data.activeCheckIn.description || '');
               setIsOnBreak(data.initialIsOnBreak);
           } else {
-              setActiveAttendanceId(null);
+              setActiveAttendance(null);
               setCheckInTime(null);
               setDescription('');
               setIsOnBreak(false);
@@ -643,14 +645,8 @@ export default function Dashboard({ user }) {
   }, []);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-  
-  useEffect(() => {
-    if (isMounted) {
-      fetchDashboardData();
-    }
-  }, [isMounted, fetchDashboardData]);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const unreadNotifications = useMemo(() => notifications.filter(n => !n.isRead), [notifications]);
   
@@ -678,10 +674,60 @@ export default function Dashboard({ user }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   
-  const handleCheckIn = async () => { setError(''); setIsAttendanceLoading(true); try { const res = await fetch('/api/attendance/checkin', { method: 'POST' }); if (!res.ok) throw new Error(await handleApiError(res)); const { data } = await res.json(); setActiveAttendanceId(data._id); setCheckInTime(data.checkInTime); setAttendance([data, ...attendance]); toast.success("Checked in successfully!"); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsAttendanceLoading(false); } };
-  const handleCheckOut = async () => { if (!description.trim()) { setError('Please provide a description of your work.'); toast.error('Work description is required.'); return; } setError(''); setIsAttendanceLoading(true); try { const res = await fetch('/api/attendance/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description, attendanceId: activeAttendanceId }), }); if (!res.ok) throw new Error(await handleApiError(res)); const { data } = await res.json(); setActiveAttendanceId(null); setCheckInTime(null); setDescription(''); setIsOnBreak(false); setAttendance(prev => prev.map(att => att._id === data._id ? data : att)); toast.success("Checked out successfully!"); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsAttendanceLoading(false); } };
-  const handleBreakIn = async () => { setError(''); setIsAttendanceLoading(true); try { const res = await fetch('/api/attendance/break-in', { method: 'POST' }); if (!res.ok) throw new Error(await handleApiError(res)); setIsOnBreak(true); toast.success("Break started.");} catch (err) { setError(err.message); toast.error(err.message);} finally { setIsAttendanceLoading(false); } };
-  const handleBreakOut = async () => { setError(''); setIsAttendanceLoading(true); try { const res = await fetch('/api/attendance/break-out', { method: 'POST' }); if (!res.ok) throw new Error(await handleApiError(res)); setIsOnBreak(false); toast.success("Resumed work.");} catch (err) { setError(err.message); toast.error(err.message);} finally { setIsAttendanceLoading(false); } };
+  const handleCheckIn = async (location) => {
+    setIsAttendanceLoading(true);
+    toast.loading(`Checking in from ${location}...`);
+    try {
+        const res = await fetch('/api/attendance/checkin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ workLocation: location })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message);
+        
+        setActiveAttendance(result.data);
+        setCheckInTime(result.data.checkInTime);
+        setAttendance(prev => [result.data, ...prev]);
+        toast.dismiss();
+        toast.success(result.message);
+    } catch (err) {
+        toast.dismiss();
+        toast.error(err.message || 'Failed to check in.');
+    } finally {
+        setIsAttendanceLoading(false);
+    }
+  };
+
+  const handleCheckOut = async () => { 
+    if (!description.trim()) { 
+      toast.error('Work description is required.'); 
+      return; 
+    } 
+    setIsAttendanceLoading(true); 
+    try { 
+      const res = await fetch('/api/attendance/checkout', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ description, attendanceId: activeAttendance._id }), 
+      }); 
+      if (!res.ok) throw new Error(await handleApiError(res)); 
+      const { data } = await res.json(); 
+      setActiveAttendance(null); 
+      setCheckInTime(null); 
+      setDescription(''); 
+      setIsOnBreak(false); 
+      setAttendance(prev => prev.map(att => att._id === data._id ? data : att)); 
+      toast.success("Checked out successfully!"); 
+    } catch (err) { 
+      toast.error(err.message); 
+    } finally { 
+      setIsAttendanceLoading(false); 
+    } 
+  };
+
+  const handleBreakIn = async () => { setIsAttendanceLoading(true); try { const res = await fetch('/api/attendance/break-in', { method: 'POST' }); if (!res.ok) throw new Error(await handleApiError(res)); setIsOnBreak(true); toast.success("Break started.");} catch (err) { toast.error(err.message);} finally { setIsAttendanceLoading(false); } };
+  const handleBreakOut = async () => { setIsAttendanceLoading(true); try { const res = await fetch('/api/attendance/break-out', { method: 'POST' }); if (!res.ok) throw new Error(await handleApiError(res)); setIsOnBreak(false); toast.success("Resumed work.");} catch (err) { toast.error(err.message);} finally { setIsAttendanceLoading(false); } };
   const handleLogout = async () => { await fetch('/api/auth/logout'); router.push('/login'); };
   const handleUpdateTaskStatus = async (taskId, newStatus) => { setError(''); try { const res = await fetch('/api/tasks/update-status', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId, newStatus }), }); if (!res.ok) throw new Error(await handleApiError(res)); await fetchDashboardData(); toast.success(`Task marked as '${newStatus}'`); } catch (err) { setError(err.message); toast.error(err.message); }};
   const handleAvatarUpload = async (base64Image) => { setIsUploading(true); setError(''); try { const res = await fetch('/api/user/upload-avatar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: base64Image }), }); if (!res.ok) throw new Error(await handleApiError(res)); const data = await res.json(); setProfileUser(prev => ({ ...prev, avatar: data.avatar })); toast.success('Avatar updated!'); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsUploading(false); }};
@@ -696,7 +742,6 @@ export default function Dashboard({ user }) {
         currentTasks.map(task => {
             if (task._id === taskId) {
                 const updatedComments = task.comments ? [...task.comments, newComment] : [newComment];
-                // Ensure the modal also gets the updated task
                 if (selectedTaskDetails && selectedTaskDetails._id === taskId) {
                     setSelectedTaskDetails(prev => ({ ...prev, comments: updatedComments }));
                 }
@@ -708,66 +753,48 @@ export default function Dashboard({ user }) {
   };
 
     const sensors = useSensors(useSensor(PointerSensor, {
-        activationConstraint: { distance: 8 }, // Drag only after 8px movement
+        activationConstraint: { distance: 8 },
     }));
 
     const handleDragEnd = async (event) => {
         const { active, over } = event;
-
         if (!over) return;
-        
-        const activeId = active.id;
-        const overId = over.id; // This can be an item or a column
-
-        // Find which column the 'over' element belongs to
         let destinationStatus = null;
         for (const status in taskColumns) {
-            if (taskColumns[status].some(task => task._id === overId)) {
+            if (taskColumns[status].some(task => task._id === over.id)) {
                 destinationStatus = status;
                 break;
             }
         }
-
-        const activeTask = tasks.find(t => t._id === activeId);
-        if (!activeTask || !destinationStatus || activeTask.status === destinationStatus) {
-            return;
-        }
-
+        const activeTask = tasks.find(t => t._id === active.id);
+        if (!activeTask || !destinationStatus || activeTask.status === destinationStatus) return;
         if (destinationStatus === 'Completed') {
             toast.error('Please use the "Submit Work" button to complete a task.');
             return;
         }
-
         if (activeTask.status === 'Completed') {
             toast.error('Completed tasks cannot be moved.');
             return;
         }
-        
-        // Optimistic UI update
         const originalTasks = [...tasks];
-        const updatedTasks = tasks.map(t =>
-            t._id === activeId ? { ...t, status: destinationStatus } : t
-        );
-        setTasks(updatedTasks);
-        
+        setTasks(tasks.map(t => t._id === active.id ? { ...t, status: destinationStatus } : t));
         try {
             const res = await fetch('/api/tasks/update-status', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ taskId: activeId, newStatus: destinationStatus }),
+                body: JSON.stringify({ taskId: active.id, newStatus: destinationStatus }),
             });
             if (!res.ok) throw new Error(await handleApiError(res));
             toast.success(`Task moved to "${destinationStatus}"`);
         } catch (err) {
             toast.error(err.message);
-            setTasks(originalTasks); // Revert on failure
+            setTasks(originalTasks);
         }
     };
 
   return (
     <>
       <Toaster position="top-center" />
-      
       <AnimatePresence>
         {selectedTaskDetails && <TaskDetailsModal key={selectedTaskDetails._id} task={selectedTaskDetails} onClose={() => setSelectedTaskDetails(null)} onCommentAdded={handleCommentAdded} currentUser={user} />}
         {taskToSubmit && <SubmitWorkModal key="submit-modal" task={taskToSubmit} onClose={() => setTaskToSubmit(null)} onWorkSubmitted={fetchDashboardData} />}
@@ -776,84 +803,178 @@ export default function Dashboard({ user }) {
             <MobileNotificationPanel key="mobile-notif-panel" notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />
         )}
       </AnimatePresence>
-
       <div className="min-h-screen bg-slate-100 font-sans text-slate-800">
         <div className="w-full h-full absolute inset-0 bg-slate-100 overflow-hidden"><div className="absolute top-0 -left-48 w-[40rem] h-[40rem] bg-green-200/50 rounded-full filter blur-3xl opacity-40 animate-blob"></div><div className="absolute top-0 -right-48 w-[40rem] h-[40rem] bg-sky-200/50 rounded-full filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div><div className="absolute bottom-0 left-1/4 w-[40rem] h-[40rem] bg-rose-200/50 rounded-full filter blur-3xl opacity-40 animate-blob animation-delay-4000"></div></div>
         <div className="relative z-10">
-          <header className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-xl shadow-md' : 'bg-white/50'}`}>
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-            <div className="flex items-center space-x-4">
-                <Link href="/dashboard" className="flex items-center space-x-3">
-                    <Image src="/geckoworks.png" alt="GeckoWorks Logo" width={42} height={42} className="rounded-full" style={{ height: 'auto', width: 'auto' }} />
-                    <h1 className="text-xl font-bold text-slate-900 tracking-tight">{user.name.split(' ')[0]}&apos;s Dashboard</h1>
-                </Link>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-                <div className="hidden md:flex items-center space-x-4 text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full">
-                    <div className="flex items-center space-x-2"><Calendar className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span></div>
-                    <div className="h-4 w-px bg-slate-300"></div>
-                    <div className="flex items-center space-x-2"><Clock className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+            <header className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-xl shadow-md' : 'bg-white/50'}`}>
+                <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-20">
+                        <div className="flex items-center space-x-4">
+                            <Link href="/dashboard" className="flex items-center space-x-3">
+                                <Image src="/geckoworks.png" alt="GeckoWorks Logo" width={42} height={42} className="rounded-full" style={{ height: 'auto', width: 'auto' }} />
+                                <h1 className="text-xl font-bold text-slate-900 tracking-tight">{user.name.split(' ')[0]}&apos;s Dashboard</h1>
+                            </Link>
+                        </div>
+                        <div className="flex items-center space-x-2 sm:space-x-4">
+                            <div className="hidden md:flex items-center space-x-4 text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full">
+                                <div className="flex items-center space-x-2"><Calendar className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span></div>
+                                <div className="h-4 w-px bg-slate-300"></div>
+                                <div className="flex items-center space-x-2"><Clock className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+                            </div>
+                            <div ref={notificationDropdownRef} className="relative">
+                                <button onClick={() => setIsNotificationOpen(prev => !prev)} className="relative p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" title="Notifications">
+                                    <Bell className="h-6 w-6"/>
+                                    {unreadNotifications.length > 0 && (<span className="absolute top-1.5 right-1.5 flex h-5 w-5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">{unreadNotifications.length}</span></span>)}
+                                </button>
+                                <AnimatePresence>
+                                    {isDesktop && isNotificationOpen && (<DesktopNotificationPanel notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />)}
+                                </AnimatePresence>
+                            </div>
+                            <div ref={userDropdownRef} className="relative">
+                                <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 bg-white pl-1 pr-2 py-1 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    <Image src={profileUser.avatar} alt={profileUser.name} width={36} height={36} className="rounded-full object-cover aspect-square"/>
+                                    <span className="font-semibold text-sm text-slate-700 hidden sm:block">{profileUser.name.split(' ')[0]}</span>
+                                    <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                <AnimatePresence>
+                                    {isDropdownOpen && (
+                                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className={`absolute top-full right-0 mt-3 w-64 rounded-xl shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-20 origin-top-right`}>
+                                            <div className="p-4 border-b border-slate-100">
+                                                <div className="flex items-center space-x-4">
+                                                    <Image src={profileUser.avatar} alt={profileUser.name} width={48} height={48} className="rounded-full object-cover aspect-square"/>
+                                                    <div>
+                                                        <p className="font-bold text-slate-800 truncate">{profileUser.name}</p>
+                                                        <p className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full inline-block mt-1">{profileUser.role}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="p-2">
+                                                <Link href="/performance" className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/80 hover:text-green-600 flex items-center gap-3 transition-colors rounded-md">
+                                                    <TrendingUp className="h-5 w-5" />
+                                                    <span>My Performance</span>
+                                                </Link>
+                                                <Link href="/leaves" className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/80 hover:text-green-600 flex items-center gap-3 transition-colors rounded-md">
+                                                    <FileText className="h-5 w-5" />
+                                                    <span>My Leave Requests</span>
+                                                </Link>
+                                                <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-3 transition-colors rounded-md">
+                                                    <LogOut className="h-5 w-5" />
+                                                    <span>Sign Out</span>
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div ref={notificationDropdownRef} className="relative">
-                    <button onClick={() => setIsNotificationOpen(prev => !prev)} className="relative p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" title="Notifications">
-                        <Bell className="h-6 w-6"/>
-                        {unreadNotifications.length > 0 && (<span className="absolute top-1.5 right-1.5 flex h-5 w-5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">{unreadNotifications.length}</span></span>)}
-                    </button>
-                    <AnimatePresence>
-                        {isDesktop && isNotificationOpen && (<DesktopNotificationPanel notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />)}
-                    </AnimatePresence>
-                </div>
-                <div ref={userDropdownRef} className="relative">
-                    <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 bg-white pl-1 pr-2 py-1 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                        <Image src={profileUser.avatar} alt={profileUser.name} width={36} height={36} className="rounded-full object-cover aspect-square"/>
-                        <span className="font-semibold text-sm text-slate-700 hidden sm:block">{profileUser.name.split(' ')[0]}</span>
-                        <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    <AnimatePresence>
-                        {isDropdownOpen && (
-                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className={`absolute top-full right-0 mt-3 w-64 rounded-xl shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-20 origin-top-right`}>
-                                <div className="p-4 border-b border-slate-100">
-                                    <div className="flex items-center space-x-4">
-                                        <Image src={profileUser.avatar} alt={profileUser.name} width={48} height={48} className="rounded-full object-cover aspect-square"/>
-                                        <div>
-                                            <p className="font-bold text-slate-800 truncate">{profileUser.name}</p>
-                                            <p className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full inline-block mt-1">{profileUser.role}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="p-2">
-                                    {/* ✅ NEW LINK ADDED HERE */}
-                                    <Link href="/performance" className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/80 hover:text-green-600 flex items-center gap-3 transition-colors rounded-md">
-                                        <TrendingUp className="h-5 w-5" />
-                                        <span>My Performance</span>
-                                    </Link>
-                                    <Link href="/leaves" className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/80 hover:text-green-600 flex items-center gap-3 transition-colors rounded-md">
-                                        <FileText className="h-5 w-5" />
-                                        <span>My Leave Requests</span>
-                                    </Link>
-                                    <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-3 transition-colors rounded-md">
-                                        <LogOut className="h-5 w-5" />
-                                        <span>Sign Out</span>
-                                    </button>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            </div>
-        </div>
-    </div>
-</header>
-
-          <main className={`max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10`}>
-             {isDataLoading ? <DashboardSkeleton /> : (
+            </header>
+            <main className={`max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10`}>
+                {isDataLoading ? <DashboardSkeleton /> : (
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
                     <motion.div className="xl:col-span-4 space-y-8" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden"><div className="p-6 flex flex-col items-center sm:flex-row sm:items-center sm:space-x-5"><div className="relative flex-shrink-0 mb-4 sm:mb-0"><Image src={profileUser.avatar} alt="Profile Picture" width={88} height={88} className="rounded-full object-cover aspect-square shadow-md" priority /><label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 bg-green-600 text-white rounded-full p-2 cursor-pointer hover:bg-green-700 transition shadow-sm border-2 border-white transform hover:scale-110"><input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} /><>{isUploading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Edit size={16} />}</></label></div><div className="text-center sm:text-left"><h2 className="text-2xl font-bold text-slate-900">{profileUser.name}</h2><p className="text-slate-500 font-medium">{profileUser.role}</p></div></div><div className="bg-slate-50/70 p-6 border-t border-slate-200/80">{!checkInTime ? (<div className="text-center py-4"><button onClick={handleCheckIn} disabled={isAttendanceLoading || isDataLoading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-8 rounded-xl transition-all transform hover:scale-[1.02] shadow-lg shadow-green-500/20 hover:shadow-green-600/30 focus:outline-none focus:ring-4 focus:ring-green-500/50 disabled:opacity-70"><div className="flex items-center justify-center gap-2"><Play size={20}/><span>{isDataLoading ? 'Loading...' : 'Check In'}</span></div></button><p className="mt-3 text-sm text-slate-500">You are currently checked out.</p></div>) : (<div className="space-y-5"><div className="flex justify-between items-center"><h3 className="text-lg font-semibold text-slate-800">Work Session Active</h3>{isOnBreak && <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800"><Coffee className="mr-1.5" size={14} /> On Break</span>}</div><div className={`text-center bg-white rounded-lg p-4 border border-green-200 shadow-inner relative overflow-hidden`}><div className="absolute inset-0 bg-green-500/10 animate-pulse"></div><p className="text-sm text-slate-500 relative">Elapsed Time</p><div className="text-3xl sm:text-5xl font-bold text-green-600 tracking-tighter my-1 relative">{elapsedTime}</div><p className="text-xs text-slate-400 relative">Checked in at {new Date(checkInTime).toLocaleTimeString()}</p></div><div><label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">Work Description</label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What are you working on?" rows={4} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/80 focus:border-transparent transition" disabled={isOnBreak} /></div><div className="grid grid-cols-2 gap-3">{!isOnBreak ? (<><button onClick={handleBreakIn} disabled={isAttendanceLoading} className="flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200/80 text-amber-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><Coffee size={16} /> Start Break</button><button onClick={handleCheckOut} disabled={isAttendanceLoading} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><LogOut size={16} /> Check Out</button></>) : (<button onClick={handleBreakOut} disabled={isAttendanceLoading} className="col-span-2 flex items-center justify-center gap-2 bg-green-100 hover:bg-green-200/80 text-green-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><CheckCircle size={16} /> Resume Work</button>)}</div></div>)}</div></div>
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                            <div className="p-6 flex flex-col items-center sm:flex-row sm:items-center sm:space-x-5">
+                                <div className="relative flex-shrink-0 mb-4 sm:mb-0">
+                                    <Image src={profileUser.avatar} alt="Profile Picture" width={88} height={88} className="rounded-full object-cover aspect-square shadow-md" priority />
+                                    <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 bg-green-600 text-white rounded-full p-2 cursor-pointer hover:bg-green-700 transition shadow-sm border-2 border-white transform hover:scale-110">
+                                        <input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
+                                        <>{isUploading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Edit size={16} />}</>
+                                    </label>
+                                </div>
+                                <div className="text-center sm:text-left">
+                                    <h2 className="text-2xl font-bold text-slate-900">{profileUser.name}</h2>
+                                    <p className="text-slate-500 font-medium">{profileUser.role}</p>
+                                </div>
+                            </div>
+                            <div className="bg-slate-50/70 p-6 border-t border-slate-200/80">
+                                {!checkInTime ? (
+                                    <div className="text-center py-4 space-y-4">
+                                        <h3 className="font-bold text-slate-800 text-lg">Ready to start your day?</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Office')} disabled={isAttendanceLoading} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-green-200 hover:bg-green-50 rounded-xl transition-colors disabled:opacity-70">
+                                                <Briefcase className="text-green-600" size={24}/>
+                                                <span className="font-semibold text-green-800">Work From Office</span>
+                                            </motion.button>
+                                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Home')} disabled={isAttendanceLoading} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-indigo-200 hover:bg-indigo-50 rounded-xl transition-colors disabled:opacity-70">
+                                                <Home className="text-indigo-600" size={24}/>
+                                                <span className="font-semibold text-indigo-800">Work From Home</span>
+                                            </motion.button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-5">
+                                        <div className="flex justify-between items-center">
+                                            <h3 className="text-lg font-semibold text-slate-800">Work Session Active</h3>
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${activeAttendance?.workLocation === 'Office' ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'}`}>
+                                                {activeAttendance?.workLocation === 'Office' ? <Briefcase size={14} className="mr-1.5"/> : <Home size={14} className="mr-1.5"/>}
+                                                {activeAttendance?.workLocation}
+                                            </span>
+                                        </div>
+                                        {isOnBreak && <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800"><Coffee className="mr-1.5" size={14} /> On Break</span>}
+                                        <div className={`text-center bg-white rounded-lg p-4 border border-green-200 shadow-inner relative overflow-hidden`}>
+                                            <div className="absolute inset-0 bg-green-500/10 animate-pulse"></div>
+                                            <p className="text-sm text-slate-500 relative">Elapsed Time</p>
+                                            <div className="text-3xl sm:text-5xl font-bold text-green-600 tracking-tighter my-1 relative">{elapsedTime}</div>
+                                            <p className="text-xs text-slate-400 relative">Checked in at {new Date(checkInTime).toLocaleTimeString()}</p>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">Work Description</label>
+                                            <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What are you working on?" rows={4} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/80 focus:border-transparent transition" disabled={isOnBreak} />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {!isOnBreak ? (
+                                                <>
+                                                    <button onClick={handleBreakIn} disabled={isAttendanceLoading} className="flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200/80 text-amber-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><Coffee size={16} /> Start Break</button>
+                                                    <button onClick={handleCheckOut} disabled={isAttendanceLoading} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><LogOut size={16} /> Check Out</button>
+                                                </>
+                                            ) : (
+                                                <button onClick={handleBreakOut} disabled={isAttendanceLoading} className="col-span-2 flex items-center justify-center gap-2 bg-green-100 hover:bg-green-200/80 text-green-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70"><CheckCircle size={16} /> Resume Work</button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                         <MyStatsWidget tasks={tasks} attendance={attendance} />
                         <WorkHoursChartCard attendance={attendance} />
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80"><div className="px-6 py-5 border-b border-slate-200/80"><h2 className="text-xl font-semibold text-slate-800">Daily Notes</h2></div><div className="p-6"><form onSubmit={handleCreateNote} className="space-y-3 mb-6"><textarea value={newNoteContent} onChange={(e) => setNewNoteContent(e.target.value)} placeholder="Write down a quick note..." rows="3" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/80"/><button type="submit" disabled={isSubmittingNote || !newNoteContent.trim()} className="px-5 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2">{isSubmittingNote ? 'Saving...' : 'Save Note'}</button></form><div className="space-y-4 max-h-96 overflow-y-auto pr-2 -mr-2">{notes.map((note) => (<div key={note._id} className="p-4 bg-slate-50/70 rounded-lg group">{editingNote?._id === note._id ? (<div className="space-y-3"><textarea value={editingNote.content} onChange={(e) => setEditingNote({...editingNote, content: e.target.value})} className="w-full px-2 py-1 border border-slate-300 rounded-md" rows="3"/><div className="flex items-center gap-2"><button onClick={handleUpdateNote} disabled={isSubmittingNote} className="p-2 text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50"><Save size={18} /></button><button onClick={() => setEditingNote(null)} className="p-2 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-md"><X size={18} /></button></div></div>) : (<div><p className="text-slate-700 whitespace-pre-wrap">{note.content}</p><div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200"><p className="text-xs text-slate-400">{formatEnglishDate(note.createdAt, true)}</p><div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => setEditingNote(note)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-full hover:text-blue-600" title="Edit Note"><Edit size={15} /></button><button onClick={() => handleDeleteNote(note._id)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-full hover:text-red-600" title="Delete Note"><Trash2 size={15} /></button></div></div></div>)}</div>))}{notes.length === 0 && <p className="text-center text-slate-500 py-8">No notes for today.</p>}</div></div></div>
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
+                            <div className="px-6 py-5 border-b border-slate-200/80"><h2 className="text-xl font-semibold text-slate-800">Daily Notes</h2></div>
+                            <div className="p-6">
+                                <form onSubmit={handleCreateNote} className="space-y-3 mb-6">
+                                    <textarea value={newNoteContent} onChange={(e) => setNewNoteContent(e.target.value)} placeholder="Write down a quick note..." rows="3" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/80"/>
+                                    <button type="submit" disabled={isSubmittingNote || !newNoteContent.trim()} className="px-5 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2">{isSubmittingNote ? 'Saving...' : 'Save Note'}</button>
+                                </form>
+                                <div className="space-y-4 max-h-96 overflow-y-auto pr-2 -mr-2">
+                                    {notes.map((note) => (
+                                        <div key={note._id} className="p-4 bg-slate-50/70 rounded-lg group">
+                                            {editingNote?._id === note._id ? (
+                                                <div className="space-y-3">
+                                                    <textarea value={editingNote.content} onChange={(e) => setEditingNote({...editingNote, content: e.target.value})} className="w-full px-2 py-1 border border-slate-300 rounded-md" rows="3"/>
+                                                    <div className="flex items-center gap-2">
+                                                        <button onClick={handleUpdateNote} disabled={isSubmittingNote} className="p-2 text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50"><Save size={18} /></button>
+                                                        <button onClick={() => setEditingNote(null)} className="p-2 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-md"><X size={18} /></button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <p className="text-slate-700 whitespace-pre-wrap">{note.content}</p>
+                                                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200">
+                                                        <p className="text-xs text-slate-400">{formatEnglishDate(note.createdAt, true)}</p>
+                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button onClick={() => setEditingNote(note)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-full hover:text-blue-600" title="Edit Note"><Edit size={15} /></button>
+                                                            <button onClick={() => handleDeleteNote(note._id)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-full hover:text-red-600" title="Delete Note"><Trash2 size={15} /></button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {notes.length === 0 && <p className="text-center text-slate-500 py-8">No notes for today.</p>}
+                                </div>
+                            </div>
+                        </div>
                     </motion.div>
                     <motion.div className="xl:col-span-8 space-y-8" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
@@ -892,6 +1013,7 @@ export default function Dashboard({ user }) {
                                     <thead className="bg-slate-50">
                                         <tr>
                                             <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                                            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
                                             <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Time</th>
                                             <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Work</th>
                                             <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Break</th>
@@ -902,6 +1024,11 @@ export default function Dashboard({ user }) {
                                         {attendance.slice(0, 7).map((att) => (
                                             <tr key={att._id} className="hover:bg-slate-50/70">
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">{formatEnglishDate(att.checkInTime)}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${att.workLocation === 'Office' ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'}`}>
+                                                        {att.workLocation || 'N/A'}
+                                                    </span>
+                                                </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{att.checkInTime && new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{att.checkOutTime && ` - ${new Date(att.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm"><span className={`font-bold ${att.checkOutTime ? att.duration >= MIN_WORK_SECONDS ? 'text-green-600' : 'text-red-600' : 'text-blue-600'}`}>{formatDuration(att.duration)}</span></td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{formatDuration(att.totalBreakDuration)}</td>
@@ -915,8 +1042,8 @@ export default function Dashboard({ user }) {
                         </div>
                     </motion.div>
                 </div>
-             )}
-          </main>
+                )}
+            </main>
         </div>
       </div>
     </>

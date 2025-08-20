@@ -13,6 +13,11 @@ const AttendanceSchema = new mongoose.Schema({
   checkOutTime: {
     type: Date,
   },
+  workLocation: {
+        type: String,
+        required: [true, 'Work location is required.'],
+        enum: ['Office', 'Home'], // Only allows these two values
+  },
   description: {
     type: String,
     trim: true,

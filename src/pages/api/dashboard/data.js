@@ -13,14 +13,20 @@ export default async function handler(req, res) {
     }
     await dbConnect();
     const { token } = req.cookies;
-    if (!token) return res.status(401).json({ message: 'Not authenticated' });
+    if (!token) return res.status(401).json({ message: 'Please Login Again' });
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = new mongoose.Types.ObjectId(decoded.userId);
 
         const [attendanceHistory, tasks, notes, userNotifications, activeCheckIn] = await Promise.all([
-            Attendance.find({ user: userId }).sort({ checkInTime: -1 }).limit(7).select('checkInTime checkOutTime duration totalBreakDuration description').lean(),
+            Attendance.find({ user: userId })
+                .sort({ checkInTime: -1 })
+                .limit(7)
+                // ✅ FIX: Added 'workLocation' to the select statement
+                .select('checkInTime checkOutTime duration totalBreakDuration description workLocation')
+                .lean(),
+
             Task.find({ $or: [{ assignedTo: userId }, { assistedBy: userId }] })
                 .sort({ createdAt: -1 })
                 .select('title description status deadline assignedTo assignedBy assistedBy attachments completedAt submissionDescription comments')
@@ -30,6 +36,7 @@ export default async function handler(req, res) {
                 .populate({ path: 'attachments.uploadedBy', select: 'name' })
                 .populate({ path: 'comments.author', select: 'name avatar' })
                 .lean(),
+
             Note.find({ user: userId }).sort({ createdAt: -1 }).limit(20).select('content createdAt').lean(),
             Notification.find({ recipient: userId }).sort({ createdAt: -1 }).limit(20).select('content author link isRead createdAt').lean(),
             Attendance.findOne({ user: userId, checkOutTime: null }).lean()

@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Image from 'next/image';
-import { Send, Trash2, AlertTriangle, LogOut, Check, X as XIcon, UserPlus, Briefcase, Download, ChevronDown, Bell, Users, BarChart2, Clock, Menu, ChevronLeft, ChevronRight, Edit } from 'react-feather';
+import { Send, Trash2, AlertTriangle, LogOut, Check, X as XIcon, UserPlus, Briefcase, Download, ChevronDown, Bell, Users, BarChart2, Clock, Menu, ChevronLeft, ChevronRight, Edit, Home } from 'react-feather';
 import toast, { Toaster } from 'react-hot-toast';
 import { Bar } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
@@ -49,7 +49,7 @@ const modalContent = {
 
 // --- Helper Functions ---
 const formatEnglishDate = (dateString) => { if (!dateString) return '–'; return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }); };
-const formatDuration = (totalSeconds) => { if (totalSeconds === null || totalSeconds === undefined || totalSeconds < 0) return '0m'; if (totalSeconds === 0) return '0m'; if (totalSeconds < 60) return `${totalSeconds}s`; const hours = Math.floor(totalSeconds / 3600); const minutes = Math.floor((totalSeconds % 3600) / 60); const parts = []; if (hours > 0) parts.push(`${hours}h`); if (minutes > 0) parts.push(`${minutes}m`); return parts.join(' ') || '0m'; };
+const formatDuration = (totalSeconds) => { if (totalSeconds === null || totalSeconds === undefined || totalSeconds < 0) return '0m'; if (totalSeconds === 0) return '0m'; if (totalSeconds < 60) return `${Math.round(totalSeconds)}s`; const hours = Math.floor(totalSeconds / 3600); const minutes = Math.floor((totalSeconds % 3600) / 60); const parts = []; if (hours > 0) parts.push(`${hours}h`); if (minutes > 0) parts.push(`${minutes}m`); return parts.join(' ') || '0m'; };
 const MIN_WORK_SECONDS = 21600; // 6 hours
 const getDurationStyle = (attendanceEntry) => { if (attendanceEntry.checkOutTime) { return attendanceEntry.duration >= MIN_WORK_SECONDS ? "text-green-500 font-bold" : "text-red-500 font-bold"; } return "font-bold text-blue-500"; };
 const getStatusBadge = (status) => { switch (status) { case 'Approved': return 'bg-green-100 text-green-700 border border-green-200'; case 'Rejected': return 'bg-red-100 text-red-700 border border-red-200'; default: return 'bg-yellow-100 text-yellow-700 border border-yellow-200'; } };
@@ -112,9 +112,9 @@ const WorkHoursChart = ({ data, targetHours }) => {
                 }
             }
         },
-        scales: { 
-            y: { 
-                beginAtZero: true, 
+        scales: {
+            y: {
+                beginAtZero: true,
                 title: { display: true, text: 'Hours' },
                 grid: {
                     color: '#e2e8f0' // slate-200
@@ -243,15 +243,17 @@ const DashboardView = ({ workHoursData, targetHours, selectedMonth, handleMonthC
 
 const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditModal }) => {
     const [searchQuery, setSearchQuery] = useState("");
+    const [locationFilter, setLocationFilter] = useState("");
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
     const filteredAttendance = useMemo(() => {
         let result = attendanceData;
         if (searchQuery) { result = result.filter(att => att.user?.name.toLowerCase().includes(searchQuery.toLowerCase())); }
+        if (locationFilter) { result = result.filter(att => att.workLocation === locationFilter); }
         if (dateRange.start) { result = result.filter(att => new Date(att.checkInTime) >= new Date(dateRange.start)); }
         if (dateRange.end) { result = result.filter(att => new Date(att.checkInTime) <= new Date(new Date(dateRange.end).setHours(23, 59, 59, 999))); }
         return result;
-    }, [searchQuery, dateRange, attendanceData]);
+    }, [searchQuery, locationFilter, dateRange, attendanceData]);
 
     const completedDays = filteredAttendance.filter((att) => att.checkOutTime);
     const totalWorkSeconds = completedDays.reduce((acc, att) => acc + (att.duration || 0), 0);
@@ -269,12 +271,13 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
             return `"${str.replace(/"/g, '""')}"`;
         };
     
-        const headers = ["Employee Name", "Role", "Date", "Check-In", "Check-Out", "Work Duration (Hours)", "Break Duration (Minutes)", "Work Description"].join(',');
+        const headers = ["Employee Name", "Role", "Date", "Location", "Check-In", "Check-Out", "Work Duration (Hours)", "Break Duration (Minutes)", "Work Description"].join(',');
     
         const rows = data.map(att => [
             sanitizeField(att.user?.name || 'N/A'),
             sanitizeField(att.user?.role || 'N/A'),
             sanitizeField(formatEnglishDate(att.checkInTime)),
+            sanitizeField(att.workLocation || 'N/A'),
             sanitizeField(new Date(att.checkInTime).toLocaleTimeString('en-US', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' })),
             sanitizeField(att.checkOutTime ? new Date(att.checkOutTime).toLocaleTimeString('en-US', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' }) : 'N/A'),
             att.duration ? (att.duration / 3600).toFixed(2) : '0.00',
@@ -306,10 +309,23 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
             </motion.div>
             <motion.div variants={fadeInUp} className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80">
                 <h2 className="text-xl font-semibold mb-4 text-slate-800">Filters</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                      <div>
                         <label htmlFor="search-filter" className="block text-sm font-medium mb-1 text-slate-600">Search by Name</label>
                         <input id="search-filter" type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="e.g. Nischal Shrestha" className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"/>
+                    </div>
+                    <div>
+                        <label htmlFor="location-filter" className="block text-sm font-medium mb-1 text-slate-600">Location</label>
+                        <select 
+                            id="location-filter"
+                            value={locationFilter}
+                            onChange={(e) => setLocationFilter(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                        >
+                            <option value="">All Locations</option>
+                            <option value="Office">Work from Office</option>
+                            <option value="Home">Work from Home</option>
+                        </select>
                     </div>
                     <div>
                         <label htmlFor="start-date-filter" className="block text-sm font-medium mb-1 text-slate-600">Start Date</label>
@@ -332,6 +348,7 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
                             <tr>
                                 <th scope="col" className="px-6 py-3">Staff</th>
                                 <th scope="col" className="px-6 py-3">Date</th>
+                                <th scope="col" className="px-6 py-3">Location</th>
                                 <th scope="col" className="px-6 py-3">Check-In/Out</th>
                                 <th scope="col" className="px-6 py-3">Break</th>
                                 <th scope="col" className="px-6 py-3">Work Time</th>
@@ -344,6 +361,12 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
                                 <tr key={att._id} className="bg-white border-b last:border-none md:border-none md:hover:bg-slate-50/70 block md:table-row mb-4 md:mb-0 rounded-lg shadow-md md:shadow-none p-4 md:p-0">
                                     <td data-label="Staff" className="flex justify-between items-center md:table-cell px-2 py-2 md:px-6 md:py-4 font-medium text-slate-900 whitespace-nowrap"><div className="flex items-center"><div className="flex-shrink-0 h-10 w-10"><Image className="h-10 w-10 rounded-full object-cover" src={att.user?.avatar || '/default-avatar.png'} alt={att.user?.name || ''} width={40} height={40}/></div><div className="ml-4"><div className="font-medium">{att.user?.name || "Deleted"}</div><div className="text-sm text-slate-500">{att.user?.role || "N/A"}</div></div></div></td>
                                     <td data-label="Date" className="flex justify-between items-center md:table-cell px-2 py-2 md:px-6 md:py-4">{formatEnglishDate(att.checkInTime)}</td>
+                                    <td data-label="Location" className="flex justify-between items-center md:table-cell px-2 py-2 md:px-6 md:py-4">
+                                       <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold ${att.workLocation === 'Office' ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'}`}>
+                                           {att.workLocation === 'Office' ? <Briefcase size={14}/> : <Home size={14}/>}
+                                           {att.workLocation || 'N/A'}
+                                       </span>
+                                    </td>
                                     <td data-label="Check-In/Out" className="flex justify-between items-center md:table-cell px-2 py-2 md:px-6 md:py-4"><div>{new Date(att.checkInTime).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div><div>{att.checkOutTime ? new Date(att.checkOutTime).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : <span className="text-blue-500 font-semibold">Active</span>}</div></td>
                                     <td data-label="Break" className="flex justify-between items-center md:table-cell px-2 py-2 md:px-6 md:py-4">{formatDuration(att.totalBreakDuration)}</td>
                                     <td data-label="Work Time" className={`flex justify-between items-center md:table-cell px-2 py-2 md:px-6 md:py-4 ${getDurationStyle(att)}`}>{formatDuration(att.duration)}</td>
@@ -356,7 +379,7 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
                                     </td>
                                 </tr>
                             ))}
-                            {filteredAttendance.length === 0 && (<tr><td colSpan="7" className="text-center py-10 text-slate-500">No records found.</td></tr>)}
+                            {filteredAttendance.length === 0 && (<tr><td colSpan="8" className="text-center py-10 text-slate-500">No records found.</td></tr>)}
                         </tbody>
                     </table>
                 </div>
@@ -642,7 +665,7 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
       
       {isLeaveModalOpen && <ManageLeaveModal item={currentLeaveItem} comments={hrComments} setComments={setHrComments} error={error} onClose={closeLeaveModal} onSubmit={handleManageLeave} isSubmitting={isSubmittingLeaveAction} />}
       {isDeleteModalOpen && <DeleteModal onConfirm={handleConfirmDelete} onClose={closeDeleteModal} isDeleting={isDeleting} />}
-      {isEditModalOpen && <AdjustCheckoutModal record={editingRecord} onClose={closeEditModal} onUpdate={handleUpdateAttendance} isSubmitting={isSubmittingEdit} />}
+      {isEditModalOpen && editingRecord && <AdjustCheckoutModal record={editingRecord} onClose={closeEditModal} onUpdate={handleUpdateAttendance} isSubmitting={isSubmittingEdit} />}
       
       {/* Mobile Menu Overlay & Sidebar */}
       <AnimatePresence>
