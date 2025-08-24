@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
-import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, DollarSign, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home } from 'react-feather';
+import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, DollarSign, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home, Send, Search, ArrowLeft, AlertTriangle, AlertCircle } from 'react-feather';
 import { ChevronDown } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Bar } from 'react-chartjs-2';
@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DndContext, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import Pusher from 'pusher-js';
 
 // --- Register Chart.js components ---
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -465,7 +466,6 @@ const MyStatsWidget = ({ tasks, attendance }) => {
             task.status !== 'Completed' && task.deadline && new Date(task.deadline) < new Date()
         ).length;
         
-        // Calculate office and home hours for the current month and year
         const currentMonthRecords = attendance.filter(att => {
             const checkInDate = new Date(att.checkInTime);
             const now = new Date();
@@ -577,6 +577,361 @@ const WorkHoursChartCard = ({ attendance }) => {
     );
 };
 
+// --- UPDATED CHAT COMPONENTS ---
+
+const DeleteChatModal = ({ onConfirm, onClose, isDeleting }) => (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[101] flex justify-center items-center p-4">
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <div className="flex items-start">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg font-bold text-slate-900">Delete Conversation</h3>
+                    <p className="text-sm text-slate-500 mt-2">Are you sure you want to delete this conversation? This will permanently remove all messages for both participants.</p>
+                </div>
+            </div>
+            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                <button onClick={onClose} disabled={isDeleting} className="w-full sm:w-auto px-5 py-2.5 bg-slate-200 rounded-lg font-semibold">Cancel</button>
+                <button onClick={onConfirm} disabled={isDeleting} className="w-full sm:w-auto px-5 py-2.5 bg-red-600 text-white font-semibold rounded-lg">{isDeleting ? 'Deleting...' : 'Delete Chat'}</button>
+            </div>
+        </motion.div>
+    </motion.div>
+);
+
+const ChatSidebar = ({ conversations, users, onSelect, selectedConvId, currentUser, onDelete }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const sortedConversations = useMemo(() => {
+        return [...conversations].sort((a, b) => (b.unreadCount || 0) - (a.unreadCount || 0) || new Date(b.lastMessage?.createdAt || 0) - new Date(a.lastMessage?.createdAt || 0));
+    }, [conversations]);
+
+    const filteredUsers = useMemo(() => {
+        if (!searchTerm) return [];
+        return users.filter(u => u._id !== currentUser._id && u.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    }, [users, searchTerm, currentUser._id]);
+
+    return (
+        <div className="w-full h-full flex flex-col bg-white">
+            <div className="p-4 border-b">
+                <div className="relative">
+                    <Search size={18} className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
+                    <input type="text" placeholder="Search people..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-green-500 focus:border-green-500" />
+                </div>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+                {searchTerm ? (
+                    <>
+                        <h3 className="px-4 py-2 text-xs font-bold text-slate-400 uppercase">Search Results</h3>
+                        {filteredUsers.length > 0 ? filteredUsers.map(user => (
+                            <div key={user._id} onClick={() => onSelect(user)} className="p-4 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors">
+                                <Image src={user.avatar} width={40} height={40} className="rounded-full" alt={user.name}/>
+                                <p className="font-semibold">{user.name}</p>
+                            </div>
+                        )) : <p className="p-4 text-sm text-slate-500">No users found.</p>}
+                    </>
+                ) : (
+                    <>
+                        <h3 className="px-4 py-2 text-xs font-bold text-slate-400 uppercase">Recent Conversations</h3>
+                        {sortedConversations.map(conv => {
+                            const otherUser = conv.participants.find(p => p._id !== currentUser._id);
+                            if (!otherUser) return null;
+                            const isUnread = conv.unreadCount > 0;
+                            return (
+                                <div key={conv._id} onClick={() => onSelect(otherUser, conv)} className={`group p-4 flex items-center gap-3 cursor-pointer transition-colors ${selectedConvId === conv._id ? 'bg-green-50' : 'hover:bg-slate-50'} ${isUnread ? 'bg-sky-50 font-bold' : ''}`}>
+                                    <div className="relative flex-shrink-0">
+                                        <Image src={otherUser.avatar} width={40} height={40} className="rounded-full" alt={otherUser.name}/>
+                                        {isUnread && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-sky-500 ring-2 ring-white"></span>}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className={`font-semibold truncate ${isUnread ? 'text-slate-900' : 'text-slate-700'}`}>{otherUser.name}</p>
+                                        <p className={`text-sm truncate ${isUnread ? 'text-slate-700' : 'text-slate-500'}`}>{conv.lastMessage?.message || 'No messages yet'}</p>
+                                    </div>
+                                    <button onClick={(e) => { e.stopPropagation(); onDelete(conv._id); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBack }) => {
+    const isMobile = useMediaQuery('(max-width: 767px)');
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const messagesEndRef = useRef(null);
+
+    useEffect(() => {
+        const fetchMessages = async () => {
+            if (conversation) {
+                setIsLoading(true);
+                try {
+                    const res = await fetch(`/api/chat/messages?conversationId=${conversation._id}`);
+                    const data = await res.json();
+                    if (data.success) setMessages((data.messages || []).map(m => ({...m, status: 'sent'})));
+                } catch (err) {
+                    toast.error("Failed to load messages.");
+                } finally {
+                    setIsLoading(false);
+                }
+            } else {
+                setMessages([]);
+            }
+        };
+        fetchMessages();
+
+        if (conversation) {
+            const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
+                cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+            });
+            const channel = pusher.subscribe(`chat-${conversation._id}`);
+            channel.bind('new-message', (data) => {
+                if (data.senderId._id !== currentUser._id) {
+                    setMessages(prev => [...prev, {...data, status: 'sent'}]);
+                }
+            });
+            return () => {
+                pusher.unsubscribe(`chat-${conversation._id}`);
+                pusher.disconnect();
+            };
+        }
+    }, [conversation, currentUser._id]);
+
+    useEffect(() => {
+        const markAsRead = async () => {
+            if (conversation && conversation.unreadCount > 0) {
+                await fetch('/api/chat/mark-as-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ conversationId: conversation._id })
+                });
+                onMessageSent();
+            }
+        };
+        markAsRead();
+    }, [conversation, onMessageSent]);
+    
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        const messageText = newMessage.trim();
+        if (!messageText) return;
+    
+        const tempId = `temp_${Date.now()}`;
+        const optimisticMessage = {
+            _id: tempId,
+            senderId: { _id: currentUser._id, name: currentUser.name, avatar: currentUser.avatar },
+            message: messageText,
+            createdAt: new Date().toISOString(),
+            status: 'sending'
+        };
+    
+        setMessages(prev => [...prev, optimisticMessage]);
+        setNewMessage('');
+    
+        try {
+            const res = await fetch('/api/chat/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ receiverId: selectedUser._id, message: messageText })
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.message);
+    
+            setMessages(prev => prev.map(msg => msg._id === tempId ? { ...result.data, status: 'sent' } : msg));
+            onMessageSent();
+        } catch (err) {
+            toast.error("Failed to send message.");
+            setMessages(prev => prev.map(msg => msg._id === tempId ? { ...msg, status: 'failed' } : msg));
+        }
+    };    
+
+    if (!selectedUser) {
+        return <div className="hidden md:flex flex-1 items-center justify-center bg-slate-50"><p>Select a conversation to start chatting</p></div>;
+    }
+
+    return (
+        <div className="flex-1 flex flex-col h-full bg-slate-50">
+            <header className="p-4 border-b flex items-center gap-3 bg-white flex-shrink-0">
+                {isMobile && (
+                    <button onClick={onBack} className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-full">
+                        <ArrowLeft size={20} />
+                    </button>
+                )}
+                <Image src={selectedUser.avatar} width={40} height={40} className="rounded-full" alt={selectedUser.name}/>
+                <div>
+                    <h3 className="font-bold">{selectedUser.name}</h3>
+                    <p className="text-sm text-slate-500">{selectedUser.role}</p>
+                </div>
+            </header>
+            <div className="flex-1 p-6 overflow-y-auto space-y-1">
+                {messages.map(msg => (
+                     <motion.div 
+                        key={msg._id} 
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`flex items-end gap-2 max-w-lg ${msg.senderId._id === currentUser._id ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
+                    >
+                        <div className={`px-4 py-3 rounded-2xl ${msg.senderId._id === currentUser._id ? 'bg-green-600 text-white rounded-br-none' : 'bg-white rounded-bl-none'}`}>
+                            <p>{msg.message}</p>
+                        </div>
+                        {msg.senderId._id === currentUser._id && (
+                            <div className="flex-shrink-0 mb-1">
+                                {msg.status === 'sending' && <Clock size={12} className="text-slate-400 animate-spin"/>}
+                                {msg.status === 'failed' && <AlertCircle size={12} className="text-red-500"/>}
+                            </div>
+                        )}
+                    </motion.div>
+                ))}
+                <div ref={messagesEndRef} />
+            </div>
+            <footer className="p-4 bg-white border-t">
+                <form onSubmit={handleSendMessage} className="flex items-center gap-4">
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 p-3 border rounded-full bg-slate-100 focus:bg-white focus:ring-2 focus:ring-green-500 transition"/>
+                    <button type="submit" className="bg-green-600 text-white p-3 rounded-full hover:bg-green-700 transition-transform active:scale-90"><Send size={20}/></button>
+                </form>
+            </footer>
+        </div>
+    );
+};
+
+const ChatView = ({ user, onBack }) => {
+    const [conversations, setConversations] = useState([]);
+    const [allUsers, setAllUsers] = useState([]);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [selectedConversation, setSelectedConversation] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [deletingConvId, setDeletingConvId] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const isMobile = useMediaQuery('(max-width: 767px)');
+    const [activeChatUser, setActiveChatUser] = useState(null);
+
+    const fetchChatData = useCallback(async () => {
+        try {
+            const res = await fetch('/api/chat/messages');
+            const data = await res.json();
+            if (data.success) {
+                setConversations(data.conversations);
+                setAllUsers(data.users);
+            }
+        } catch (error) {
+            toast.error("Failed to load chat data.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchChatData();
+    }, [fetchChatData]);
+
+    const handleSelectConversation = (user, conversation = null) => {
+        setSelectedUser(user);
+        const existingConv = conversation || conversations.find(c => c.participants.some(p => p._id === user._id));
+        setSelectedConversation(existingConv);
+        if (isMobile) {
+            setActiveChatUser(user);
+        }
+    };
+
+    const handleDeleteConversation = async () => {
+        if (!deletingConvId) return;
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`/api/chat/messages?conversationId=${deletingConvId}`, {
+                method: 'DELETE'
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.message);
+            
+            toast.success("Conversation deleted.");
+            setConversations(prev => prev.filter(c => c._id !== deletingConvId));
+            if (selectedConversation?._id === deletingConvId) {
+                setSelectedConversation(null);
+                setSelectedUser(null);
+                if(isMobile) setActiveChatUser(null);
+            }
+        } catch (err) {
+            toast.error(err.message || "Failed to delete conversation.");
+        } finally {
+            setIsDeleting(false);
+            setDeletingConvId(null);
+        }
+    };
+
+    const handleBackToSidebar = () => {
+        setActiveChatUser(null);
+        setTimeout(() => {
+            setSelectedUser(null);
+            setSelectedConversation(null);
+        }, 300);
+    };
+
+    const slideAnimation = {
+        initial: { x: '100%' },
+        animate: { x: 0 },
+        exit: { x: '100%' },
+        transition: { type: 'spring', stiffness: 400, damping: 40 }
+    };
+    
+    return (
+        <>
+            <AnimatePresence>
+                {deletingConvId && (
+                    <DeleteChatModal 
+                        onClose={() => setDeletingConvId(null)}
+                        onConfirm={handleDeleteConversation}
+                        isDeleting={isDeleting}
+                    />
+                )}
+            </AnimatePresence>
+            <div className="fixed inset-0 z-50 bg-white flex flex-col md:relative md:inset-auto md:h-[calc(100vh-10rem)] md:rounded-2xl md:shadow-lg md:border overflow-hidden">
+                <header className="p-4 border-b flex-shrink-0 flex items-center justify-between bg-white md:hidden">
+                    <button onClick={onBack} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold">
+                        <ArrowLeft size={20} />
+                        Back to Dashboard
+                    </button>
+                    <div className="flex items-center gap-2">
+                        <Image src={user.avatar} width={36} height={36} className="rounded-full object-cover" alt="User Avatar" />
+                    </div>
+                </header>
+                <header className="p-4 border-b flex-shrink-0 hidden md:flex items-center justify-between bg-white">
+                    <h2 className="text-xl font-bold">Messages</h2>
+                    <button onClick={onBack} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold text-sm">
+                        Back to Dashboard
+                    </button>
+                </header>
+                <div className="flex flex-1 overflow-hidden relative">
+                    <div className={`w-full md:w-80 h-full flex-col border-r border-slate-200 bg-white ${isMobile && activeChatUser ? 'hidden' : 'flex'}`}>
+                         <ChatSidebar conversations={conversations} users={allUsers} onSelect={handleSelectConversation} selectedConvId={selectedConversation?._id} currentUser={user} onDelete={setDeletingConvId} />
+                    </div>
+                    
+                    <div className="flex-1 hidden md:flex">
+                        {selectedUser ? <ChatBox selectedUser={selectedUser} conversation={selectedConversation} currentUser={user} onMessageSent={fetchChatData} onBack={() => {}} /> : <div className="flex-1 items-center justify-center bg-slate-50 hidden md:flex"><p>Select a conversation to start chatting</p></div>}
+                    </div>
+                    
+                    <AnimatePresence>
+                    {isMobile && activeChatUser && (
+                        <motion.div key="chatbox" className="absolute inset-0" variants={slideAnimation} initial="initial" animate="animate" exit="exit">
+                            <ChatBox selectedUser={selectedUser} conversation={selectedConversation} currentUser={user} onMessageSent={fetchChatData} onBack={handleBackToSidebar} />
+                        </motion.div>
+                    )}
+                    </AnimatePresence>
+                </div>
+            </div>
+        </>
+    );
+};
 
 const DashboardSkeleton = () => (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-pulse">
@@ -595,6 +950,7 @@ const DashboardSkeleton = () => (
 // --- Main Component ---
 export default function Dashboard({ user }) {
   const router = useRouter();
+  const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' or 'chat'
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [attendance, setAttendance] = useState([]);
   const [description, setDescription] = useState('');
@@ -622,9 +978,26 @@ export default function Dashboard({ user }) {
   const [isPersonalTaskModalOpen, setIsPersonalTaskModalOpen] = useState(false);
   const [selectedTaskDetails, setSelectedTaskDetails] = useState(null);
   
+  const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+
   const notificationDropdownRef = useRef(null);
   const userDropdownRef = useRef(null);
   const isDesktop = useMediaQuery('(min-width: 768px)');
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+        try {
+            const res = await fetch('/api/chat/messages?getTotalUnread=true');
+            const data = await res.json();
+            if (data.success) {
+                setTotalUnreadMessages(data.totalUnreadCount);
+            }
+        } catch (error) {
+            console.error("Failed to fetch unread message count");
+        }
+    };
+    fetchUnreadCount();
+  }, [activeView]);
 
   const fetchDashboardData = useCallback(async () => {
       try {
@@ -737,7 +1110,7 @@ export default function Dashboard({ user }) {
     const res = await fetch('/api/attendance/break-in', { method: 'POST' });
     if (!res.ok) throw new Error(await handleApiError(res));
     setIsOnBreak(true);
-    await fetchDashboardData(); // Re-fetch to get the break start time
+    await fetchDashboardData();
   }, 'Break started.');
   
   const handleBreakOut = () => handleAction('break-out', async () => {
@@ -810,6 +1183,14 @@ export default function Dashboard({ user }) {
             setTasks(originalTasks);
         }
     };
+    
+  if (activeView === 'chat') {
+      return (
+          <div className="min-h-screen bg-slate-100 md:p-4 lg:p-8">
+              <ChatView user={user} onBack={() => setActiveView('dashboard')} />
+          </div>
+      );
+  }
 
   return (
     <>
@@ -840,6 +1221,10 @@ export default function Dashboard({ user }) {
                                 <div className="h-4 w-px bg-slate-300"></div>
                                 <div className="flex items-center space-x-2"><Clock className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
                             </div>
+                            <button onClick={() => setActiveView('chat')} className="relative p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" title="Messages">
+                                <MessageSquare className="h-6 w-6"/>
+                                {totalUnreadMessages > 0 && <span className="absolute top-1.5 right-1.5 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>}
+                            </button>
                             <div ref={notificationDropdownRef} className="relative">
                                 <button onClick={() => setIsNotificationOpen(prev => !prev)} className="relative p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" title="Notifications">
                                     <Bell className="h-6 w-6"/>

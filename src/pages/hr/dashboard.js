@@ -2,10 +2,10 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Image from 'next/image';
-import { Send, Trash2, AlertTriangle, LogOut, Check, X as XIcon, UserPlus, Briefcase, Download, ChevronDown, Bell, Users, BarChart2, Clock, Menu, ChevronLeft, ChevronRight, Edit, Home } from 'react-feather';
+import { Send, Trash2, AlertTriangle, LogOut, Check, X as XIcon, UserPlus, Briefcase, Download, ChevronDown, Bell, Users, BarChart2, Clock, Menu, ChevronLeft, ChevronRight, Edit, Home, PieChart, TrendingUp } from 'react-feather';
 import toast, { Toaster } from 'react-hot-toast';
-import { Bar } from 'react-chartjs-2';
-import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -19,7 +19,7 @@ import LeaveRequest from '../../../models/LeaveRequest';
 
 
 // Register Chart.js components
-Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 // --- Animation Variants ---
 const fadeInUp = {
@@ -227,6 +227,103 @@ const AdjustCheckoutModal = ({ record, onClose, onUpdate, isSubmitting }) => {
 
 
 // --- Page Views ---
+
+// --- NEW Analytics View and Skeleton ---
+
+const AnalyticsSkeleton = () => (
+    <div className="space-y-8 animate-pulse">
+        <div className="h-10 bg-slate-200 rounded-lg w-1/3"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="h-28 bg-white rounded-xl shadow-sm"></div>
+            <div className="h-28 bg-white rounded-xl shadow-sm"></div>
+            <div className="h-28 bg-white rounded-xl shadow-sm"></div>
+            <div className="h-28 bg-white rounded-xl shadow-sm"></div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="h-96 bg-white rounded-xl shadow-sm"></div>
+            <div className="h-96 bg-white rounded-xl shadow-sm"></div>
+        </div>
+    </div>
+);
+
+const AnalyticsView = () => {
+    const [data, setData] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const res = await fetch('/api/hr/analytics');
+                const result = await res.json();
+                if (!result.success) throw new Error("Could not load analytics data.");
+                setData(result.data);
+            } catch (error) {
+                toast.error(error.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const leaveChartData = useMemo(() => {
+        if (!data) return { labels: [], datasets: [] };
+        const labels = data.leaveBreakdown.map(d => d._id);
+        const chartData = data.leaveBreakdown.map(d => d.count);
+        return {
+            labels,
+            datasets: [{
+                data: chartData,
+                backgroundColor: ['#f43f5e', '#3b82f6', '#f59e0b', '#84cc16'],
+                borderColor: '#ffffff',
+                borderWidth: 2,
+            }]
+        };
+    }, [data]);
+    
+    const taskChartData = useMemo(() => {
+        if (!data) return { labels: [], datasets: [] };
+        const labels = data.taskDistribution.map(d => d.name);
+        const chartData = data.taskDistribution.map(d => d.count);
+        return {
+            labels,
+            datasets: [{
+                label: 'Tasks Assigned',
+                data: chartData,
+                backgroundColor: 'rgba(79, 70, 229, 0.7)',
+                borderColor: 'rgba(79, 70, 229, 1)',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        };
+    }, [data]);
+    
+    if (isLoading) return <AnalyticsSkeleton />;
+    if (!data) return <div>Error loading data.</div>;
+
+    return (
+        <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+            <h1 className="text-3xl font-bold text-slate-800">Company Analytics</h1>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard title="Active Employees" value={data.kpis.totalEmployees} icon={<Users size={24} className="text-indigo-600" />} color={{ bg: 'bg-indigo-100', text: 'text-indigo-600' }} />
+                <StatCard title="Tasks In Progress" value={data.kpis.tasksInProgress} icon={<TrendingUp size={24} className="text-amber-600" />} color={{ bg: 'bg-amber-100', text: 'text-amber-600' }} />
+                <StatCard title="On Leave Today" value={data.kpis.onLeaveToday} icon={<Briefcase size={24} className="text-rose-600" />} color={{ bg: 'bg-rose-100', text: 'text-rose-600' }} />
+                <StatCard title="Work Location Today" value={`${data.todayLocation.find(l=>l._id==='Office')?.count || 0} Office / ${data.todayLocation.find(l=>l._id==='Home')?.count || 0} Home`} icon={<Home size={24} className="text-sky-600" />} color={{ bg: 'bg-sky-100', text: 'text-sky-600' }} />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 className="text-lg font-bold text-slate-700 mb-4">Task Distribution (Top 10)</h3>
+                    <div className="relative h-96"><Bar data={taskChartData} options={{ maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }} /></div>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 className="text-lg font-bold text-slate-700 mb-4">Leave Breakdown (This Month)</h3>
+                    <div className="relative h-96"><Doughnut data={leaveChartData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} /></div>
+                </div>
+            </div>
+        </motion.div>
+    );
+};
+
 
 const DashboardView = ({ workHoursData, targetHours, selectedMonth, handleMonthChange, isLoadingChart }) => (
     <motion.div key="dashboard" variants={fadeInUp} initial="initial" animate="animate" className="space-y-8">
@@ -643,6 +740,7 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   const renderContent = () => {
       switch(activeView) {
           case 'dashboard': return <DashboardView workHoursData={workHoursData} targetHours={MONTHLY_HOUR_TARGET} selectedMonth={selectedMonth} handleMonthChange={handleMonthChange} isLoadingChart={isLoadingChart} />;
+          case 'analytics': return <AnalyticsView />;
           case 'attendance': return <AttendanceView attendanceData={attendanceRecords} allUsers={allUsers} openDeleteModal={openDeleteModal} openEditModal={openEditModal} />;
           case 'notifications': return <NotificationSender allUsers={allUsers} targetType={targetType} setTargetType={setTargetType} targetUser={targetUser} setTargetUser={setTargetUser} notificationContent={notificationContent} setNotificationContent={setNotificationContent} handleSendNotification={handleSendNotification} isSending={isSending} />;
           case 'leaves': return <LeaveManagementView pending={leaveRequests} approved={approvedLeaves} history={concludedLeaves} onManage={openLeaveModal} />;
@@ -653,6 +751,7 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   const MainNav = ({ isMobile = false }) => (
     <nav className="flex-1 space-y-2">
         <NavButton label="Dashboard" icon={<BarChart2 size={20} />} isActive={activeView === 'dashboard'} onClick={() => isMobile ? handleMobileNavClick('dashboard') : setActiveView('dashboard')} />
+        <NavButton label="Analytics" icon={<PieChart size={20} />} isActive={activeView === 'analytics'} onClick={() => isMobile ? handleMobileNavClick('analytics') : setActiveView('analytics')} />
         <NavButton label="Attendance" icon={<Clock size={20} />} isActive={activeView === 'attendance'} onClick={() => isMobile ? handleMobileNavClick('attendance') : setActiveView('attendance')} />
         <NavButton label="Leave Management" icon={<Briefcase size={20} />} isActive={activeView === 'leaves'} onClick={() => isMobile ? handleMobileNavClick('leaves') : setActiveView('leaves')} notificationCount={leaveRequests.length}/>
         <NavButton label="Notifications" icon={<Bell size={20} />} isActive={activeView === 'notifications'} onClick={() => isMobile ? handleMobileNavClick('notifications') : setActiveView('notifications')} />
