@@ -12,6 +12,7 @@ import { DndContext, closestCorners, PointerSensor, useSensor, useSensors } from
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Pusher from 'pusher-js';
+import { formatDistanceToNow } from 'date-fns';
 
 // --- Register Chart.js components ---
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -491,7 +492,7 @@ const MyStatsWidget = ({ tasks, attendance }) => {
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
             <div className="px-6 py-5 border-b border-slate-200/80">
-                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><TrendingUp className="text-indigo-600"/>My Stats</h2>
+                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><TrendingUp className="text-green-600"/>My Stats</h2>
             </div>
             <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
@@ -574,6 +575,72 @@ const WorkHoursChartCard = ({ attendance }) => {
                 <Bar options={chartOptions} data={chartData} />
             </div>
         </motion.div>
+    );
+};
+
+// ✅ NEW: Daily Standup Report Component
+const DailyStandupReport = () => {
+    const [reports, setReports] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchReports = useCallback(async () => {
+        try {
+            const res = await fetch('/api/reports/daily-standup');
+            const data = await res.json();
+            if (data.success) {
+                setReports(data.reports);
+            }
+        } catch (error) {
+            console.error("Failed to fetch standup reports:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchReports();
+        const interval = setInterval(fetchReports, 60000); // Refresh every 60 seconds
+        return () => clearInterval(interval);
+    }, [fetchReports]);
+
+    return (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
+            <div className="px-6 py-5 border-b border-slate-200/80">
+                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3">
+                    <Calendar className="text-green-600"/>Today&apos;s Update of Every Member
+                </h2>
+            </div>
+            <div className="p-6 space-y-4 max-h-[600px] overflow-y-auto">
+                {isLoading ? (
+                    <p className="text-slate-500">Loading reports...</p>
+                ) : reports.length > 0 ? (
+                    reports.map(report => (
+                        <motion.div 
+                            key={report._id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="p-4 border bg-slate-50/70 rounded-lg"
+                        >
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-3">
+                                    <Image src={report.user.avatar} alt={report.user.name} width={32} height={32} className="rounded-full object-cover" />
+                                    <span className="font-bold text-slate-800">{report.user.name}</span>
+                                </div>
+                                <span className="text-xs text-slate-500">
+                                    {new Date(report.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            </div>
+                            <p className="text-sm text-slate-600 whitespace-pre-wrap pl-11">{report.description}</p>
+                        </motion.div>
+                    ))
+                ) : (
+                    <div className="text-center py-10 text-slate-500">
+                        <p className="font-semibold">No checkout reports submitted yet today.</p>
+                        <p className="text-sm">Check back later as the team completes their day.</p>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 };
 
@@ -753,7 +820,7 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
             toast.error("Failed to send message.");
             setMessages(prev => prev.map(msg => msg._id === tempId ? { ...msg, status: 'failed' } : msg));
         }
-    };    
+    };   
 
     if (!selectedUser) {
         return <div className="hidden md:flex flex-1 items-center justify-center bg-slate-50"><p>Select a conversation to start chatting</p></div>;
@@ -775,23 +842,23 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
             </header>
             <div className="flex-1 p-6 overflow-y-auto space-y-1">
                 {messages.map(msg => (
-                     <motion.div 
-                        key={msg._id} 
-                        layout
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`flex items-end gap-2 max-w-lg ${msg.senderId._id === currentUser._id ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
-                    >
-                        <div className={`px-4 py-3 rounded-2xl ${msg.senderId._id === currentUser._id ? 'bg-green-600 text-white rounded-br-none' : 'bg-white rounded-bl-none'}`}>
-                            <p>{msg.message}</p>
-                        </div>
-                        {msg.senderId._id === currentUser._id && (
-                            <div className="flex-shrink-0 mb-1">
-                                {msg.status === 'sending' && <Clock size={12} className="text-slate-400 animate-spin"/>}
-                                {msg.status === 'failed' && <AlertCircle size={12} className="text-red-500"/>}
-                            </div>
-                        )}
-                    </motion.div>
+                       <motion.div 
+                           key={msg._id} 
+                           layout
+                           initial={{ opacity: 0, y: 20 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           className={`flex items-end gap-2 max-w-lg ${msg.senderId._id === currentUser._id ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
+                       >
+                           <div className={`px-4 py-3 rounded-2xl ${msg.senderId._id === currentUser._id ? 'bg-green-600 text-white rounded-br-none' : 'bg-white rounded-bl-none'}`}>
+                               <p>{msg.message}</p>
+                           </div>
+                           {msg.senderId._id === currentUser._id && (
+                               <div className="flex-shrink-0 mb-1">
+                                   {msg.status === 'sending' && <Clock size={12} className="text-slate-400 animate-spin"/>}
+                                   {msg.status === 'failed' && <AlertCircle size={12} className="text-red-500"/>}
+                               </div>
+                           )}
+                       </motion.div>
                 ))}
                 <div ref={messagesEndRef} />
             </div>
@@ -1184,6 +1251,14 @@ export default function Dashboard({ user }) {
         }
     };
     
+  if (isDataLoading) {
+    return (
+        <div className="min-h-screen bg-slate-100 font-sans text-slate-800 p-8">
+            <DashboardSkeleton />
+        </div>
+    );
+  }
+    
   if (activeView === 'chat') {
       return (
           <div className="min-h-screen bg-slate-100 md:p-4 lg:p-8">
@@ -1275,7 +1350,6 @@ export default function Dashboard({ user }) {
                 </div>
             </header>
             <main className={`max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10`}>
-                {isDataLoading ? <DashboardSkeleton /> : (
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
                     <motion.div className="xl:col-span-4 space-y-8" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
@@ -1417,6 +1491,7 @@ export default function Dashboard({ user }) {
                                 </div>
                             </DndContext>
                         </div>
+                        <DailyStandupReport />
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
                             <div className="px-6 py-5 border-b border-slate-200/80"><h2 className="text-xl font-semibold text-slate-800">Attendance History</h2></div>
                             <div className="overflow-x-auto">
@@ -1453,7 +1528,6 @@ export default function Dashboard({ user }) {
                         </div>
                     </motion.div>
                 </div>
-                )}
             </main>
         </div>
       </div>
