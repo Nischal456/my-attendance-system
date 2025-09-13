@@ -599,7 +599,7 @@ const DailyStandupReport = () => {
 
     useEffect(() => {
         fetchReports();
-        const interval = setInterval(fetchReports, 60000); // Refresh every 60 seconds
+        const interval = setInterval(fetchReports, 60000); 
         return () => clearInterval(interval);
     }, [fetchReports]);
 
