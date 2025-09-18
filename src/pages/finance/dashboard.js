@@ -12,7 +12,6 @@ import { LogOut, ChevronDown, Plus, Minus, TrendingUp, TrendingDown, DollarSign,
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
-
 // --- Helper Functions ---
 const formatCurrency = (amount) => `Rs. ${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(amount || 0)}`;
 const formatDate = (dateString, includeTime = false) => {
@@ -93,7 +92,6 @@ const TransactionRow = ({ transaction, remainingBalance, onRowClick, index }) =>
     );
 };
 
-
 const TransactionModal = ({ type, onClose, onSuccess }) => {
     let defaultCategory = 'General';
     if (type === 'Income') defaultCategory = 'Client Payment';
@@ -119,9 +117,53 @@ const TransactionModal = ({ type, onClose, onSuccess }) => {
             setIsSubmitting(false);
         }
     };
-    return (<AnimatePresence>{ onclose && <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-lg"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold text-slate-800">Add New {type}</h3><button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><XIcon size={20}/></button></div><form onSubmit={handleSubmit} className="space-y-5"><div><label htmlFor="title" className="block text-sm font-medium text-slate-600 mb-1">Title <span className="text-red-500">*</span></label><input type="text" name="title" id="title" value={formData.title} onChange={handleChange} required className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"/></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label htmlFor="amount" className="block text-sm font-medium text-slate-600 mb-1">Amount (NPR) <span className="text-red-500">*</span></label><input type="number" step="0.01" name="amount" id="amount" value={formData.amount} onChange={handleChange} required className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"/></div><div><label htmlFor="date" className="block text-sm font-medium text-slate-600 mb-1">Date <span className="text-red-500">*</span></label><input type="date" name="date" id="date" value={formData.date} onChange={handleChange} required className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"/></div></div><div><label htmlFor="category" className="block text-sm font-medium text-slate-600 mb-1">Category</label><input type="text" name="category" id="category" value={formData.category} onChange={handleChange} required className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"/></div><div><label htmlFor="description" className="block text-sm font-medium text-slate-600 mb-1">Description</label><textarea name="description" id="description" value={formData.description} onChange={handleChange} rows="3" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"/></div>{error && <div className="p-3 bg-red-50 text-red-700 rounded-lg flex items-center gap-2"><AlertTriangle size={18}/><span>{error}</span></div>}<div className="mt-8 pt-5 border-t border-slate-200 flex justify-end gap-4"><button type="button" onClick={onClose} disabled={isSubmitting} className="px-5 py-2.5 bg-slate-200 text-slate-800 font-semibold rounded-lg hover:bg-slate-300 transition-colors">Cancel</button><button type="submit" disabled={isSubmitting} className={`px-5 py-2.5 text-white font-semibold rounded-lg flex items-center gap-2 disabled:opacity-50 transition-colors transform hover:scale-105 ${type.includes('Income') || type.includes('Deposit') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>{isSubmitting ? 'Saving...' : `Save ${type}`}</button></div></form></motion.div></div>}</AnimatePresence>);
+    return (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+            <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-lg">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-2xl font-bold text-slate-800">Add New {type}</h3>
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><XIcon size={20}/></button>
+                </div>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div><label htmlFor="title" className="block text-sm font-medium text-slate-600 mb-1">Title <span className="text-red-500">*</span></label><input type="text" name="title" id="title" value={formData.title} onChange={handleChange} required className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"/></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label htmlFor="amount" className="block text-sm font-medium text-slate-600 mb-1">Amount (NPR) <span className="text-red-500">*</span></label><input type="number" step="0.01" name="amount" id="amount" value={formData.amount} onChange={handleChange} required className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"/></div>
+                        <div><label htmlFor="date" className="block text-sm font-medium text-slate-600 mb-1">Date <span className="text-red-500">*</span></label><input type="date" name="date" id="date" value={formData.date} onChange={handleChange} required className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"/></div>
+                    </div>
+                    <div><label htmlFor="category" className="block text-sm font-medium text-slate-600 mb-1">Category</label><input type="text" name="category" id="category" value={formData.category} onChange={handleChange} required className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"/></div>
+                    <div><label htmlFor="description" className="block text-sm font-medium text-slate-600 mb-1">Description</label><textarea name="description" id="description" value={formData.description} onChange={handleChange} rows="3" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"/></div>
+                    {error && <div className="p-3 bg-red-50 text-red-700 rounded-lg flex items-center gap-2"><AlertTriangle size={18}/><span>{error}</span></div>}
+                    <div className="mt-8 pt-5 border-t border-slate-200 flex justify-end gap-4">
+                        <button type="button" onClick={onClose} disabled={isSubmitting} className="px-5 py-2.5 bg-slate-200 text-slate-800 font-semibold rounded-lg hover:bg-slate-300 transition-colors">Cancel</button>
+                        <button type="submit" disabled={isSubmitting} className={`px-5 py-2.5 text-white font-semibold rounded-lg flex items-center gap-2 disabled:opacity-50 transition-colors transform hover:scale-105 ${type.includes('Income') || type.includes('Deposit') ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>{isSubmitting ? 'Saving...' : `Save ${type}`}</button>
+                    </div>
+                </form>
+            </motion.div>
+        </div>
+    );
 };
-const TransactionDetailModal = ({ transaction, onClose }) => { return (<AnimatePresence>{transaction && <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-lg relative"><button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 rounded-full p-2"><XIcon size={20}/></button><h3 className="text-2xl font-bold mb-1 text-slate-800">{transaction.title}</h3><p className={`text-lg font-semibold ${transaction.type.includes('Income') || transaction.type.includes('Deposit') ? 'text-green-600' : 'text-red-600'}`}>{transaction.type.includes('Expense') || transaction.type.includes('Withdrawal') ? '-' : '+'}{formatCurrency(transaction.amount)}</p><div className="mt-6 space-y-3 text-sm border-t pt-6"><div className="flex justify-between"><span className="text-slate-500 font-medium">Date:</span><span className="font-semibold">{formatDate(transaction.date)}</span></div><div className="flex justify-between"><span className="text-slate-500 font-medium">Type:</span><span className="font-semibold">{transaction.type}</span></div><div className="flex justify-between"><span className="text-slate-500 font-medium">Category:</span><span className="font-semibold">{transaction.category}</span></div>{transaction.description && (<div className="pt-2"><p className="text-slate-500 font-medium mb-1">Description:</p><p className="text-slate-700 bg-slate-50 p-3 rounded-md whitespace-pre-wrap">{transaction.description}</p></div>)}</div></motion.div></div>}</AnimatePresence>);};
+
+const TransactionDetailModal = ({ transaction, onClose }) => { 
+    return (
+        <AnimatePresence>
+            {transaction && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+                    <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-lg relative">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 rounded-full p-2"><XIcon size={20}/></button>
+                        <h3 className="text-2xl font-bold mb-1 text-slate-800">{transaction.title}</h3>
+                        <p className={`text-lg font-semibold ${transaction.type.includes('Income') || transaction.type.includes('Deposit') ? 'text-green-600' : 'text-red-600'}`}>{transaction.type.includes('Expense') || transaction.type.includes('Withdrawal') ? '-' : '+'}{formatCurrency(transaction.amount)}</p>
+                        <div className="mt-6 space-y-3 text-sm border-t pt-6">
+                            <div className="flex justify-between"><span className="text-slate-500 font-medium">Date:</span><span className="font-semibold">{formatDate(transaction.date, true)}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500 font-medium">Type:</span><span className="font-semibold">{transaction.type}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500 font-medium">Category:</span><span className="font-semibold">{transaction.category}</span></div>
+                            {transaction.description && (<div className="pt-2"><p className="text-slate-500 font-medium mb-1">Description:</p><p className="text-slate-700 bg-slate-50 p-3 rounded-md whitespace-pre-wrap">{transaction.description}</p></div>)}
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+    );
+};
 
 // --- Main Finance Dashboard Component ---
 export default function FinanceDashboard({ user, allUsers, initialTransactions, initialBankAccount, initialNotifications }) {
@@ -150,7 +192,7 @@ export default function FinanceDashboard({ user, allUsers, initialTransactions, 
   useEffect(() => { setIsMounted(true); }, []);
   useEffect(() => { function handleClickOutside(event) { if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) setIsDropdownOpen(false); if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target)) setIsNotificationOpen(false); } document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
   
-  const { filteredTransactions, summary } = useMemo(() => {
+  const { summary } = useMemo(() => {
     const filtered = transactions.filter(t => {
         const transactionDate = new Date(t.date);
         return transactionDate.getUTCFullYear() === viewingYear && transactionDate.getUTCMonth() === viewingMonth;
@@ -163,7 +205,7 @@ export default function FinanceDashboard({ user, allUsers, initialTransactions, 
             totalExpenses += t.amount;
         }
     });
-    return { filteredTransactions: filtered, summary: { totalIncome, totalExpenses, netProfit: totalIncome - totalExpenses } };
+    return { summary: { totalIncome, totalExpenses, netProfit: totalIncome - totalExpenses } };
   }, [transactions, viewingMonth, viewingYear]);
 
   const transactionsWithRunningBalance = useMemo(() => {
@@ -266,7 +308,7 @@ export default function FinanceDashboard({ user, allUsers, initialTransactions, 
   const yearOptions = [...Array(5)].map((_, i) => new Date().getFullYear() - i);
   const monthOptions = Array.from({length: 12}, (_, i) => ({ value: i, label: new Date(0, i).toLocaleString('default', { month: 'long' })}));
   
-  const filteredTransactionsWithBalance = useMemo(() => {
+  const filteredTransactionsForDisplay = useMemo(() => {
     return transactionsWithRunningBalance.filter(t => {
         const transactionDate = new Date(t.date);
         return transactionDate.getUTCFullYear() === viewingYear && transactionDate.getUTCMonth() === viewingMonth;
@@ -276,7 +318,9 @@ export default function FinanceDashboard({ user, allUsers, initialTransactions, 
   return (
     <>
       <Toaster position="top-center" toastOptions={{ duration: 3000 }}/>
-      <TransactionModal type={modalType} onClose={closeModal} onSuccess={refetchData}/>
+      <AnimatePresence>
+        {isModalOpen && <TransactionModal type={modalType} onClose={closeModal} onSuccess={refetchData} />}
+      </AnimatePresence>
       <TransactionDetailModal transaction={viewingTransaction} onClose={() => setViewingTransaction(null)} />
       
       <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
@@ -304,7 +348,7 @@ export default function FinanceDashboard({ user, allUsers, initialTransactions, 
                     </motion.div>
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                       <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="lg:col-span-4 space-y-8">
-                        <ActionCard onAction={openModal} />
+                         <ActionCard onAction={openModal} />
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
                           <h2 className="text-xl font-semibold text-slate-800 mb-4">Generate Statement</h2>
                           <div className="space-y-4">
@@ -322,8 +366,8 @@ export default function FinanceDashboard({ user, allUsers, initialTransactions, 
                             </div>
                             <div className="space-y-3">
                                 <AnimatePresence>
-                                {filteredTransactionsWithBalance.length > 0 ? (
-                                    filteredTransactionsWithBalance.map((t, index) => <TransactionRow key={t._id} transaction={t} remainingBalance={t.remainingBalance} index={index} onRowClick={() => setViewingTransaction(t)} />)
+                                {filteredTransactionsForDisplay.length > 0 ? (
+                                    filteredTransactionsForDisplay.map((t, index) => <TransactionRow key={t._id} transaction={t} remainingBalance={t.remainingBalance} index={index} onRowClick={() => setViewingTransaction(t)} />)
                                 ) : (
                                     <motion.p initial={{opacity:0}} animate={{opacity:1}} className="text-center py-10 text-slate-500">No transactions found for this period.</motion.p>
                                 )}
@@ -368,6 +412,7 @@ export async function getServerSideProps(context) {
         };
     } catch (error) {
         console.error("Finance Dashboard getServerSideProps Error:", error);
+        // Clear invalid token cookie and redirect
         context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
         return { redirect: { destination: "/login", permanent: false } };
     }
