@@ -1,8 +1,8 @@
-import dbConnect from '../../../lib/dbConnect';
-import User from '../../../models/User';
-import Transaction from '../../../models/Transaction';
-import BankAccount from '../../../models/BankAccount';
-import Notification from '../../../models/Notification';
+import dbConnect from '../../../../lib/dbConnect';
+import User from '../../../../models/User';
+import Transaction from '../../../../models/Transaction';
+import BankAccount from '../../../../models/BankAccount';
+import Notification from '../../../../models/Notification';
 import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
