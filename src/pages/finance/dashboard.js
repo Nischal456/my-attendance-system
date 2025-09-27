@@ -2,12 +2,6 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Image from 'next/image';
-import jwt from "jsonwebtoken";
-import dbConnect from "../../../lib/dbConnect";
-import User from "../../../models/User";
-import Transaction from "../../../models/Transaction";
-import BankAccount from "../../../models/BankAccount";
-import Notification from '../../../models/Notification';
 import { LogOut, ChevronDown, Plus, Minus, TrendingUp, TrendingDown, DollarSign, Send, CreditCard, Bell, ArrowUpRight, ArrowDownLeft, AlertTriangle, X as XIcon, CheckCircle, Download } from 'react-feather';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -165,78 +159,41 @@ const TransactionDetailModal = ({ transaction, onClose }) => {
     );
 };
 
+
 // --- Main Finance Dashboard Component ---
-export default function FinanceDashboard({ user, allUsers, initialTransactions, initialBankAccount, initialNotifications }) {
+export default function FinanceDashboard({ user }) {
   const router = useRouter();
-  const [transactions, setAllTransactions] = useState(initialTransactions);
-  const [bankAccount, setBankAccount] = useState(initialBankAccount);
+  
+  // States for data fetched from client-side
+  const [isLoading, setIsLoading] = useState(true);
+  const [transactions, setAllTransactions] = useState([]);
+  const [bankAccount, setBankAccount] = useState({ balance: 0 });
+  const [allUsers, setAllUsers] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
+  // UI and Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState('Income');
   const [isMounted, setIsMounted] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [viewingTransaction, setViewingTransaction] = useState(null);
-  const [notifications, setNotifications] = useState(initialNotifications || []);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const userDropdownRef = useRef(null);
   const notificationDropdownRef = useRef(null);
   const [notificationContent, setNotificationContent] = useState('');
-  const [targetUser, setTargetUser] = useState(allUsers.find(u => u.role !== 'Admin')?._id || allUsers[0]?._id || '');
+  const [targetUser, setTargetUser] = useState('');
   const [isSending, setIsSending] = useState(false);
+  
+  // Date and Report Filtering States
   const [viewingMonth, setViewingMonth] = useState(new Date().getMonth());
   const [viewingYear, setViewingYear] = useState(new Date().getFullYear());
   const [reportType, setReportType] = useState('monthly');
   const [reportYear, setReportYear] = useState(new Date().getFullYear());
   const [reportMonth, setReportMonth] = useState(new Date().getMonth());
+  
   const unreadNotifications = useMemo(() => notifications.filter(n => !n.isRead), [notifications]);
 
-  useEffect(() => { setIsMounted(true); }, []);
-  useEffect(() => { function handleClickOutside(event) { if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) setIsDropdownOpen(false); if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target)) setIsNotificationOpen(false); } document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
-  
-  const { summary } = useMemo(() => {
-    const filtered = transactions.filter(t => {
-        const transactionDate = new Date(t.date);
-        return transactionDate.getUTCFullYear() === viewingYear && transactionDate.getUTCMonth() === viewingMonth;
-    });
-    let totalIncome = 0, totalExpenses = 0;
-    filtered.forEach(t => {
-        if (t.type === 'Income' || t.type === 'Deposit') {
-            totalIncome += t.amount;
-        } else if (t.type === 'Expense' || t.type === 'Withdrawal') {
-            totalExpenses += t.amount;
-        }
-    });
-    return { summary: { totalIncome, totalExpenses, netProfit: totalIncome - totalExpenses } };
-  }, [transactions, viewingMonth, viewingYear]);
-
-  const transactionsWithRunningBalance = useMemo(() => {
-    const sorted = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date) || new Date(a.createdAt) - new Date(b.createdAt));
-    
-    let balanceBeforeFirst = bankAccount.balance;
-    for (let i = sorted.length - 1; i >= 0; i--) {
-        const t = sorted[i];
-        if (t.type === 'Income' || t.type === 'Deposit') {
-            balanceBeforeFirst -= t.amount;
-        } else {
-            balanceBeforeFirst += t.amount;
-        }
-    }
-
-    let runningBalance = balanceBeforeFirst;
-    return sorted.map(t => {
-        if (t.type === 'Income' || t.type === 'Deposit') {
-            runningBalance += t.amount;
-        } else {
-            runningBalance -= t.amount;
-        }
-        return { ...t, remainingBalance: runningBalance };
-    });
-  }, [transactions, bankAccount.balance]);
-  
-  const handleLogout = async () => { await fetch("/api/auth/logout"); router.push("/login"); };
-  const openModal = (type) => { setModalType(type); setIsModalOpen(true); };
-  const closeModal = () => setIsModalOpen(false);
-  const handleMarkAsRead = async () => { if (unreadNotifications.length === 0) return; try { await fetch('/api/notification/mark-as-read', { method: 'POST' }); setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))); } catch (err) { console.error(err); } };
-  
+  // Refetch data from the API endpoint
   const refetchData = useCallback(async () => {
     try {
         const res = await fetch('/api/finance/dashboard-data');
@@ -244,13 +201,76 @@ export default function FinanceDashboard({ user, allUsers, initialTransactions, 
         const data = await res.json();
         setAllTransactions(data.transactions);
         setBankAccount(data.bankAccount);
-        setNotifications(data.notifications);
         setAllUsers(data.allUsers);
+        setNotifications(data.notifications);
+        // Set default target user for notification form after users are fetched
+        if (data.allUsers.length > 0 && !targetUser) {
+            setTargetUser(data.allUsers.find(u => u.role !== 'Admin')?._id || data.allUsers[0]?._id || '');
+        }
     } catch (err) {
         toast.error(err.message);
+    } finally {
+        setIsLoading(false);
     }
-  }, []);
+  }, [targetUser]); // Added targetUser dependency to set default once
 
+  // Initial data fetch and dropdown outside click handler
+  useEffect(() => {
+    setIsMounted(true);
+    refetchData();
+  }, []); // Note: refetchData is memoized, so we can remove it from dependency array for initial fetch.
+
+  useEffect(() => {
+      function handleClickOutside(event) {
+          if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) setIsDropdownOpen(false);
+          if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target)) setIsNotificationOpen(false);
+      }
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+  
+  // Memoized calculations
+  const { summary } = useMemo(() => {
+    const filtered = transactions.filter(t => {
+        const transactionDate = new Date(t.date);
+        return transactionDate.getUTCFullYear() === viewingYear && transactionDate.getUTCMonth() === viewingMonth;
+    });
+    let totalIncome = 0, totalExpenses = 0;
+    filtered.forEach(t => {
+        if (t.type === 'Income' || t.type === 'Deposit') totalIncome += t.amount;
+        else if (t.type === 'Expense' || t.type === 'Withdrawal') totalExpenses += t.amount;
+    });
+    return { summary: { totalIncome, totalExpenses, netProfit: totalIncome - totalExpenses } };
+  }, [transactions, viewingMonth, viewingYear]);
+
+  const transactionsWithRunningBalance = useMemo(() => {
+    const sorted = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date) || new Date(a.createdAt) - new Date(b.createdAt));
+    let balanceBeforeFirst = bankAccount.balance;
+    for (let i = sorted.length - 1; i >= 0; i--) {
+        const t = sorted[i];
+        if (t.type === 'Income' || t.type === 'Deposit') balanceBeforeFirst -= t.amount;
+        else balanceBeforeFirst += t.amount;
+    }
+    let runningBalance = balanceBeforeFirst;
+    return sorted.map(t => {
+        if (t.type === 'Income' || t.type === 'Deposit') runningBalance += t.amount;
+        else runningBalance -= t.amount;
+        return { ...t, remainingBalance: runningBalance };
+    });
+  }, [transactions, bankAccount.balance]);
+  
+  const filteredTransactionsForDisplay = useMemo(() => {
+    return transactionsWithRunningBalance.filter(t => {
+        const transactionDate = new Date(t.date);
+        return transactionDate.getUTCFullYear() === viewingYear && transactionDate.getUTCMonth() === viewingMonth;
+    }).reverse(); // Reverse for display (newest first)
+  }, [transactionsWithRunningBalance, viewingMonth, viewingYear]);
+
+  // Handlers
+  const handleLogout = async () => { await fetch("/api/auth/logout"); router.push("/login"); };
+  const openModal = (type) => { setModalType(type); setIsModalOpen(true); };
+  const handleMarkAsRead = async () => { if (unreadNotifications.length === 0) return; try { await fetch('/api/notification/mark-as-read', { method: 'POST' }); setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))); } catch (err) { console.error(err); } };
+  
   const handleSendNotification = async (e) => {
     e.preventDefault();
     if (!notificationContent.trim() || !targetUser) { toast.error('Please select a user and write a message.'); return; }
@@ -272,13 +292,11 @@ export default function FinanceDashboard({ user, allUsers, initialTransactions, 
     try {
         const res = await fetch(`/api/finance/statement?reportType=${reportType}&year=${reportYear}&month=${reportMonth}`);
         if (!res.ok) throw new Error('Failed to fetch statement data.');
-        
         const statementData = await res.json();
         if (!statementData.success || statementData.data.length === 0) {
             toast.error('No transactions found for the selected period.', { id: toastId });
             return;
         }
-
         let totalIncome = 0, totalExpenses = 0;
         statementData.data.forEach(t => {
             if(t.type === 'Income' || t.type === 'Deposit') totalIncome += t.amount;
@@ -289,7 +307,6 @@ export default function FinanceDashboard({ user, allUsers, initialTransactions, 
         const rows = statementData.data.map(t => [sanitizeField(formatDate(t.date)), sanitizeField(t.title), sanitizeField(t.category), sanitizeField(t.description), sanitizeField(t.type), t.amount].join(','));
         const summaryTitle = reportType === 'monthly' ? `${new Date(0, reportMonth).toLocaleString('default', { month: 'long' })} ${reportYear}` : `Year ${reportYear}`;
         const summaryRows = [ `\n\nSummary for ${summaryTitle}`, `Total Income:,"${formatCurrency(totalIncome)}"`, `Total Expenses:,"${formatCurrency(totalExpenses)}"`, `Net Profit/Loss:,"${formatCurrency(totalIncome - totalExpenses)}"`,`Final Bank Balance as of file generation:,"${formatCurrency(bankAccount.balance)}"` ];
-        
         const csvContent = [headers.join(','), ...rows, ...summaryRows].join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
@@ -307,19 +324,16 @@ export default function FinanceDashboard({ user, allUsers, initialTransactions, 
 
   const yearOptions = [...Array(5)].map((_, i) => new Date().getFullYear() - i);
   const monthOptions = Array.from({length: 12}, (_, i) => ({ value: i, label: new Date(0, i).toLocaleString('default', { month: 'long' })}));
-  
-  const filteredTransactionsForDisplay = useMemo(() => {
-    return transactionsWithRunningBalance.filter(t => {
-        const transactionDate = new Date(t.date);
-        return transactionDate.getUTCFullYear() === viewingYear && transactionDate.getUTCMonth() === viewingMonth;
-    }).reverse(); // Reverse for display (newest first)
-  }, [transactionsWithRunningBalance, viewingMonth, viewingYear]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen bg-slate-50 text-slate-600">Loading our financial dashboard...</div>;
+  }
 
   return (
     <>
       <Toaster position="top-center" toastOptions={{ duration: 3000 }}/>
       <AnimatePresence>
-        {isModalOpen && <TransactionModal type={modalType} onClose={closeModal} onSuccess={refetchData} />}
+        {isModalOpen && <TransactionModal type={modalType} onClose={() => setIsModalOpen(false)} onSuccess={refetchData} />}
       </AnimatePresence>
       <TransactionDetailModal transaction={viewingTransaction} onClose={() => setViewingTransaction(null)} />
       
@@ -384,35 +398,36 @@ export default function FinanceDashboard({ user, allUsers, initialTransactions, 
 }
 
 export async function getServerSideProps(context) {
+    // Dynamically require modules needed only on the server
+    const jwt = require('jsonwebtoken');
+    const dbConnect = require('../../../lib/dbConnect').default;
+    const User = require('../../../models/User').default;
+    
     await dbConnect();
     const { token } = context.req.cookies;
-    if (!token) return { redirect: { destination: "/login", permanent: false } };
+    if (!token) {
+        return { redirect: { destination: "/login", permanent: false } };
+    }
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.userId).select("-password").lean();
-        if (!user || user.role !== "Finance") { return { redirect: { destination: "/dashboard", permanent: false } }; }
         
-        const [transactions, bankAccount, allUsers, notifications] = await Promise.all([
-            Transaction.find({}).sort({ date: -1, createdAt: -1 }).lean(),
-            BankAccount.findOne({ accountName: 'Main Account' }).lean(),
-            User.find({ role: { $ne: 'Finance' } }).select('name role avatar').sort({ name: 1 }).lean(),
-            Notification.find({ recipient: user._id }).sort({ createdAt: -1 }).limit(50).lean()
-        ]);
-
-        const initialBankAccount = bankAccount || await BankAccount.create({ accountName: 'Main Account', balance: 0 });
+        if (!user || user.role !== "Finance") {
+          // If user not found or not Finance role, clear cookie and redirect
+          context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
+          return { redirect: { destination: "/login", permanent: false } };
+        }
         
-        return {
-            props: {
-                user: JSON.parse(JSON.stringify(user)),
-                allUsers: JSON.parse(JSON.stringify(allUsers)),
-                initialTransactions: JSON.parse(JSON.stringify(transactions)),
-                initialBankAccount: JSON.parse(JSON.stringify(initialBankAccount)),
-                initialNotifications: JSON.parse(JSON.stringify(notifications)),
-            },
+        // Return only the essential user prop. All other data is fetched on the client.
+        return { 
+            props: { 
+                user: JSON.parse(JSON.stringify(user)) 
+            } 
         };
     } catch (error) {
         console.error("Finance Dashboard getServerSideProps Error:", error);
-        // Clear invalid token cookie and redirect
+        // If token is invalid, clear it and redirect to login
         context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
         return { redirect: { destination: "/login", permanent: false } };
     }
