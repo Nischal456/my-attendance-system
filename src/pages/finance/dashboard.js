@@ -2,16 +2,27 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Image from 'next/image';
-import { LogOut, ChevronDown, Plus, Minus, TrendingUp, TrendingDown, DollarSign, Send, CreditCard, Bell, ArrowUpRight, ArrowDownLeft, AlertTriangle, X as XIcon, CheckCircle, Download } from 'react-feather';
+import { 
+  LogOut, ChevronDown, Plus, Minus, TrendingUp, TrendingDown, 
+  DollarSign, Send, CreditCard, Bell, ArrowUpRight, ArrowDownLeft, 
+  AlertTriangle, X as XIcon, CheckCircle, Download, Globe, Layers, 
+  Facebook, Instagram, Linkedin, Video, Trash2, ExternalLink, Target, Zap, Search 
+} from 'react-feather';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Bar, Doughnut } from 'react-chartjs-2';
+import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
+
+// --- Register ChartJS Components ---
+Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 // --- Helper Functions ---
 const formatCurrency = (amount) => `Rs. ${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(amount || 0)}`;
+const formatUSD = (amount) => `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount || 0)}`;
 const formatDate = (dateString, includeTime = false) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    const options = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
     if(includeTime) {
         options.hour = '2-digit';
         options.minute = '2-digit';
@@ -21,6 +32,185 @@ const formatDate = (dateString, includeTime = false) => {
 };
 
 // --- Sub-Components ---
+
+// 1. DOLLAR DETAIL MODAL (Updated Design)
+const DollarDetailModal = ({ transaction, onClose }) => {
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex justify-center items-center p-4">
+            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative overflow-hidden">
+                <div className={`absolute top-0 left-0 w-full h-2 ${transaction.type === 'Load' ? 'bg-green-500' : 'bg-indigo-500'}`}></div>
+                <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 rounded-full p-2"><XIcon size={20}/></button>
+                
+                <div className="flex items-center gap-3 mb-4 mt-2">
+                    <div className={`p-3 rounded-xl ${transaction.type === 'Load' ? 'bg-green-100 text-green-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                        {transaction.type === 'Load' ? <ArrowDownLeft size={28}/> : <Target size={28}/>}
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{transaction.type === 'Load' ? 'Credit' : 'Ad Spend'}</p>
+                        <h3 className="text-xl font-bold text-slate-800">{transaction.type === 'Load' ? 'Funds Added' : transaction.companyName}</h3>
+                    </div>
+                </div>
+                
+                <div className="flex items-baseline gap-1 mb-6">
+                    <span className={`text-4xl font-extrabold ${transaction.type === 'Load' ? 'text-green-600' : 'text-slate-900'}`}>
+                        {transaction.type === 'Load' ? '+' : '-'}{formatUSD(transaction.amount)}
+                    </span>
+                    <span className="text-slate-500 font-medium text-sm">USD</span>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-4 space-y-3 border border-slate-100">
+                    <div className="flex justify-between text-sm"><span className="text-slate-500">Date</span><span className="font-semibold text-slate-800">{formatDate(transaction.date, true)}</span></div>
+                    {transaction.type === 'Spend' && (
+                         <div className="flex justify-between text-sm"><span className="text-slate-500">Platform</span><span className="font-semibold text-slate-800 flex items-center gap-1">{transaction.platform}</span></div>
+                    )}
+                    <div className="flex justify-between text-sm"><span className="text-slate-500">Exchange Rate</span><span className="font-semibold text-slate-800">Rs. {transaction.exchangeRate}</span></div>
+                    <div className="flex justify-between text-sm pt-2 border-t border-slate-200"><span className="text-slate-500">Total Cost (NPR)</span><span className="font-bold text-slate-800">{formatCurrency(transaction.nprEquivalent || (transaction.amount * transaction.exchangeRate))}</span></div>
+                </div>
+                
+                {transaction.campaignName && (
+                    <div className="mt-4">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Campaign Details</span>
+                        <p className="text-sm text-slate-700 bg-blue-50/50 p-3 rounded-lg border border-blue-100 leading-relaxed flex gap-2">
+                            <Zap size={16} className="text-blue-500 flex-shrink-0 mt-0.5"/> {transaction.campaignName}
+                        </p>
+                    </div>
+                )}
+            </motion.div>
+        </motion.div>
+    );
+};
+
+// 2. ADD SPEND MODAL (Updated Design)
+const AddDollarSpendModal = ({ onClose, onSuccess }) => {
+    const [formData, setFormData] = useState({ companyName: '', platform: 'Facebook', campaignName: '', amount: '', exchangeRate: '135.0' });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const platforms = [{ id: 'Facebook', icon: <Facebook size={18} />, color: 'bg-blue-600' }, { id: 'Instagram', icon: <Instagram size={18} />, color: 'bg-pink-600' }, { id: 'Google', icon: <Globe size={18} />, color: 'bg-red-500' }, { id: 'LinkedIn', icon: <Linkedin size={18} />, color: 'bg-blue-700' }, { id: 'TikTok', icon: <Video size={18} />, color: 'bg-black' }];
+
+    const handleSubmit = async (e) => {
+        e.preventDefault(); setIsSubmitting(true);
+        try {
+            const res = await fetch('/api/finance/dollar-spend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, type: 'Spend' }) });
+            if (!res.ok) throw new Error('Failed');
+            toast.success('Spend recorded!'); await onSuccess(); onClose();
+        } catch (error) { toast.error(error.message); } finally { setIsSubmitting(false); }
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex justify-center items-center p-4">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md overflow-hidden">
+                <div className="flex justify-between items-center mb-6"><h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Target size={20} className="text-green-600"/> Record Ad Spend</h3><button onClick={onClose}><XIcon className="text-slate-400 hover:text-slate-600"/></button></div>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                      <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Platform</label><div className="flex flex-wrap gap-2">{platforms.map((p) => (<button key={p.id} type="button" onClick={() => setFormData({...formData, platform: p.id})} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${formData.platform === p.id ? `${p.color} text-white shadow-md ring-2 ring-offset-1 ring-gray-200` : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{p.icon} {p.id}</button>))}</div></div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Client</label><input type="text" required value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Client Name"/></div>
+                        <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Campaign</label><input type="text" value={formData.campaignName} onChange={e => setFormData({...formData, campaignName: e.target.value})} className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Dashain Sale"/></div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Amount ($)</label><input type="number" step="0.01" required value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full p-2 bg-white border rounded-lg font-bold text-slate-800 outline-none focus:border-indigo-500" placeholder="0.00"/></div>
+                        <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rate (NPR)</label><input type="number" step="0.01" required value={formData.exchangeRate} onChange={e => setFormData({...formData, exchangeRate: e.target.value})} className="w-full p-2 bg-white border rounded-lg outline-none focus:border-indigo-500"/></div>
+                    </div>
+                    <button type="submit" disabled={isSubmitting} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl mt-2 transition-all shadow-lg shadow-green-500/20">Save Spend Record</button>
+                </form>
+            </motion.div>
+        </motion.div>
+    );
+};
+
+// 3. LOAD FUNDS MODAL (Updated Design)
+const LoadFundsModal = ({ onClose, onSuccess }) => {
+    const [amount, setAmount] = useState('');
+    const [rate, setRate] = useState('135.0');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const handleSubmit = async (e) => {
+        e.preventDefault(); setIsSubmitting(true);
+        try {
+            const res = await fetch('/api/finance/dollar-spend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'Load', amount, exchangeRate: rate }) });
+            if (!res.ok) throw new Error('Failed to load funds');
+            toast.success(`Loaded $${amount} successfully!`); await onSuccess(); onClose();
+        } catch (error) { toast.error(error.message); } finally { setIsSubmitting(false); }
+    };
+    return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[70] flex justify-center items-center p-4"><div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md"><div className="flex justify-between items-center mb-6"><h3 className="text-xl font-bold text-slate-900">Load Dollar Card</h3><button onClick={onClose}><XIcon className="text-slate-400 hover:text-slate-600"/></button></div><form onSubmit={handleSubmit} className="space-y-5"><div><label className="block text-sm mb-1">Amount (USD)</label><input type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} className="w-full p-3 border rounded-xl text-lg font-bold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0.00"/></div><div><label className="block text-sm mb-1">Exchange Rate</label><input type="number" step="0.01" required value={rate} onChange={e => setRate(e.target.value)} className="w-full p-3 border rounded-xl"/></div><button type="submit" disabled={isSubmitting} className="w-full bg-green-600 text-white font-bold py-3 rounded-xl">{isSubmitting ? 'Loading...' : 'Add Funds'}</button></form></div></motion.div>);
+};
+
+// 4. DOLLAR CARD WIDGET (With Delete & Detail)
+const DollarCardWidget = ({ dollarData, dollarBalance, onAddClick, onLoadClick, onItemClick, onDelete }) => {
+    // Sort: Newest first
+    const recentActivity = [...dollarData].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+    
+    // Optional Chart Data Calculation (preserved for future use or if you want to enable charts)
+    const companyStats = dollarData.filter(d => d.type === 'Spend').reduce((acc, item) => {
+        acc[item.companyName] = (acc[item.companyName] || 0) + item.amount;
+        return acc;
+    }, {});
+    const sortedCompanies = Object.entries(companyStats).sort((a,b) => b[1] - a[1]).slice(0, 4);
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* Virtual Card */}
+            <div className="relative h-72 rounded-3xl overflow-hidden shadow-2xl shadow-slate-900/20 bg-slate-900 group transform transition hover:scale-[1.01]">
+                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                 <div className="absolute inset-0 bg-gradient-to-tr from-slate-900 via-indigo-950 to-purple-900 opacity-90"></div>
+                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl"></div>
+                <div className="relative p-8 flex flex-col justify-between h-full text-white">
+                    <div className="flex justify-between items-start">
+                        <div><p className="text-blue-200/80 text-xs font-bold tracking-[0.2em] uppercase mb-2">Ads Dollar Wallet</p><h3 className="text-4xl lg:text-5xl font-bold tracking-tight text-white">{formatUSD(dollarBalance)}</h3></div>
+                        <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner"><Globe size={22} className="text-blue-300"/></div>
+                    </div>
+                    <div className="mt-auto">
+                        <div className="flex gap-3 mb-8">
+                            <button onClick={onLoadClick} className="bg-green-500 hover:bg-green-400 text-slate-900 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-green-900/20"><ArrowDownLeft size={16}/> Load Funds</button>
+                            <button onClick={onAddClick} className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2.5 px-4 rounded-xl border border-white/20 flex items-center gap-2 transition-all"><Minus size={16}/> Record Spend</button>
+                        </div>
+                        <div className="flex justify-between items-end">
+                            <div><div className="flex items-center gap-3 mb-1"><div className="flex -space-x-2"><div className="w-8 h-8 rounded-full bg-red-500/90 border-2 border-slate-900"></div><div className="w-8 h-8 rounded-full bg-yellow-500/90 border-2 border-slate-900"></div></div><span className="text-sm text-slate-300 font-mono tracking-widest">XXXX 5869</span></div><p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider ml-1">GECKO WORKS DOLLAR CARD</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Smart Activity List */}
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/80 flex flex-col h-72">
+                 <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg"><Layers size={20} className="text-indigo-500"/> Recent Activity</h3>
+                 </div>
+                 <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+                     {recentActivity.length > 0 ? recentActivity.map((d, i) => (
+                         <motion.div whileHover={{ x: 4 }} key={d._id || i} className="flex justify-between items-center text-sm border-b border-slate-100 pb-2.5 last:border-0 cursor-pointer group relative">
+                             <div className="flex items-center gap-3" onClick={() => onItemClick(d)}>
+                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${d.type === 'Load' ? 'bg-green-100 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                     {d.type === 'Load' ? <ArrowDownLeft size={18}/> : <Target size={18}/>}
+                                 </div>
+                                 <div>
+                                     <p className="font-bold text-slate-700">{d.type === 'Load' ? 'Wallet Load' : d.companyName}</p>
+                                     <p className="text-xs text-slate-500 flex items-center gap-1">
+                                         {d.type === 'Load' ? formatDate(d.date) : <><span className="truncate max-w-[120px]">{d.campaignName || 'General'}</span> • {formatDate(d.date)}</>}
+                                     </p>
+                                 </div>
+                             </div>
+                             <div className="flex items-center gap-3">
+                                 <span className={`font-bold text-base ${d.type === 'Load' ? 'text-green-600' : 'text-slate-800'}`} onClick={() => onItemClick(d)}>
+                                     {d.type === 'Load' ? '+' : '-'}{formatUSD(d.amount)}
+                                 </span>
+                                 {/* ✅ NEW: Delete Button for Dollar Transactions */}
+                                 <button onClick={(e) => { e.stopPropagation(); onDelete(d._id); }} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                                     <Trash2 size={14}/>
+                                 </button>
+                             </div>
+                         </motion.div>
+                     )) : <div className="h-full flex items-center justify-center text-slate-400 text-sm">No activity yet.</div>}
+                 </div>
+                 {dollarData.length > 5 && (
+                    <Link href="/finance/dollar-history" className="mt-2 w-full py-2.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl text-center transition-colors flex items-center justify-center gap-2">
+                        View Full History <ExternalLink size={14}/>
+                    </Link>
+                 )}
+            </div>
+        </div>
+    );
+};
+
 const StatCard = ({ title, value, icon, iconBgColor }) => (
     <div className={`bg-white/70 backdrop-blur-sm p-5 rounded-2xl shadow-sm border border-slate-200/80 transition-all duration-300 hover:shadow-lg hover:border-indigo-300/50 transform hover:-translate-y-1`}>
         <div className="flex items-center gap-4">
@@ -34,13 +224,13 @@ const StatCard = ({ title, value, icon, iconBgColor }) => (
 );
 
 const ActionCard = ({ onAction }) => (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 h-full">
         <h2 className="text-xl font-semibold text-slate-800 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 gap-4">
             <button onClick={() => onAction('Income')} className="bg-green-50 text-green-700 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-green-100 transition-colors transform hover:scale-105"><Plus size={18}/> Income</button>
             <button onClick={() => onAction('Expense')} className="bg-red-50 text-red-700 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-red-100 transition-colors transform hover:scale-105"><Minus size={18}/> Expense</button>
             <button onClick={() => onAction('Deposit')} className="bg-blue-50 text-blue-700 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors transform hover:scale-105"><ArrowUpRight size={18}/> Deposit</button>
-            <button onClick={() => onAction('Withdrawal')} className="bg-yellow-50 text-yellow-700 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-100 transition-colors transform hover:scale-105"><ArrowDownLeft size={18}/> Withdrawal</button>
+            <button onClick={() => onAction('Withdrawal')} className="bg-yellow-50 text-yellow-700 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-100 transition-colors transform hover:scale-105"><ArrowDownLeft size={18}/> Withdraw</button>
         </div>
     </div>
 );
@@ -56,7 +246,7 @@ const NotificationCard = ({ allUsers, onSubmit, content, setContent, targetUser,
     </div>
 );
 
-const TransactionRow = ({ transaction, remainingBalance, onRowClick, index }) => {
+const TransactionRow = ({ transaction, remainingBalance, onRowClick, onDelete, index }) => {
     const isIncome = transaction.type === 'Income' || transaction.type === 'Deposit';
     return (
         <motion.div
@@ -65,7 +255,7 @@ const TransactionRow = ({ transaction, remainingBalance, onRowClick, index }) =>
             animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05, ease: "easeOut" } }}
             exit={{ opacity: 0, transition: { duration: 0.1 } }}
             onClick={onRowClick}
-            className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200/60 hover:shadow-md hover:border-indigo-300/50 transition-all duration-300 cursor-pointer"
+            className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200/60 hover:shadow-md hover:border-indigo-300/50 transition-all duration-300 cursor-pointer group"
         >
             <div className="flex items-center gap-3 sm:gap-4">
                 <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full ${isIncome ? 'bg-green-100' : 'bg-red-100'}`}>
@@ -78,9 +268,16 @@ const TransactionRow = ({ transaction, remainingBalance, onRowClick, index }) =>
                 </div>
                  <div className="text-sm text-slate-500 mx-4 hidden md:block whitespace-nowrap">{formatDate(transaction.date)}</div>
                 <div className="text-right flex-shrink-0">
-                     <p className={`text-base font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}`}>{isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}</p>
-                     <p className="text-xs text-slate-500 font-medium">Balance: {formatCurrency(remainingBalance)}</p>
+                      <p className={`text-base font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}`}>{isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}</p>
+                      <p className="text-xs text-slate-500 font-medium">Balance: {formatCurrency(remainingBalance)}</p>
                 </div>
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onDelete(transaction._id); }} 
+                    className="ml-2 p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                    title="Delete Transaction"
+                >
+                    <Trash2 size={16}/>
+                </button>
             </div>
         </motion.div>
     );
@@ -164,14 +361,22 @@ const TransactionDetailModal = ({ transaction, onClose }) => {
 export default function FinanceDashboard({ user }) {
   const router = useRouter();
   
-  // States for data fetched from client-side
+  // States
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setAllTransactions] = useState([]);
   const [bankAccount, setBankAccount] = useState({ balance: 0 });
   const [allUsers, setAllUsers] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
-  // UI and Form States
+  // Dollar Card State
+  const [dollarData, setDollarData] = useState([]);
+  const [dollarBalance, setDollarBalance] = useState(0);
+  const [isDollarModalOpen, setIsDollarModalOpen] = useState(false);
+  const [isLoadFundsModalOpen, setIsLoadFundsModalOpen] = useState(false);
+  // NEW: State for viewing single dollar transaction
+  const [viewingDollarTransaction, setViewingDollarTransaction] = useState(null);
+
+  // UI States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState('Income');
   const [isMounted, setIsMounted] = useState(false);
@@ -184,7 +389,7 @@ export default function FinanceDashboard({ user }) {
   const [targetUser, setTargetUser] = useState('');
   const [isSending, setIsSending] = useState(false);
   
-  // Date and Report Filtering States
+  // Filter States
   const [viewingMonth, setViewingMonth] = useState(new Date().getMonth());
   const [viewingYear, setViewingYear] = useState(new Date().getFullYear());
   const [reportType, setReportType] = useState('monthly');
@@ -193,32 +398,39 @@ export default function FinanceDashboard({ user }) {
   
   const unreadNotifications = useMemo(() => notifications.filter(n => !n.isRead), [notifications]);
 
-  // Refetch data from the API endpoint
+  // Data Fetching
   const refetchData = useCallback(async () => {
     try {
         const res = await fetch('/api/finance/dashboard-data');
         if (!res.ok) throw new Error('Could not refetch dashboard data');
         const data = await res.json();
-        setAllTransactions(data.transactions);
-        setBankAccount(data.bankAccount);
-        setAllUsers(data.allUsers);
-        setNotifications(data.notifications);
-        // Set default target user for notification form after users are fetched
-        if (data.allUsers.length > 0 && !targetUser) {
+        setAllTransactions(data.transactions || []);
+        setBankAccount(data.bankAccount || { balance: 0 });
+        setAllUsers(data.allUsers || []);
+        setNotifications(data.notifications || []);
+        
+        if (data.allUsers && data.allUsers.length > 0 && !targetUser) {
             setTargetUser(data.allUsers.find(u => u.role !== 'Admin')?._id || data.allUsers[0]?._id || '');
         }
+
+        const dollarRes = await fetch('/api/finance/dollar-spend');
+        const dollarJson = await dollarRes.json();
+        if (dollarJson.success) {
+            setDollarData(dollarJson.data || []);
+            setDollarBalance(dollarJson.balance || 0);
+        }
+
     } catch (err) {
         toast.error(err.message);
     } finally {
         setIsLoading(false);
     }
-  }, [targetUser]); // Added targetUser dependency to set default once
+  }, [targetUser]);
 
-  // Initial data fetch and dropdown outside click handler
   useEffect(() => {
     setIsMounted(true);
     refetchData();
-  }, []); // Note: refetchData is memoized, so we can remove it from dependency array for initial fetch.
+  }, []); 
 
   useEffect(() => {
       function handleClickOutside(event) {
@@ -229,7 +441,7 @@ export default function FinanceDashboard({ user }) {
       return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   
-  // Memoized calculations
+  // Calculations
   const { summary } = useMemo(() => {
     const filtered = transactions.filter(t => {
         const transactionDate = new Date(t.date);
@@ -263,14 +475,34 @@ export default function FinanceDashboard({ user }) {
     return transactionsWithRunningBalance.filter(t => {
         const transactionDate = new Date(t.date);
         return transactionDate.getUTCFullYear() === viewingYear && transactionDate.getUTCMonth() === viewingMonth;
-    }).reverse(); // Reverse for display (newest first)
+    }).reverse();
   }, [transactionsWithRunningBalance, viewingMonth, viewingYear]);
 
-  // Handlers
+  // Actions
   const handleLogout = async () => { await fetch("/api/auth/logout"); router.push("/login"); };
   const openModal = (type) => { setModalType(type); setIsModalOpen(true); };
   const handleMarkAsRead = async () => { if (unreadNotifications.length === 0) return; try { await fetch('/api/notification/mark-as-read', { method: 'POST' }); setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))); } catch (err) { console.error(err); } };
   
+  const handleDeleteTransaction = async (id) => {
+    if(!confirm("Are you sure you want to delete this transaction? This will reverse the effect on the bank balance.")) return;
+    try {
+        const res = await fetch(`/api/finance/transactions?id=${id}`, { method: 'DELETE' });
+        if(!res.ok) throw new Error("Failed to delete");
+        toast.success("Transaction deleted.");
+        refetchData();
+    } catch (e) { toast.error(e.message); }
+  };
+
+  // ✅ NEW: Delete Handler for Dollar Spend
+  const handleDeleteDollarSpend = async (id) => {
+      if(!confirm("Delete this dollar record? Balance will update.")) return;
+      try {
+          const res = await fetch(`/api/finance/dollar-spend?id=${id}`, { method: 'DELETE' });
+          if(!res.ok) throw new Error("Failed to delete");
+          toast.success("Dollar record deleted."); refetchData();
+      } catch (e) { toast.error(e.message); }
+  };
+
   const handleSendNotification = async (e) => {
     e.preventDefault();
     if (!notificationContent.trim() || !targetUser) { toast.error('Please select a user and write a message.'); return; }
@@ -308,14 +540,16 @@ export default function FinanceDashboard({ user }) {
         const summaryTitle = reportType === 'monthly' ? `${new Date(0, reportMonth).toLocaleString('default', { month: 'long' })} ${reportYear}` : `Year ${reportYear}`;
         const summaryRows = [ `\n\nSummary for ${summaryTitle}`, `Total Income:,"${formatCurrency(totalIncome)}"`, `Total Expenses:,"${formatCurrency(totalExpenses)}"`, `Net Profit/Loss:,"${formatCurrency(totalIncome - totalExpenses)}"`,`Final Bank Balance as of file generation:,"${formatCurrency(bankAccount.balance)}"` ];
         const csvContent = [headers.join(','), ...rows, ...summaryRows].join('\n');
+        
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
+        const downloadLink = document.createElement("a");
         const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `financial_statement_${reportYear}_${reportType === 'monthly' ? String(reportMonth + 1).padStart(2, '0') : ''}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        downloadLink.setAttribute("href", url);
+        downloadLink.setAttribute("download", `financial_statement_${reportYear}_${reportType === 'monthly' ? String(reportMonth + 1).padStart(2, '0') : ''}.csv`);
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        
         toast.success('Download complete!', { id: toastId });
     } catch (error) {
         toast.error(error.message, { id: toastId });
@@ -334,6 +568,9 @@ export default function FinanceDashboard({ user }) {
       <Toaster position="top-center" toastOptions={{ duration: 3000 }}/>
       <AnimatePresence>
         {isModalOpen && <TransactionModal type={modalType} onClose={() => setIsModalOpen(false)} onSuccess={refetchData} />}
+        {isDollarModalOpen && <AddDollarSpendModal onClose={() => setIsDollarModalOpen(false)} onSuccess={refetchData} />} 
+        {isLoadFundsModalOpen && <LoadFundsModal onClose={() => setIsLoadFundsModalOpen(false)} onSuccess={refetchData} />}
+        {viewingDollarTransaction && <DollarDetailModal transaction={viewingDollarTransaction} onClose={() => setViewingDollarTransaction(null)} />}
       </AnimatePresence>
       <TransactionDetailModal transaction={viewingTransaction} onClose={() => setViewingTransaction(null)} />
       
@@ -360,20 +597,38 @@ export default function FinanceDashboard({ user }) {
                       <StatCard title="Monthly Net" value={formatCurrency(summary.netProfit)} icon={<DollarSign className="text-indigo-600"/>} iconBgColor="bg-indigo-100" />
                       <StatCard title="Bank Balance" value={formatCurrency(bankAccount.balance)} icon={<CreditCard className="text-blue-600"/>} iconBgColor="bg-blue-100" />
                     </motion.div>
+                    
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                      <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="lg:col-span-4 space-y-8">
-                         <ActionCard onAction={openModal} />
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
-                          <h2 className="text-xl font-semibold text-slate-800 mb-4">Generate Statement</h2>
-                          <div className="space-y-4">
-                            <div className="flex gap-4"><select value={reportType} onChange={e => setReportType(e.target.value)} className="w-full p-2 border rounded-lg bg-white"><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select><select value={reportYear} onChange={e => setReportYear(parseInt(e.target.value))} className="w-full p-2 border rounded-lg bg-white">{yearOptions.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
-                            {reportType === 'monthly' && (<div><label className="text-xs text-slate-500">Month</label><select value={reportMonth} onChange={e => setReportMonth(parseInt(e.target.value))} className="w-full p-2 border rounded-lg bg-white">{monthOptions.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}</select></div>)}
-                            <button onClick={handleDownloadStatement} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors"><Download size={18}/>Generate & Download CSV</button>
-                          </div>
-                        </div>
-                        <NotificationCard allUsers={allUsers} onSubmit={handleSendNotification} content={notificationContent} setContent={setNotificationContent} targetUser={targetUser} setTargetUser={setTargetUser} isSending={isSending} />
+                      {/* Left Column: Dollar Card, Actions, Notifications, Statement */}
+                      <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="lg:col-span-5 space-y-8">
+                         {/* UPDATED: Pass onDelete */}
+                         <DollarCardWidget 
+                            dollarData={dollarData} 
+                            dollarBalance={dollarBalance} 
+                            onAddClick={() => setIsDollarModalOpen(true)} 
+                            onLoadClick={() => setIsLoadFundsModalOpen(true)} 
+                            onItemClick={(transaction) => setViewingDollarTransaction(transaction)}
+                            onDelete={handleDeleteDollarSpend}
+                         />
+                         
+                         <div className="grid grid-cols-1 gap-8">
+                             <ActionCard onAction={openModal} />
+                             
+                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                               <h2 className="text-xl font-semibold text-slate-800 mb-4">Generate Statement</h2>
+                               <div className="space-y-4">
+                                 <div className="flex gap-4"><select value={reportType} onChange={e => setReportType(e.target.value)} className="w-full p-2 border rounded-lg bg-white"><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select><select value={reportYear} onChange={e => setReportYear(parseInt(e.target.value))} className="w-full p-2 border rounded-lg bg-white">{yearOptions.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
+                                 {reportType === 'monthly' && (<div><label className="text-xs text-slate-500">Month</label><select value={reportMonth} onChange={e => setReportMonth(parseInt(e.target.value))} className="w-full p-2 border rounded-lg bg-white">{monthOptions.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}</select></div>)}
+                                 <button onClick={handleDownloadStatement} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors"><Download size={18}/>Generate & Download CSV</button>
+                               </div>
+                             </div>
+                             
+                             <NotificationCard allUsers={allUsers} onSubmit={handleSendNotification} content={notificationContent} setContent={setNotificationContent} targetUser={targetUser} setTargetUser={setTargetUser} isSending={isSending} />
+                         </div>
                       </motion.div>
-                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="lg:col-span-8 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80">
+
+                      {/* Right Column: Transactions List */}
+                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="lg:col-span-7 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80 h-fit">
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
                               <h2 className="text-xl font-semibold text-slate-800">Transactions</h2>
                               <div className="flex gap-2"><select value={viewingMonth} onChange={e => setViewingMonth(parseInt(e.target.value))} className="p-2 border rounded-lg bg-white">{monthOptions.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}</select><select value={viewingYear} onChange={e => setViewingYear(parseInt(e.target.value))} className="p-2 border rounded-lg bg-white">{yearOptions.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
@@ -381,7 +636,16 @@ export default function FinanceDashboard({ user }) {
                             <div className="space-y-3">
                                 <AnimatePresence>
                                 {filteredTransactionsForDisplay.length > 0 ? (
-                                    filteredTransactionsForDisplay.map((t, index) => <TransactionRow key={t._id} transaction={t} remainingBalance={t.remainingBalance} index={index} onRowClick={() => setViewingTransaction(t)} />)
+                                    filteredTransactionsForDisplay.map((t, index) => (
+                                      <TransactionRow 
+                                        key={t._id} 
+                                        transaction={t} 
+                                        remainingBalance={t.remainingBalance} 
+                                        index={index} 
+                                        onRowClick={() => setViewingTransaction(t)} 
+                                        onDelete={handleDeleteTransaction}
+                                      />
+                                    ))
                                 ) : (
                                     <motion.p initial={{opacity:0}} animate={{opacity:1}} className="text-center py-10 text-slate-500">No transactions found for this period.</motion.p>
                                 )}
@@ -398,7 +662,6 @@ export default function FinanceDashboard({ user }) {
 }
 
 export async function getServerSideProps(context) {
-    // Dynamically require modules needed only on the server
     const jwt = require('jsonwebtoken');
     const dbConnect = require('../../../lib/dbConnect').default;
     const User = require('../../../models/User').default;
@@ -414,12 +677,10 @@ export async function getServerSideProps(context) {
         const user = await User.findById(decoded.userId).select("-password").lean();
         
         if (!user || user.role !== "Finance") {
-          // If user not found or not Finance role, clear cookie and redirect
           context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
           return { redirect: { destination: "/login", permanent: false } };
         }
         
-        // Return only the essential user prop. All other data is fetched on the client.
         return { 
             props: { 
                 user: JSON.parse(JSON.stringify(user)) 
@@ -427,7 +688,6 @@ export async function getServerSideProps(context) {
         };
     } catch (error) {
         console.error("Finance Dashboard getServerSideProps Error:", error);
-        // If token is invalid, clear it and redirect to login
         context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
         return { redirect: { destination: "/login", permanent: false } };
     }

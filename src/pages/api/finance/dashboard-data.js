@@ -17,19 +17,37 @@ export default async function handler(req, res) {
             return res.status(403).json({ message: 'Forbidden' });
         }
 
-        const [transactions, bankAccount, allUsers, notifications] = await Promise.all([
-            Transaction.find({}).sort({ date: -1 }).limit(500).lean(),
-            BankAccount.findOne({ accountName: 'Main Account' }).lean(),
-            User.find({ role: { $ne: 'Finance' } }).select('name role').sort({ name: 1 }).lean(),
-            Notification.find({ recipient: user._id }).sort({ createdAt: -1 }).limit(50).lean()
-        ]);
+        // 1. Fetch all transactions
+        const transactions = await Transaction.find({}).sort({ date: -1, createdAt: -1 }).lean();
+        
+        // 2. ✅ FIX: Calculate the REAL balance from scratch (Self-Healing)
+        const realBalance = transactions.reduce((acc, t) => {
+            if (t.type === 'Income' || t.type === 'Deposit') {
+                return acc + t.amount;
+            } else {
+                return acc - t.amount;
+            }
+        }, 0);
 
-        const initialBankAccount = bankAccount || await BankAccount.create({ accountName: 'Main Account', balance: 0 });
+        // 3. Update or Create the Bank Account with the corrected balance
+        let bankAccount = await BankAccount.findOne({ accountName: 'Main Account' });
+        if (!bankAccount) {
+            bankAccount = await BankAccount.create({ accountName: 'Main Account', balance: realBalance });
+        } else {
+            // Force update the balance to be correct
+            if (bankAccount.balance !== realBalance) {
+                bankAccount.balance = realBalance;
+                await bankAccount.save();
+            }
+        }
+
+        const allUsers = await User.find({ role: { $ne: 'Finance' } }).select('name role').sort({ name: 1 }).lean();
+        const notifications = await Notification.find({ recipient: user._id }).sort({ createdAt: -1 }).limit(50).lean();
 
         res.status(200).json({
             success: true,
             transactions,
-            bankAccount: initialBankAccount,
+            bankAccount, // This now sends the 100% accurate balance
             allUsers,
             notifications
         });
