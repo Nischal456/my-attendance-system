@@ -5,7 +5,7 @@ import { motion, Variants } from 'framer-motion';
 import { 
   User, Shield, CheckCircle, Users, Zap, Layout, 
   BarChart2, Lock, ChevronRight, Activity, Layers, Database, 
-  Globe, Server, Cpu, PieChart, Command 
+  Globe, Server, Cpu, PieChart, Command ,LogIn,UserCheck
 } from 'react-feather';
 
 export default function HomePage() {
@@ -171,7 +171,7 @@ export default function HomePage() {
               {/* Card Header */}
               <div className="relative mb-8 text-center z-10">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-white shadow-inner border border-emerald-100">
-                    <Command className="text-emerald-600" size={28} />
+                    <UserCheck className="text-emerald-600" size={28} />
                 </div>
                 <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Access Portal</h2>
                 <p className="text-sm font-medium text-slate-400 mt-1">Secure gateway for personnel</p>

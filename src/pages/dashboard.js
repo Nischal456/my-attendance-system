@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, DollarSign, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home, Send, Search, ArrowLeft, AlertTriangle, AlertCircle } from 'react-feather';
 import { ChevronDown } from 'lucide-react';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast'; // Uses global _app.js Toaster
 import { Bar } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,17 +14,15 @@ import { CSS } from '@dnd-kit/utilities';
 import Pusher from 'pusher-js';
 import { formatDistanceToNow } from 'date-fns';
 
-// --- Register Chart.js components ---
+// --- Configuration ---
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-// --- Helper & Utility Hooks ---
+// --- Helpers ---
 const useMediaQuery = (query) => {
     const [matches, setMatches] = useState(false);
     useEffect(() => {
         const media = window.matchMedia(query);
-        if (media.matches !== matches) {
-            setMatches(media.matches);
-        }
+        if (media.matches !== matches) setMatches(media.matches);
         const listener = () => setMatches(media.matches);
         window.addEventListener('resize', listener);
         return () => window.removeEventListener('resize', listener);
@@ -32,73 +30,137 @@ const useMediaQuery = (query) => {
     return matches;
 };
 
+const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+};
+
 const formatEnglishDate = (dateString, includeTime = false) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    if (includeTime) {
-        options.hour = 'numeric';
-        options.minute = '2-digit';
-        options.hour12 = true;
-    }
+    if (includeTime) { options.hour = 'numeric'; options.minute = '2-digit'; options.hour12 = true; }
     return date.toLocaleDateString('en-US', options);
 };
-const formatDuration = (totalSeconds) => { if (totalSeconds === null || totalSeconds === undefined || totalSeconds < 0) return '0m'; if (totalSeconds < 60) return `${totalSeconds}s`; const hours = Math.floor(totalSeconds / 3600); const minutes = Math.floor((totalSeconds % 3600) / 60); const parts = []; if (hours > 0) parts.push(`${hours}h`); if (minutes > 0) parts.push(`${minutes}m`); return parts.join(' ') || '0m'; };
-const formatElapsedTime = (startTime) => { if (!startTime) return '00:00:00'; const now = new Date(); const start = new Date(startTime); const seconds = Math.floor((now - start) / 1000); if (seconds < 0) return '00:00:00'; const h = Math.floor(seconds / 3600).toString().padStart(2, '0'); const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0'); const s = (seconds % 60).toString().padStart(2, '0'); return `${h}:${m}:${s}`; };
-const formatDeadline = (dateString) => {
-    if (!dateString) return 'No deadline';
-    return new Date(dateString).toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-    });
-};
-const MIN_WORK_SECONDS = 21600; // 6 hours
-const getStatusPill = (status) => { switch (status) { case 'In Progress': return 'bg-amber-100 text-amber-800'; case 'Completed': return 'bg-green-100 text-green-800'; default: return 'bg-sky-100 text-sky-800'; } };
-const getDeadlineInfo = (task) => { if (!task.deadline || task.status === 'Completed') return { classes: 'text-slate-500' }; if (new Date(task.deadline) < new Date()) { return { classes: 'text-red-600 font-semibold' }; } return { classes: 'text-slate-500' }; };
-const handleApiError = async (response) => { const contentType = response.headers.get("content-type"); if (contentType && contentType.indexOf("application/json") !== -1) { const errorData = await response.json(); return errorData.message || `HTTP error! status: ${response.status}`; } else { return `HTTP error! status: ${response.status} - ${response.statusText}`; } };
-const getSenderUI = (author) => { const lowerCaseAuthor = author?.toLowerCase() || ''; if (lowerCaseAuthor.includes('hr')) return { Icon: UserIcon, iconBg: 'bg-rose-100 text-rose-600' }; if (lowerCaseAuthor.includes('project manager')) return { Icon: Briefcase, iconBg: 'bg-purple-100 text-purple-600' }; if (lowerCaseAuthor.includes('finance')) return { Icon: DollarSign, iconBg: 'bg-emerald-100 text-emerald-600' }; return { Icon: Info, iconBg: 'bg-blue-100 text-blue-600' }; };
 
-// --- Reusable & Sub-Components ---
+const formatDuration = (totalSeconds) => { 
+    if (totalSeconds == null || totalSeconds < 0) return '0m'; 
+    if (totalSeconds < 60) return `${totalSeconds}s`; 
+    const h = Math.floor(totalSeconds / 3600); 
+    const m = Math.floor((totalSeconds % 3600) / 60); 
+    const parts = []; 
+    if (h > 0) parts.push(`${h}h`); 
+    if (m > 0) parts.push(`${m}m`); 
+    return parts.join(' ') || '0m'; 
+};
+
+const formatElapsedTime = (startTime) => { 
+    if (!startTime) return '00:00:00'; 
+    const now = new Date(); 
+    const start = new Date(startTime); 
+    const s = Math.floor((now - start) / 1000); 
+    if (s < 0) return '00:00:00'; 
+    const hh = Math.floor(s / 3600).toString().padStart(2, '0'); 
+    const mm = Math.floor((s % 3600) / 60).toString().padStart(2, '0'); 
+    const ss = (s % 60).toString().padStart(2, '0'); 
+    return `${hh}:${mm}:${ss}`; 
+};
+
+const formatDeadline = (dateString) => { 
+    if (!dateString) return 'No deadline'; 
+    return new Date(dateString).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }); 
+};
+
+const MIN_WORK_SECONDS = 21600; 
+
+const getStatusPill = (status) => { 
+    switch (status) { 
+        case 'In Progress': return 'bg-amber-100 text-amber-800 border border-amber-200'; 
+        case 'Completed': return 'bg-emerald-100 text-emerald-800 border border-emerald-200'; 
+        default: return 'bg-slate-100 text-slate-600 border border-slate-200'; 
+    } 
+};
+
+const getDeadlineInfo = (task) => { 
+    if (!task.deadline || task.status === 'Completed') return { classes: 'text-slate-400' }; 
+    if (new Date(task.deadline) < new Date()) { return { classes: 'text-rose-500 font-bold' }; } 
+    return { classes: 'text-slate-500' }; 
+};
+
+const handleApiError = async (response) => { 
+    const contentType = response.headers.get("content-type"); 
+    if (contentType && contentType.indexOf("application/json") !== -1) { 
+        const errorData = await response.json(); 
+        return errorData.message || `HTTP error! status: ${response.status}`; 
+    } 
+    return `HTTP error! status: ${response.status}`; 
+};
+
+const getSenderUI = (author) => { 
+    const lower = author?.toLowerCase() || ''; 
+    if (lower.includes('hr')) return { Icon: UserIcon, iconBg: 'bg-rose-100 text-rose-600' }; 
+    if (lower.includes('project')) return { Icon: Briefcase, iconBg: 'bg-purple-100 text-purple-600' }; 
+    if (lower.includes('finance')) return { Icon: DollarSign, iconBg: 'bg-emerald-100 text-emerald-600' }; 
+    return { Icon: Info, iconBg: 'bg-blue-100 text-blue-600' }; 
+};
+
+// --- Sub-Components ---
 
 const ButtonLoader = () => (
-    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>
 );
 
+const DashboardEntryLoader = ({ userName }) => (
+    <motion.div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center font-sans" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5, ease: "easeInOut" }}>
+        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 20 }} className="relative mb-8">
+            <div className="absolute inset-0 bg-emerald-200 blur-2xl rounded-full opacity-40 animate-pulse"></div>
+            <Image src="/logo.png" alt="Logo" width={80} height={80} className="" priority style={{ width: 'auto', height: 'auto' }} />
+        </motion.div>
+        <h2 className="text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">Welcome, {userName.split(' ')[0]}</h2>
+        <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
+            <span className="flex items-center gap-2"><span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>Preparing your dashboard...</span>
+        </div>
+        <motion.div className="mt-8 h-1.5 w-48 bg-slate-100 rounded-full overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+            <motion.div className="h-full bg-emerald-500 rounded-full" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 1.2, ease: "easeInOut" }} />
+        </motion.div>
+    </motion.div>
+);
+
 const NotificationContent = ({ notifications, onLinkClick }) => (
     <>
         {notifications.length > 0 ? (
-            <div className="divide-y divide-slate-200/80">
+            <div className="divide-y divide-slate-100">
                 {notifications.map((notif) => {
                     const senderUI = getSenderUI(notif.author);
                     const isUnread = !notif.isRead;
                     return (
-                        <Link key={notif._id} href={notif.link || '#'} onClick={onLinkClick} className={`block`}>
-                                <div className={`flex items-start gap-4 p-4 transition-colors ${isUnread ? 'bg-sky-50/70 hover:bg-sky-100/60' : 'hover:bg-slate-100/70'}`}>
-                                    <div className={`flex-shrink-0 mt-0.5 w-9 h-9 flex items-center justify-center rounded-full shadow-inner ${senderUI.iconBg}`}>
+                        <Link key={notif._id} href={notif.link || '#'} onClick={onLinkClick} className={`block group`}>
+                                <div className={`flex items-start gap-4 p-4 transition-all duration-200 ${isUnread ? 'bg-emerald-50/60' : 'hover:bg-slate-50'}`}>
+                                    <div className={`flex-shrink-0 mt-0.5 w-10 h-10 flex items-center justify-center rounded-2xl shadow-sm ${senderUI.iconBg}`}>
                                         <senderUI.Icon size={18}/>
                                     </div>
                                     <div className="flex-1 text-sm">
-                                        <p className={`leading-snug ${isUnread ? 'text-slate-800 font-semibold' : 'text-slate-600'}`}>{notif.content}</p>
-                                        <p className={`text-xs mt-1.5 ${isUnread ? 'text-sky-600 font-semibold' : 'text-slate-400'}`}>{formatEnglishDate(notif.createdAt, true)}</p>
+                                        <p className={`leading-snug ${isUnread ? 'text-slate-800 font-bold' : 'text-slate-600'}`}>{notif.content}</p>
+                                        <p className={`text-xs mt-1.5 ${isUnread ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>{formatEnglishDate(notif.createdAt, true)}</p>
                                     </div>
-                                    {isUnread && (<div className="mt-1 w-2.5 h-2.5 bg-sky-500 rounded-full flex-shrink-0" title="Unread"></div>)}
+                                    {isUnread && (<div className="mt-2 w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0 shadow-sm shadow-emerald-200" title="Unread"></div>)}
                                 </div>
                         </Link>
                     );
                 })}
             </div>
         ) : (
-            <div className="p-8 text-center flex flex-col justify-center items-center h-full">
-                <Bell className="mx-auto h-16 w-16 text-slate-300"/>
-                <h4 className="mt-5 text-lg font-semibold text-slate-700">All caught up!</h4>
-                <p className="mt-1 text-sm text-slate-500">You have no new notifications.</p>
+            <div className="p-10 text-center flex flex-col justify-center items-center h-full">
+                <div className="bg-slate-50 p-4 rounded-full mb-4">
+                    <Bell className="h-8 w-8 text-slate-300"/>
+                </div>
+                <h4 className="text-base font-semibold text-slate-700">All caught up!</h4>
+                <p className="mt-1 text-xs text-slate-400">You have no new notifications.</p>
             </div>
         )}
     </>
@@ -110,13 +172,13 @@ const MobileNotificationPanel = ({ notifications, unreadCount, handleMarkAsRead,
         return () => { document.body.style.overflow = 'unset'; };
     }, []);
     return (
-        <motion.div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-            <motion.div className="h-full w-full max-w-md bg-slate-50 shadow-2xl flex flex-col" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} onClick={(e) => e.stopPropagation()}>
-                <header className="p-4 border-b border-slate-200 flex justify-between items-center bg-white flex-shrink-0">
-                    <h3 className="text-xl font-bold text-slate-800">Notifications</h3>
-                    <div className="flex items-center gap-1">
-                        {unreadCount > 0 && (<button onClick={handleMarkAsRead} className="p-2 text-slate-500 hover:text-green-600 hover:bg-green-100/50 rounded-full transition-colors" title="Mark all as read"><CheckSquare size={20} /></button>)}
-                        <button onClick={onClose} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-100/50 rounded-full transition-colors" title="Close"><X size={22} /></button>
+        <motion.div className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+            <motion.div className="h-full w-full max-w-md bg-white shadow-2xl flex flex-col" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 350, damping: 35 }} onClick={(e) => e.stopPropagation()}>
+                <header className="p-5 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0">
+                    <h3 className="text-xl font-bold text-slate-800 tracking-tight">Notifications</h3>
+                    <div className="flex items-center gap-2">
+                        {unreadCount > 0 && (<button onClick={handleMarkAsRead} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors" title="Mark all as read"><CheckSquare size={20} /></button>)}
+                        <button onClick={onClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors" title="Close"><X size={22} /></button>
                     </div>
                 </header>
                 <div className="flex-grow overflow-y-auto"><NotificationContent notifications={notifications} onLinkClick={onClose} /></div>
@@ -127,12 +189,12 @@ const MobileNotificationPanel = ({ notifications, unreadCount, handleMarkAsRead,
 
 const DesktopNotificationPanel = ({ notifications, unreadCount, handleMarkAsRead, onClose }) => {
     return (
-        <motion.div initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.95 }} transition={{ duration: 0.2, ease: "easeOut" }} className="absolute top-full right-0 mt-3 w-full max-w-sm sm:w-[26rem] bg-white/80 backdrop-blur-xl border border-slate-200/80 rounded-xl shadow-2xl z-20 overflow-hidden origin-top-right">
-            <header className="p-4 border-b border-slate-200/80 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-slate-800">Notifications</h3>
-                {unreadCount > 0 && (<button onClick={handleMarkAsRead} className="p-2 text-slate-500 hover:text-green-600 hover:bg-green-100/50 rounded-full transition-colors" title="Mark all as read"><CheckSquare size={20} /></button>)}
+        <motion.div initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.95 }} transition={{ duration: 0.2, ease: "easeOut" }} className="absolute top-full right-0 mt-4 w-full max-w-sm sm:w-[28rem] bg-white/95 backdrop-blur-xl border border-white/50 rounded-2xl shadow-2xl shadow-slate-200/50 z-50 overflow-hidden origin-top-right ring-1 ring-slate-100">
+            <header className="p-4 px-5 border-b border-slate-100 flex justify-between items-center bg-white/50">
+                <h3 className="text-base font-bold text-slate-800">Notifications</h3>
+                {unreadCount > 0 && (<button onClick={handleMarkAsRead} className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors text-xs font-semibold flex items-center gap-1" title="Mark all as read"><CheckSquare size={14} /> Mark all read</button>)}
             </header>
-            <div className="max-h-[70vh] overflow-y-auto"><NotificationContent notifications={notifications} onLinkClick={onClose} /></div>
+            <div className="max-h-[65vh] overflow-y-auto custom-scrollbar"><NotificationContent notifications={notifications} onLinkClick={onClose} /></div>
         </motion.div>
     );
 };
@@ -155,16 +217,16 @@ const SubmitWorkModal = ({ task, onClose, onWorkSubmitted }) => {
             onClose();
         } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmitting(false); }
     };
-    return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-xl p-8 w-full max-w-lg"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold">Submit Work</h3><button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100"><X size={20} /></button></div><p className="text-sm text-slate-500 mb-6">For task: <span className="font-semibold text-slate-700">"{task.title}"</span></p><form
+    return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg border border-white/50"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold text-slate-800">Submit Work</h3><button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 transition-colors"><X size={20} className="text-slate-500" /></button></div><div className="bg-slate-50 p-4 rounded-xl mb-6 border border-slate-100"><p className="text-sm text-slate-500">Submitting for task:</p><p className="font-bold text-slate-800 text-lg">{task.title}</p></div><form
     onSubmit={handleSubmit}
     className="space-y-6"
 >
     <div>
         <label
             htmlFor="submissionDescription"
-            className="block text-sm font-medium text-slate-700"
+            className="block text-sm font-semibold text-slate-700 mb-2"
         >
-            Work Description <span className="text-red-500">*</span>
+            Work Description <span className="text-rose-500">*</span>
         </label>
         <textarea
             id="submissionDescription"
@@ -172,56 +234,59 @@ const SubmitWorkModal = ({ task, onClose, onWorkSubmitted }) => {
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             required
-            className="mt-2 w-full border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all outline-none resize-none"
             placeholder="Describe the task or work completed..."
         />
     </div>
     <div>
-        <label className="block text-sm font-medium text-slate-700">
-            Attach Files <span className="text-slate-400 text-xs">(optional)</span>
+        <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Attach Files <span className="text-slate-400 text-xs font-normal">(optional)</span>
         </label>
-        <input
-            type="file"
-            multiple
-            onChange={handleFileChange}
-            className="mt-2 block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-slate-200 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-300 transition"
-        />
+        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                <p className="text-sm text-slate-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+            </div>
+            <input type="file" multiple onChange={handleFileChange} className="hidden" />
+        </label>
     </div>
     {attachments.length > 0 && (
-        <div>
-            <p className="text-sm font-semibold text-slate-600">Selected Files:</p>
-            <div className="flex flex-wrap gap-2 mt-2">
+        <div className="bg-white border border-slate-100 rounded-xl p-3">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Selected Files:</p>
+            <div className="flex flex-wrap gap-2">
                 {attachments.map((f, i) => (
                     <span
                         key={i}
-                        className="bg-green-50 text-green-800 px-3 py-1 text-xs rounded-full border border-green-200 shadow-sm"
+                        className="bg-emerald-50 text-emerald-700 px-3 py-1 text-xs font-medium rounded-full border border-emerald-100 shadow-sm flex items-center gap-1"
                     >
-                        {f.filename}
+                        <Paperclip size={10} /> {f.filename}
                     </span>
                 ))}
             </div>
         </div>
     )}
     {error && (
-        <p className="text-sm text-red-600 font-medium">{error}</p>
+        <div className="p-3 bg-rose-50 text-rose-600 text-sm rounded-lg flex items-center gap-2">
+             <AlertTriangle size={16} /> {error}
+        </div>
     )}
-    <div className="pt-6 border-t flex justify-end gap-4">
+    <div className="pt-4 flex justify-end gap-3">
         <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition"
+            className="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition active:scale-95"
         >
             Cancel
         </button>
         <button
             type="submit"
             disabled={isSubmitting}
-            className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg flex items-center gap-2 transition"
+            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl flex items-center gap-2 transition shadow-lg shadow-emerald-200 active:scale-95 disabled:opacity-70 disabled:active:scale-100"
         >
             {isSubmitting ? (
-                <span className="animate-pulse">Submitting...</span>
+                <span className="flex items-center gap-2"><ButtonLoader /> Processing...</span>
             ) : (
-                "Submit & Complete"
+                <>Submit & Complete <CheckCircle size={18} /></>
             )}
         </button>
     </div>
@@ -246,7 +311,7 @@ const PersonalTaskModal = ({ onClose, onTaskCreated }) => {
             onClose();
         } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmitting(false); }
     };
-    return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-xl p-8 w-full max-w-lg"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold">Add Personal Task</h3><button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100"><X size={20} /></button></div><form onSubmit={handleSubmit} className="space-y-6"><div><label htmlFor="title" className="block text-sm font-semibold text-slate-700">Task Title <span className="text-red-500">*</span></label><input id="title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition" required /></div><div><label htmlFor="description" className="block text-sm font-semibold text-slate-700">Description <span className="font-normal text-slate-500">(Optional)</span></label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"/></div>{error && <p className="text-sm text-red-600">{error}</p>}<div className="pt-6 border-t border-slate-200 flex items-center justify-end gap-4"><button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition">Cancel</button><button type="submit" disabled={isSubmitting} className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-md shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed transition">{isSubmitting && (<svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>)}{isSubmitting ? 'Adding...' : 'Add Task'}</button></div></form></motion.div></motion.div>);
+    return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg border border-white/50"><div className="flex justify-between items-center mb-8"><h3 className="text-2xl font-bold text-slate-800">Add Personal Task</h3><button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 text-slate-500 transition"><X size={22} /></button></div><form onSubmit={handleSubmit} className="space-y-6"><div><label htmlFor="title" className="block text-sm font-bold text-slate-700 mb-2">Task Title <span className="text-rose-500">*</span></label><input id="title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all outline-none" placeholder="e.g. Update portfolio design" required /></div><div><label htmlFor="description" className="block text-sm font-bold text-slate-700 mb-2">Description <span className="font-normal text-slate-400 text-xs">(Optional)</span></label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all outline-none resize-none" placeholder="Add more details..."/></div>{error && <p className="text-sm text-rose-600 bg-rose-50 p-3 rounded-lg flex items-center gap-2"><AlertCircle size={16}/>{error}</p>}<div className="pt-4 flex items-center justify-end gap-3"><button type="button" onClick={onClose} className="px-5 py-3 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition active:scale-95">Cancel</button><button type="submit" disabled={isSubmitting} className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white bg-emerald-600 rounded-xl shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:shadow-emerald-300 transition-all active:scale-95 disabled:opacity-70">{isSubmitting && (<ButtonLoader />)}{isSubmitting ? 'Adding...' : 'Add Task'}</button></div></form></motion.div></motion.div>);
 };
 
 const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
@@ -274,7 +339,7 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
             setIsSubmitting(false);
         }
     };
-    
+      
     useEffect(() => {
         commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [task.comments]);
@@ -282,96 +347,128 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
     if (!task) return null;
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                <header className="flex justify-between items-start pb-4 border-b border-slate-200 mb-6">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex justify-center items-center p-4" onClick={onClose}>
+            <motion.div initial={{ y: 40, opacity: 0, scale: 0.9 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 40, opacity: 0, scale: 0.9 }} transition={{ type: "spring", bounce: 0.3 }} className="bg-white rounded-[2rem] shadow-2xl overflow-hidden w-full max-w-4xl max-h-[85vh] flex flex-col border border-white/40" onClick={(e) => e.stopPropagation()}>
+                <header className="flex justify-between items-start p-8 pb-6 border-b border-slate-100 bg-white sticky top-0 z-10">
                     <div>
-                        <h2 className="text-2xl font-bold text-slate-800">{task.title}</h2>
-                        <span className={`mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusPill(task.status)}`}>{task.status}</span>
+                        <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">{task.title}</h2>
+                        <div className="flex items-center gap-3 mt-3">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getStatusPill(task.status)}`}>{task.status}</span>
+                            <span className="text-slate-300">|</span>
+                            <span className="text-sm text-slate-500 font-medium"> {formatEnglishDate(task.createdAt)}</span>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="p-2 -mr-2 -mt-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-full transition-colors"><X size={24}/></button>
+                    <button onClick={onClose} className="p-2 bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-full transition-all transform hover:rotate-90"><X size={24}/></button>
                 </header>
-                <div className="flex-grow overflow-y-auto pr-3 -mr-3 space-y-6">
-                    <div>
-                        <h4 className="font-bold text-slate-600 mb-3 flex items-center gap-2"><Users size={16}/> Team</h4>
-                        <div className="flex flex-wrap gap-4">
-                            <div className="flex items-center gap-3">
-                                <Image src={task.assignedBy?.avatar || '/default-avatar.png'} width={40} height={40} className="rounded-full aspect-square object-cover" alt={task.assignedBy?.name || 'Assigner'} />
-                                <div>
-                                    <p className="font-semibold text-slate-800">{task.assignedBy?.name}</p>
-                                    <p className="text-xs text-slate-500">Project Manager</p>
+                <div className="flex-grow overflow-y-auto p-8 pt-6 space-y-8 custom-scrollbar">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {/* Left Column: Details */}
+                        <div className="md:col-span-2 space-y-8">
+                             <div>
+                                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm uppercase tracking-wide"><FileText size={16} className="text-emerald-500"/> Description</h4>
+                                <div className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50/50 p-6 rounded-2xl border border-slate-100 leading-relaxed">
+                                    {task.description || <span className="italic text-slate-400">No description provided.</span>}
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <Image src={task.assignedTo?.avatar || '/default-avatar.png'} width={40} height={40} className="rounded-full aspect-square object-cover" alt={task.assignedTo?.name || 'Assignee'} />
-                                <div>
-                                    <p className="font-semibold text-slate-800">{task.assignedTo?.name}</p>
-                                    <p className="text-xs text-slate-500">Assigned To</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <h4 className="font-bold text-slate-600 mb-2 flex items-center gap-2"><Calendar size={16}/> Deadline</h4>
-                            <p className={`text-sm ${getDeadlineInfo(task).classes}`}>{formatDeadline(task.deadline)}</p>
-                        </div>
-                        {task.completedAt && (
-                            <div>
-                                <h4 className="font-bold text-slate-600 mb-2 flex items-center gap-2"><CheckCircle size={16}/> Completed On</h4>
-                                <p className="text-sm text-green-600">{formatEnglishDate(task.completedAt, true)}</p>
-                            </div>
-                        )}
-                    </div>
-                    {task.description && (
-                        <div>
-                            <h4 className="font-bold text-slate-600 mb-2 flex items-center gap-2"><FileText size={16}/> Description</h4>
-                            <p className="text-sm text-slate-700 whitespace-pre-wrap bg-slate-50 p-3 rounded-lg border">{task.description}</p>
-                        </div>
-                    )}
-                    {(pmAttachments.length > 0 || userAttachments.length > 0) && (
-                         <div>
-                            <h4 className="font-bold text-slate-600 mb-3 flex items-center gap-2"><Paperclip size={16}/> Attachments</h4>
-                            {pmAttachments.length > 0 && (
-                                <div className="mb-4">
-                                    <h5 className="text-xs font-semibold text-slate-500 mb-2">From Project Manager:</h5>
-                                    <div className="flex flex-wrap gap-2">{pmAttachments.map(file => (<a key={file.url} href={file.url} target="_blank" rel="noopener noreferrer" className="text-sm bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 flex items-center gap-2"><Paperclip size={14}/>{file.filename}</a>))}</div>
-                                </div>
-                            )}
-                             {userAttachments.length > 0 && (
-                                <div>
-                                    <h5 className="text-xs font-semibold text-slate-500 mb-2">Your Submissions:</h5>
-                                    <div className="flex flex-wrap gap-2">{userAttachments.map(file => (<a key={file.url} href={file.url} target="_blank" rel="noopener noreferrer" className="text-sm bg-green-100 text-green-800 px-3 py-1.5 rounded-lg hover:bg-green-200 flex items-center gap-2"><CheckCircle size={14}/>{file.filename}</a>))}</div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                    <div>
-                        <h4 className="font-bold text-slate-600 mb-2 flex items-center gap-2"><MessageSquare size={16}/> Discussion</h4>
-                        <div className="space-y-4 max-h-60 overflow-y-auto p-4 bg-slate-50 rounded-lg border">
-                            {task.comments && task.comments.length > 0 ? (
-                                task.comments.map(comment => (
-                                    <div key={comment._id} className="flex items-start gap-3">
-                                        <Image src={comment.author?.avatar || '/default-avatar.png'} width={32} height={32} className="rounded-full aspect-square object-cover mt-1" alt={comment.author?.name || 'User'} />
-                                        <div className="flex-1 bg-white p-3 rounded-lg border">
-                                            <div className="flex items-center justify-between">
-                                                <p className="font-semibold text-sm text-slate-800">{comment.author?.name || 'Unknown User'}</p>
-                                                <p className="text-xs text-slate-400">{formatEnglishDate(comment.createdAt, true)}</p>
+                            
+                            {(pmAttachments.length > 0 || userAttachments.length > 0) && (
+                                 <div>
+                                    <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide"><Paperclip size={16} className="text-emerald-500"/> Attachments</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {pmAttachments.length > 0 && (
+                                            <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100">
+                                                <h5 className="text-xs font-bold text-blue-600 mb-3 uppercase">Project Files</h5>
+                                                <div className="flex flex-col gap-2">{pmAttachments.map(file => (<a key={file.url} href={file.url} target="_blank" rel="noopener noreferrer" className="text-sm bg-white p-2.5 rounded-xl hover:shadow-md transition-all flex items-center gap-3 text-slate-700 border border-blue-100/50"><div className="bg-blue-100 p-1.5 rounded-lg"><Paperclip size={14} className="text-blue-600"/></div><span className="truncate">{file.filename}</span></a>))}</div>
                                             </div>
-                                            <p className="text-sm text-slate-600 mt-1 whitespace-pre-wrap">{comment.content}</p>
+                                        )}
+                                         {userAttachments.length > 0 && (
+                                            <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100">
+                                                <h5 className="text-xs font-bold text-emerald-600 mb-3 uppercase">My Submissions</h5>
+                                                <div className="flex flex-col gap-2">{userAttachments.map(file => (<a key={file.url} href={file.url} target="_blank" rel="noopener noreferrer" className="text-sm bg-white p-2.5 rounded-xl hover:shadow-md transition-all flex items-center gap-3 text-slate-700 border border-emerald-100/50"><div className="bg-emerald-100 p-1.5 rounded-lg"><CheckCircle size={14} className="text-emerald-600"/></div><span className="truncate">{file.filename}</span></a>))}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div>
+                                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide"><MessageSquare size={16} className="text-emerald-500"/> Discussion</h4>
+                                <div className="space-y-4 max-h-80 overflow-y-auto p-1 pr-2">
+                                    {task.comments && task.comments.length > 0 ? (
+                                        task.comments.map(comment => (
+                                            <div key={comment._id} className="flex items-start gap-4 group">
+                                                <Image src={comment.author?.avatar || '/default-avatar.png'} width={40} height={40} className="rounded-2xl object-cover shadow-sm" alt={comment.author?.name || 'User'} />
+                                                <div className="flex-1">
+                                                    <div className="flex items-baseline justify-between mb-1">
+                                                        <p className="font-bold text-sm text-slate-800">{comment.author?.name}</p>
+                                                        <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{formatEnglishDate(comment.createdAt, true)}</span>
+                                                    </div>
+                                                    <div className="bg-slate-50 p-3 rounded-2xl rounded-tl-none border border-slate-100 text-sm text-slate-600 leading-relaxed shadow-sm">
+                                                        {comment.content}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-8 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                            <MessageSquare className="mx-auto h-8 w-8 text-slate-300 mb-2"/>
+                                            <p className="text-sm text-slate-500">No comments yet. Start the conversation!</p>
+                                        </div>
+                                    )}
+                                    <div ref={commentsEndRef} />
+                                </div>
+                                <form onSubmit={handlePostComment} className="mt-6 flex items-start gap-3 relative">
+                                    <Image src={currentUser.avatar} width={36} height={36} className="rounded-xl object-cover shadow-sm" alt="Your avatar" />
+                                    <div className="flex-1 relative">
+                                        <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write a comment..." rows="1" className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm shadow-inner focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all resize-none overflow-hidden min-h-[46px]" required />
+                                        <button type="submit" disabled={isSubmitting || !newComment.trim()} className="absolute right-2 top-2 p-1.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 disabled:opacity-50 disabled:hover:bg-emerald-500 transition-all shadow-md shadow-emerald-200"><Send size={16}/></button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        {/* Right Column: Meta Info */}
+                        <div className="space-y-6">
+                             <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide"><Users size={16} className="text-emerald-500"/> The Team</h4>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative"><Image src={task.assignedBy?.avatar || '/default-avatar.png'} width={44} height={44} className="rounded-2xl object-cover shadow-sm" alt={task.assignedBy?.name} /><div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5"><div className="bg-purple-500 p-1 rounded-full"><Briefcase size={8} className="text-white"/></div></div></div>
+                                        <div>
+                                            <p className="font-bold text-sm text-slate-800">{task.assignedBy?.name}</p>
+                                            <p className="text-xs text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded-full inline-block mt-0.5">Manager</p>
                                         </div>
                                     </div>
-                                ))
-                            ) : (
-                                <p className="text-sm text-slate-500 text-center py-4">No comments yet. Start the conversation!</p>
-                            )}
-                            <div ref={commentsEndRef} />
+                                    <div className="w-full h-px bg-slate-200/50"></div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative"><Image src={task.assignedTo?.avatar || '/default-avatar.png'} width={44} height={44} className="rounded-2xl object-cover shadow-sm" alt={task.assignedTo?.name} /><div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5"><div className="bg-emerald-500 p-1 rounded-full"><UserIcon size={8} className="text-white"/></div></div></div>
+                                        <div>
+                                            <p className="font-bold text-sm text-slate-800">{task.assignedTo?.name}</p>
+                                            <p className="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-0.5">Assigned To</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 space-y-4">
+                                <div>
+                                    <h4 className="font-bold text-slate-400 text-xs uppercase tracking-wide mb-1">Deadline</h4>
+                                    <div className={`flex items-center gap-2 font-bold ${getDeadlineInfo(task).classes.replace('text-slate-500', 'text-slate-700')}`}>
+                                        <Clock size={18}/>
+                                        <span>{formatDeadline(task.deadline)}</span>
+                                    </div>
+                                </div>
+                                {task.completedAt && (
+                                    <div>
+                                        <h4 className="font-bold text-slate-400 text-xs uppercase tracking-wide mb-1">Completed On</h4>
+                                        <div className="flex items-center gap-2 font-bold text-emerald-600">
+                                            <CheckCircle size={18}/>
+                                            <span>{formatEnglishDate(task.completedAt, true)}</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <form onSubmit={handlePostComment} className="mt-4 flex items-start gap-3">
-                            <Image src={currentUser.avatar} width={32} height={32} className="rounded-full aspect-square object-cover mt-1" alt="Your avatar" />
-                            <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write a comment..." rows="2" className="flex-1 p-2 border border-slate-300 rounded-lg text-sm shadow-sm focus:ring-green-500 focus:border-green-500 transition" required />
-                            <button type="submit" disabled={isSubmitting || !newComment.trim()} className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 h-full transition-colors">Post</button>
-                        </form>
                     </div>
                 </div>
             </motion.div>
@@ -382,48 +479,59 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
 const CompletedTaskCard = ({ task, onOpenDetails }) => {
     const userAttachments = task.attachments?.filter(att => att.uploadedBy?._id?.toString() === task.assignedTo?._id?.toString()) || [];
     return (
-        <div className="p-4 bg-slate-50/80 rounded-lg cursor-pointer hover:bg-slate-100/70 transition-colors" onClick={() => onOpenDetails(task)}>
-            <div className="flex justify-between items-start gap-4">
-                <div><h4 className="font-semibold text-slate-600">{task.title}</h4><p className="text-sm text-green-600 font-medium mt-1">Completed on {formatEnglishDate(task.completedAt)}</p></div>
-                <span className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${getStatusPill(task.status)}`}>{task.status}</span>
+        <motion.div whileHover={{ scale: 1.01, y: -2 }} className="p-3 bg-white rounded-2xl cursor-pointer shadow-sm hover:shadow-lg border border-slate-100 transition-all duration-200 group" onClick={() => onOpenDetails(task)}>
+            <div className="flex justify-between items-start gap-3">
+                <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-sm text-slate-700 group-hover:text-emerald-700 transition-colors line-through decoration-emerald-500/50 truncate">{task.title}</h4>
+                    <p className="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1"><CheckCircle size={10}/> {formatEnglishDate(task.completedAt)}</p>
+                </div>
+                <div className="bg-emerald-100 text-emerald-600 p-1 rounded-lg flex-shrink-0"><CheckCircle size={14} /></div>
             </div>
-            {task.submissionDescription && (<div className="mt-3 pt-3 border-t border-slate-200/60"><div className="flex items-start gap-2.5 mt-2"><MessageSquare size={16} className="text-slate-400 mt-0.5 flex-shrink-0" /><p className="text-sm text-slate-600 whitespace-pre-wrap">{task.submissionDescription}</p></div></div>)}
-            {userAttachments.length > 0 && <div className="mt-3 pt-3 border-t border-slate-200/60"><h4 className="text-xs font-bold text-green-700 mb-2">Your Submissions:</h4><div className="flex flex-wrap gap-2">{userAttachments.map(file => (<a key={file.url} href={file.url} target="_blank" rel="noopener noreferrer" className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-md hover:bg-green-200 flex items-center gap-1.5"><CheckCircle size={12}/>{file.filename}</a>))}</div></div>}
-        </div>
+        </motion.div>
     );
 };
 
 const DraggableTaskCard = ({ task, onUpdateTaskStatus, onOpenSubmitModal, onOpenDetails }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task._id });
-    const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : 'auto', opacity: isDragging ? 0.8 : 1 };
+    const style = { 
+        transform: CSS.Transform.toString(transform), 
+        transition, 
+        zIndex: isDragging ? 50 : 'auto', 
+        opacity: isDragging ? 0.9 : 1, 
+        scale: isDragging ? 1.05 : 1,
+        touchAction: 'none' // CRITICAL: Allows dragging on mobile without scrolling page
+    };
     const isSelfAssigned = task.assignedBy?._id === task.assignedTo?._id;
-    
+      
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="p-4 border border-slate-200 bg-white rounded-lg transition-shadow shadow-sm hover:shadow-md touch-none cursor-grab" onClick={() => onOpenDetails(task)}>
-            <div className="flex justify-between items-start gap-4">
-                <div><h4 className="font-semibold text-slate-800">{task.title}</h4></div>
-                {isSelfAssigned && <span className="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">Personal</span>}
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={`p-3 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 touch-none cursor-grab active:cursor-grabbing group will-change-transform ${isDragging ? 'shadow-2xl ring-2 ring-emerald-400 rotate-2' : ''}`} onClick={() => onOpenDetails(task)}>
+            <div className="flex justify-between items-start gap-2 mb-1.5">
+                <h4 className="font-bold text-slate-800 text-sm leading-tight line-clamp-2">{task.title}</h4>
+                {isSelfAssigned && <span className="flex-shrink-0 text-[9px] uppercase font-bold bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md border border-indigo-100">Personal</span>}
             </div>
-            {task.description && <p className="text-sm text-slate-600 mt-2 line-clamp-2">{task.description}</p>}
             
-            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                <div className={`flex items-center gap-1.5 text-xs font-medium ${getDeadlineInfo(task).classes}`}>
-                    <Clock size={14} />
+            {task.description && <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed">{task.description}</p>}
+            
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-50">
+                <div className={`flex items-center gap-1 text-[10px] font-semibold ${getDeadlineInfo(task).classes}`}>
+                    <Clock size={12} />
                     <span>{formatDeadline(task.deadline)}</span>
                 </div>
-                <div className="flex items-center -space-x-2">
-                    <Image src={task.assignedTo?.avatar || '/default-avatar.png'} width={24} height={24} className="rounded-full object-cover aspect-square border-2 border-white" alt={task.assignedTo?.name || ''} title={`Lead: ${task.assignedTo?.name}`} />
-                    {task.assistedBy?.map(assistant => (<Image key={assistant._id} src={assistant.avatar || '/default-avatar.png'} width={24} height={24} className="rounded-full object-cover aspect-square border-2 border-white" alt={assistant.name} title={`Assist: ${assistant.name}`} />))}
+                <div className="flex items-center -space-x-1.5 pl-2">
+                    <div className="relative z-10 hover:z-20 transition-all hover:scale-110">
+                        <Image src={task.assignedTo?.avatar || '/default-avatar.png'} width={22} height={22} className="rounded-full object-cover aspect-square border-2 border-white shadow-sm" alt={task.assignedTo?.name || ''} title={`Lead: ${task.assignedTo?.name}`} />
+                    </div>
+                    {task.assistedBy?.map(assistant => (<div key={assistant._id} className="relative hover:z-20 transition-all hover:scale-110"><Image src={assistant.avatar || '/default-avatar.png'} width={22} height={22} className="rounded-full object-cover aspect-square border-2 border-white shadow-sm" alt={assistant.name} title={`Assist: ${assistant.name}`} /></div>))}
                 </div>
             </div>
 
             {(task.status === 'To Do' || task.status === 'In Progress') && (
-                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <div className="mt-3 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     {task.status === 'To Do' && (
-                        <button onClick={(e) => { e.stopPropagation(); onUpdateTaskStatus(task._id, 'In Progress');}} className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-3 rounded-lg text-sm transition-all"><Play size={14} /> Start</button>
+                        <button onClick={(e) => { e.stopPropagation(); onUpdateTaskStatus(task._id, 'In Progress');}} className="w-full flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold py-1.5 px-2 rounded-lg text-[10px] transition-all shadow-lg shadow-slate-200"><Play size={10} fill="currentColor" /> Start</button>
                     )}
                     {task.status === 'In Progress' && (
-                        <button onClick={(e) => { e.stopPropagation(); onOpenSubmitModal(task);}} className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white font-medium py-1.5 px-3 rounded-lg text-sm"><Upload size={14} /> Submit</button>
+                        <button onClick={(e) => { e.stopPropagation(); onOpenSubmitModal(task);}} className="w-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-1.5 px-2 rounded-lg text-[10px] transition-all shadow-lg shadow-emerald-200"><Upload size={10} /> Submit</button>
                     )}
                 </div>
             )}
@@ -432,20 +540,31 @@ const DraggableTaskCard = ({ task, onUpdateTaskStatus, onOpenSubmitModal, onOpen
 };
 
 const TaskColumn = ({ title, tasks, onUpdateTaskStatus, onOpenSubmitModal, onOpenDetails }) => {
-    let titleColor, icon;
+    let titleColor, icon, bgGradient;
     switch (title) {
-        case 'In Progress': titleColor = 'text-amber-800'; icon = <Play size={16} className="text-amber-600"/>; break;
-        default: titleColor = 'text-sky-800'; icon = <List size={16} className="text-sky-600"/>; break;
+        case 'In Progress': 
+            titleColor = 'text-amber-700'; 
+            icon = <div className="bg-amber-100 p-1.5 rounded-lg"><Play size={14} className="text-amber-600 fill-amber-600"/></div>; 
+            bgGradient = 'from-amber-50/50 to-transparent';
+            break;
+        default: 
+            titleColor = 'text-slate-700'; 
+            icon = <div className="bg-slate-200 p-1.5 rounded-lg"><List size={14} className="text-slate-600"/></div>; 
+            bgGradient = 'from-slate-50/50 to-transparent';
+            break;
     }
     return (
-        <div className="bg-white/60 p-4 rounded-xl shadow-sm h-full flex flex-col">
-            <h2 className={`font-bold text-lg mb-4 flex items-center gap-2 ${titleColor}`}>{icon}{title}<span className="text-sm font-mono bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">{tasks.length}</span></h2>
-            <div className="space-y-4 h-full overflow-y-auto pr-2 -mr-2 rounded-lg">
+        <div className={`bg-white/40 p-1 rounded-3xl h-full flex flex-col`}>
+            <div className={`flex items-center justify-between mb-3 p-3 rounded-2xl bg-gradient-to-b ${bgGradient}`}>
+                <h2 className={`font-bold text-sm flex items-center gap-2 ${titleColor}`}>{icon}{title}</h2>
+                <span className="text-[10px] font-bold bg-white shadow-sm text-slate-600 px-2 py-0.5 rounded-lg border border-slate-100">{tasks.length}</span>
+            </div>
+            <div className="space-y-3 h-full overflow-y-auto px-1 pb-4 custom-scrollbar">
                 <SortableContext items={tasks.map(t => t._id)} strategy={verticalListSortingStrategy}>
                     {tasks.length > 0 ? (
                         tasks.map(task => <DraggableTaskCard key={task._id} task={task} onUpdateTaskStatus={onUpdateTaskStatus} onOpenSubmitModal={onOpenSubmitModal} onOpenDetails={onOpenDetails} />)
                     ) : (
-                        <div className="text-center py-10"><Inbox className="mx-auto h-12 w-12 text-slate-300"/><p className="mt-2 text-sm text-slate-500">No tasks here.</p></div>
+                        <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50"><Inbox className="mx-auto h-8 w-8 text-slate-300 mb-1"/><p className="text-[10px] font-semibold text-slate-400">Empty</p></div>
                     )}
                 </SortableContext>
             </div>
@@ -469,8 +588,8 @@ const MyStatsWidget = ({ tasks, attendance }) => {
         
         const currentMonthRecords = attendance.filter(att => {
             const checkInDate = new Date(att.checkInTime);
-            const now = new Date();
-            return checkInDate.getMonth() === now.getMonth() && checkInDate.getFullYear() === now.getFullYear();
+            const today = new Date();
+            return checkInDate.getMonth() === today.getMonth() && checkInDate.getFullYear() === today.getFullYear();
         });
 
         const totalOfficeSeconds = currentMonthRecords
@@ -490,29 +609,69 @@ const MyStatsWidget = ({ tasks, attendance }) => {
     }, [tasks, attendance]);
 
     return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
-            <div className="px-6 py-5 border-b border-slate-200/80">
-                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><TrendingUp className="text-green-600"/>My Stats</h2>
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.3 }} 
+            className="bg-white rounded-[2.5rem] shadow-lg shadow-slate-200/50 border border-slate-100 overflow-hidden relative"
+        >
+             {/* Background Decoration */}
+             <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-full blur-3xl opacity-60 pointer-events-none"></div>
+
+            <div className="px-8 py-6 border-b border-slate-50 relative z-10 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+                    <div className="bg-green-600 text-white p-2.5 rounded-xl shadow-md">
+                        <TrendingUp size={18}/>
+                    </div> 
+                    My Stats
+                </h2>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50 px-3 py-1 rounded-full">Monthly Overview</span>
             </div>
-            <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-600 flex items-center gap-2"><Briefcase size={16} className="text-green-600"/> Work Hours (Office)</span>
-                    <span className="font-bold text-lg text-slate-800">{stats.totalHoursOffice.toFixed(1)} hrs</span>
-                </div>
-                <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-600 flex items-center gap-2"><Home size={16} className="text-indigo-600"/> Work Hours (Home)</span>
-                    <span className="font-bold text-lg text-slate-800">{stats.totalHoursHome.toFixed(1)} hrs</span>
-                </div>
-                <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-600">Tasks Completed (This Week)</span>
-                    <span className="font-bold text-lg text-green-600">{stats.completedThisWeek}</span>
-                </div>
-                <div className={`flex items-center justify-between p-3 rounded-lg ${stats.overdueTasks > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
-                    <span className={`font-semibold ${stats.overdueTasks > 0 ? 'text-red-600' : 'text-slate-600'}`}>Overdue Tasks</span>
-                    <span className={`font-bold text-lg flex items-center gap-2 ${stats.overdueTasks > 0 ? 'text-red-600' : 'text-slate-800'}`}>
-                        {stats.overdueTasks > 0 && <AlertOctagon size={16} />}
-                        {stats.overdueTasks}
-                    </span>
+
+            <div className="p-8 grid grid-cols-2 gap-5 relative z-10">
+                {/* Office Hours Card */}
+                <motion.div whileHover={{ scale: 1.02 }} className="col-span-2 sm:col-span-1 p-5 rounded-3xl bg-gradient-to-br from-emerald-50/80 to-teal-50/30 border border-emerald-100/60 shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><Briefcase size={60} className="text-emerald-600"/></div>
+                    <p className="text-xs font-bold text-emerald-600/80 uppercase tracking-wider mb-1">Office Hours</p>
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-extrabold text-slate-800">{stats.totalHoursOffice.toFixed(1)}</span>
+                        <span className="text-sm font-medium text-slate-500">hrs</span>
+                    </div>
+                </motion.div>
+
+                {/* Remote Hours Card */}
+                <motion.div whileHover={{ scale: 1.02 }} className="col-span-2 sm:col-span-1 p-5 rounded-3xl bg-gradient-to-br from-indigo-50/80 to-blue-50/30 border border-indigo-100/60 shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><Home size={60} className="text-indigo-600"/></div>
+                    <p className="text-xs font-bold text-indigo-600/80 uppercase tracking-wider mb-1">Remote Hours</p>
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-extrabold text-slate-800">{stats.totalHoursHome.toFixed(1)}</span>
+                        <span className="text-sm font-medium text-slate-500">hrs</span>
+                    </div>
+                </motion.div>
+
+                {/* Tasks Row */}
+                <div className="col-span-2 grid grid-cols-2 gap-4 mt-2">
+                    <div className="col-span-2 sm:col-span-1 flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-white hover:border-emerald-200 hover:shadow-md transition-all">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-xl"><CheckCircle size={18}/></div>
+                            <div>
+                                <p className="text-xs text-slate-400 font-semibold uppercase">Done (Week)</p>
+                                <p className="text-lg font-bold text-slate-800">{stats.completedThisWeek} Tasks</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className={`col-span-2 sm:col-span-1 flex items-center justify-between p-4 rounded-2xl border hover:shadow-md transition-all ${stats.overdueTasks > 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-white border-slate-100'}`}>
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2.5 rounded-xl ${stats.overdueTasks > 0 ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-400'}`}>
+                                <AlertOctagon size={18}/>
+                            </div>
+                            <div>
+                                <p className={`text-xs font-semibold uppercase ${stats.overdueTasks > 0 ? 'text-rose-400' : 'text-slate-400'}`}>Overdue</p>
+                                <p className={`text-lg font-bold ${stats.overdueTasks > 0 ? 'text-rose-600' : 'text-slate-400'}`}>{stats.overdueTasks} Tasks</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </motion.div>
@@ -548,10 +707,10 @@ const WorkHoursChartCard = ({ attendance }) => {
             datasets: [{
                 label: 'Work Hours',
                 data: data,
-                backgroundColor: 'rgba(22, 163, 74, 0.6)',
-                borderColor: 'rgba(22, 163, 74, 1)',
-                borderWidth: 1,
-                borderRadius: 4,
+                backgroundColor: 'rgba(16, 185, 129, 0.8)', // emerald-500
+                hoverBackgroundColor: 'rgba(5, 150, 105, 1)', // emerald-600
+                borderRadius: 6,
+                barThickness: 20,
             }]
         };
     }, [attendance]);
@@ -561,17 +720,34 @@ const WorkHoursChartCard = ({ attendance }) => {
         maintainAspectRatio: false,
         plugins: {
             legend: { display: false },
-            title: { display: true, text: 'This Week\'s Work Hours', font: { size: 16, weight: 'bold' }, color: '#334155' }
+            title: { display: true, text: 'Weekly Activity', font: { size: 13, weight: 'bold', family: 'sans-serif' }, color: '#64748b', padding: {bottom: 15} },
+            tooltip: {
+                backgroundColor: '#1e293b',
+                padding: 10,
+                cornerRadius: 8,
+                titleFont: { size: 12 },
+                bodyFont: { size: 12, weight: 'bold' },
+                displayColors: false,
+            }
         },
         scales: {
-            y: { beginAtZero: true, title: { display: true, text: 'Hours' } },
-            x: { grid: { display: false } }
+            y: { 
+                beginAtZero: true, 
+                grid: { color: '#f1f5f9', borderDash: [5, 5] },
+                border: { display: false },
+                ticks: { font: { size: 10 }, color: '#94a3b8' }
+            },
+            x: { 
+                grid: { display: false },
+                border: { display: false },
+                ticks: { font: { size: 10, weight: '600' }, color: '#64748b' }
+            }
         }
     };
 
     return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
-            <div style={{ height: '250px' }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-5">
+            <div className="h-52">
                 <Bar options={chartOptions} data={chartData} />
             </div>
         </motion.div>
@@ -604,39 +780,48 @@ const DailyStandupReport = () => {
     }, [fetchReports]);
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
-            <div className="px-6 py-5 border-b border-slate-200/80">
-                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3">
-                    <Calendar className="text-green-600"/>Today&apos;s Update of Every Member
+        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+            <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/30">
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                    <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600"><Calendar size={18}/></div>
+                    Team Daily Updates
                 </h2>
             </div>
-            <div className="p-6 space-y-4 max-h-[600px] overflow-y-auto">
+            <div className="p-6 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
                 {isLoading ? (
-                    <p className="text-slate-500">Loading reports...</p>
+                    <div className="flex justify-center py-10"><ButtonLoader /></div>
                 ) : reports.length > 0 ? (
-                    reports.map(report => (
+                    reports.map((report, idx) => (
                         <motion.div 
                             key={report._id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="p-4 border bg-slate-50/70 rounded-lg"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="flex gap-3 p-3 hover:bg-slate-50 rounded-2xl transition-colors border border-transparent hover:border-slate-100"
                         >
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-3">
-                                    <Image src={report.user.avatar} alt={report.user.name} width={32} height={32} className="rounded-full object-cover" />
-                                    <span className="font-bold text-slate-800">{report.user.name}</span>
-                                </div>
-                                <span className="text-xs text-slate-500">
-                                    {new Date(report.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
+                            <div className="flex-shrink-0">
+                                <Image src={report.user.avatar} alt={report.user.name} width={40} height={40} className="rounded-xl object-cover shadow-sm" />
                             </div>
-                            <p className="text-sm text-slate-600 whitespace-pre-wrap pl-11">{report.description}</p>
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                    <h4 className="font-bold text-sm text-slate-800">{report.user.name}</h4>
+                                    <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
+                                        {new Date(report.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                                <div className="bg-slate-50 p-2.5 rounded-xl rounded-tl-none text-xs text-slate-600 leading-relaxed border border-slate-100">
+                                    {report.description}
+                                </div>
+                            </div>
                         </motion.div>
                     ))
                 ) : (
-                    <div className="text-center py-10 text-slate-500">
-                        <p className="font-semibold">No checkout reports submitted yet today.</p>
-                        <p className="text-sm">Check back later as the team completes their day.</p>
+                    <div className="text-center py-10">
+                         <div className="bg-slate-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <Clock className="text-slate-300" size={24}/>
+                         </div>
+                        <p className="font-semibold text-sm text-slate-600">No updates yet.</p>
+                        <p className="text-xs text-slate-400">Updates appear when team members check out.</p>
                     </div>
                 )}
             </div>
@@ -647,20 +832,16 @@ const DailyStandupReport = () => {
 // --- UPDATED CHAT COMPONENTS ---
 
 const DeleteChatModal = ({ onConfirm, onClose, isDeleting }) => (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[101] flex justify-center items-center p-4">
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
-            <div className="flex items-start">
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <AlertTriangle className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg font-bold text-slate-900">Delete Conversation</h3>
-                    <p className="text-sm text-slate-500 mt-2">Are you sure you want to delete this conversation? This will permanently remove all messages for both participants.</p>
-                </div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[101] flex justify-center items-center p-4">
+        <motion.div initial={{ y: 20, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm text-center">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-rose-50 mb-6">
+                <AlertTriangle className="h-8 w-8 text-rose-500" />
             </div>
-            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-                <button onClick={onClose} disabled={isDeleting} className="w-full sm:w-auto px-5 py-2.5 bg-slate-200 rounded-lg font-semibold">Cancel</button>
-                <button onClick={onConfirm} disabled={isDeleting} className="w-full sm:w-auto px-5 py-2.5 bg-red-600 text-white font-semibold rounded-lg">{isDeleting ? 'Deleting...' : 'Delete Chat'}</button>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Conversation?</h3>
+            <p className="text-sm text-slate-500 mb-8 leading-relaxed">This will permanently remove all messages for both participants. This action cannot be undone.</p>
+            <div className="grid grid-cols-2 gap-3">
+                <button onClick={onClose} disabled={isDeleting} className="w-full px-5 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition">Cancel</button>
+                <button onClick={onConfirm} disabled={isDeleting} className="w-full px-5 py-3 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 shadow-lg shadow-rose-200 transition">{isDeleting ? 'Deleting...' : 'Delete'}</button>
             </div>
         </motion.div>
     </motion.div>
@@ -679,42 +860,46 @@ const ChatSidebar = ({ conversations, users, onSelect, selectedConvId, currentUs
     }, [users, searchTerm, currentUser._id]);
 
     return (
-        <div className="w-full h-full flex flex-col bg-white">
-            <div className="p-4 border-b">
-                <div className="relative">
-                    <Search size={18} className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
-                    <input type="text" placeholder="Search people..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-green-500 focus:border-green-500" />
+        <div className="w-full h-full flex flex-col bg-white border-r border-slate-100">
+            <div className="p-6 pb-2">
+                <div className="relative group">
+                    <Search size={18} className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                    <input type="text" placeholder="Search team..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-emerald-100 transition-all placeholder-slate-400" />
                 </div>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar space-y-1">
                 {searchTerm ? (
                     <>
-                        <h3 className="px-4 py-2 text-xs font-bold text-slate-400 uppercase">Search Results</h3>
+                        <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Results</h3>
                         {filteredUsers.length > 0 ? filteredUsers.map(user => (
-                            <div key={user._id} onClick={() => onSelect(user)} className="p-4 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors">
-                                <Image src={user.avatar} width={40} height={40} className="rounded-full" alt={user.name}/>
-                                <p className="font-semibold">{user.name}</p>
+                            <div key={user._id} onClick={() => onSelect(user)} className="p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 rounded-2xl transition-all">
+                                <Image src={user.avatar} width={44} height={44} className="rounded-xl object-cover" alt={user.name}/>
+                                <p className="font-bold text-slate-700 text-sm">{user.name}</p>
                             </div>
-                        )) : <p className="p-4 text-sm text-slate-500">No users found.</p>}
+                        )) : <p className="p-4 text-center text-sm text-slate-400 italic">No users found.</p>}
                     </>
                 ) : (
                     <>
-                        <h3 className="px-4 py-2 text-xs font-bold text-slate-400 uppercase">Recent Conversations</h3>
+                        <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Recent Chats</h3>
                         {sortedConversations.map(conv => {
                             const otherUser = conv.participants.find(p => p._id !== currentUser._id);
                             if (!otherUser) return null;
                             const isUnread = conv.unreadCount > 0;
+                            const isSelected = selectedConvId === conv._id;
                             return (
-                                <div key={conv._id} onClick={() => onSelect(otherUser, conv)} className={`group p-4 flex items-center gap-3 cursor-pointer transition-colors ${selectedConvId === conv._id ? 'bg-green-50' : 'hover:bg-slate-50'} ${isUnread ? 'bg-sky-50 font-bold' : ''}`}>
+                                <div key={conv._id} onClick={() => onSelect(otherUser, conv)} className={`group relative p-3 flex items-center gap-4 cursor-pointer rounded-2xl transition-all duration-200 ${isSelected ? 'bg-emerald-50/80 shadow-sm' : 'hover:bg-slate-50'}`}>
                                     <div className="relative flex-shrink-0">
-                                        <Image src={otherUser.avatar} width={40} height={40} className="rounded-full" alt={otherUser.name}/>
-                                        {isUnread && <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-sky-500 ring-2 ring-white"></span>}
+                                        <Image src={otherUser.avatar} width={48} height={48} className={`rounded-2xl object-cover transition-all ${isUnread ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`} alt={otherUser.name}/>
+                                        {isUnread && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">{conv.unreadCount}</span>}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className={`font-semibold truncate ${isUnread ? 'text-slate-900' : 'text-slate-700'}`}>{otherUser.name}</p>
-                                        <p className={`text-sm truncate ${isUnread ? 'text-slate-700' : 'text-slate-500'}`}>{conv.lastMessage?.message || 'No messages yet'}</p>
+                                        <div className="flex justify-between items-baseline mb-0.5">
+                                            <p className={`font-bold truncate text-sm ${isUnread ? 'text-slate-900' : 'text-slate-700'}`}>{otherUser.name}</p>
+                                            <span className="text-[10px] text-slate-400 font-medium">{conv.lastMessage && formatDistanceToNow(new Date(conv.lastMessage.createdAt), {addSuffix: false})}</span>
+                                        </div>
+                                        <p className={`text-xs truncate ${isUnread ? 'text-slate-800 font-semibold' : 'text-slate-500'}`}>{conv.lastMessage?.message || 'No messages yet'}</p>
                                     </div>
-                                    <button onClick={(e) => { e.stopPropagation(); onDelete(conv._id); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={(e) => { e.stopPropagation(); onDelete(conv._id); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100">
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
@@ -735,17 +920,18 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
+        let isMounted = true;
         const fetchMessages = async () => {
             if (conversation) {
                 setIsLoading(true);
                 try {
                     const res = await fetch(`/api/chat/messages?conversationId=${conversation._id}`);
                     const data = await res.json();
-                    if (data.success) setMessages((data.messages || []).map(m => ({...m, status: 'sent'})));
+                    if (data.success && isMounted) setMessages((data.messages || []).map(m => ({...m, status: 'sent'})));
                 } catch (err) {
                     toast.error("Failed to load messages.");
                 } finally {
-                    setIsLoading(false);
+                    if(isMounted) setIsLoading(false);
                 }
             } else {
                 setMessages([]);
@@ -753,21 +939,30 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
         };
         fetchMessages();
 
+        let pusher;
+        let channel;
+
         if (conversation) {
-            const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
+            pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
                 cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
             });
-            const channel = pusher.subscribe(`chat-${conversation._id}`);
+            channel = pusher.subscribe(`chat-${conversation._id}`);
             channel.bind('new-message', (data) => {
                 if (data.senderId._id !== currentUser._id) {
                     setMessages(prev => [...prev, {...data, status: 'sent'}]);
                 }
             });
-            return () => {
-                pusher.unsubscribe(`chat-${conversation._id}`);
-                pusher.disconnect();
-            };
         }
+        
+        return () => {
+            isMounted = false;
+            if (channel && conversation) {
+                 pusher.unsubscribe(`chat-${conversation._id}`);
+            }
+            if (pusher) {
+                 pusher.disconnect();
+            }
+        };
     }, [conversation, currentUser._id]);
 
     useEffect(() => {
@@ -783,7 +978,7 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
         };
         markAsRead();
     }, [conversation, onMessageSent]);
-    
+      
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
@@ -792,7 +987,7 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
         e.preventDefault();
         const messageText = newMessage.trim();
         if (!messageText) return;
-    
+      
         const tempId = `temp_${Date.now()}`;
         const optimisticMessage = {
             _id: tempId,
@@ -801,10 +996,10 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
             createdAt: new Date().toISOString(),
             status: 'sending'
         };
-    
+      
         setMessages(prev => [...prev, optimisticMessage]);
         setNewMessage('');
-    
+      
         try {
             const res = await fetch('/api/chat/messages', {
                 method: 'POST',
@@ -813,59 +1008,78 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
             });
             const result = await res.json();
             if (!res.ok) throw new Error(result.message);
-    
+      
             setMessages(prev => prev.map(msg => msg._id === tempId ? { ...result.data, status: 'sent' } : msg));
             onMessageSent();
         } catch (err) {
             toast.error("Failed to send message.");
             setMessages(prev => prev.map(msg => msg._id === tempId ? { ...msg, status: 'failed' } : msg));
         }
-    };   
+    };    
 
     if (!selectedUser) {
-        return <div className="hidden md:flex flex-1 items-center justify-center bg-slate-50"><p>Select a conversation to start chatting</p></div>;
+        return <div className="hidden md:flex flex-1 items-center justify-center bg-white"><div className="text-center"><div className="bg-slate-50 inline-block p-6 rounded-full mb-4"><MessageSquare size={40} className="text-slate-300"/></div><p className="text-slate-500 font-medium">Select a conversation to start chatting</p></div></div>;
     }
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-slate-50">
-            <header className="p-4 border-b flex items-center gap-3 bg-white flex-shrink-0">
+        <div className="flex-1 flex flex-col h-full bg-white relative">
+            {/* Header */}
+            <header className="p-4 px-6 border-b border-slate-100 flex items-center gap-4 bg-white/80 backdrop-blur-md sticky top-0 z-10">
                 {isMobile && (
                     <button onClick={onBack} className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-full">
                         <ArrowLeft size={20} />
                     </button>
                 )}
-                <Image src={selectedUser.avatar} width={40} height={40} className="rounded-full" alt={selectedUser.name}/>
+                <div className="relative">
+                    <Image src={selectedUser.avatar} width={44} height={44} className="rounded-xl object-cover shadow-sm" alt={selectedUser.name}/>
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                </div>
                 <div>
-                    <h3 className="font-bold">{selectedUser.name}</h3>
-                    <p className="text-sm text-slate-500">{selectedUser.role}</p>
+                    <h3 className="font-bold text-slate-800 text-base">{selectedUser.name}</h3>
+                    <p className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-full inline-block">{selectedUser.role}</p>
                 </div>
             </header>
-            <div className="flex-1 p-6 overflow-y-auto space-y-1">
-                {messages.map(msg => (
-                       <motion.div 
-                           key={msg._id} 
-                           layout
-                           initial={{ opacity: 0, y: 20 }}
-                           animate={{ opacity: 1, y: 0 }}
-                           className={`flex items-end gap-2 max-w-lg ${msg.senderId._id === currentUser._id ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
-                       >
-                           <div className={`px-4 py-3 rounded-2xl ${msg.senderId._id === currentUser._id ? 'bg-green-600 text-white rounded-br-none' : 'bg-white rounded-bl-none'}`}>
-                               <p>{msg.message}</p>
-                           </div>
-                           {msg.senderId._id === currentUser._id && (
-                               <div className="flex-shrink-0 mb-1">
-                                   {msg.status === 'sending' && <Clock size={12} className="text-slate-400 animate-spin"/>}
-                                   {msg.status === 'failed' && <AlertCircle size={12} className="text-red-500"/>}
-                               </div>
-                           )}
-                       </motion.div>
-                ))}
+            
+            {/* Messages Area */}
+            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/30">
+                {messages.map((msg, i) => {
+                     const isMe = msg.senderId._id === currentUser._id;
+                     const isSequence = i > 0 && messages[i-1].senderId._id === msg.senderId._id;
+                     return (
+                        <motion.div 
+                            key={msg._id} 
+                            layout
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            className={`flex items-end gap-3 max-w-[85%] ${isMe ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
+                        >
+                            {!isMe && !isSequence && <Image src={msg.senderId.avatar} width={32} height={32} className="rounded-full object-cover shadow-sm mb-1" alt={msg.senderId.name} />}
+                            {!isMe && isSequence && <div className="w-8" />}
+                            
+                            <div className={`relative px-5 py-3 shadow-sm text-sm leading-relaxed ${isMe ? 'bg-emerald-600 text-white rounded-[1.2rem] rounded-br-sm' : 'bg-white text-slate-700 rounded-[1.2rem] rounded-bl-sm border border-slate-100'}`}>
+                                <p>{msg.message}</p>
+                                <span className={`text-[10px] block mt-1 opacity-70 ${isMe ? 'text-emerald-100 text-right' : 'text-slate-400'}`}>
+                                    {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </span>
+                            </div>
+                            
+                            {isMe && (
+                                <div className="flex-shrink-0 mb-3 text-slate-400">
+                                    {msg.status === 'sending' && <Clock size={12} className="animate-spin"/>}
+                                    {msg.status === 'failed' && <AlertCircle size={12} className="text-rose-500"/>}
+                                </div>
+                            )}
+                        </motion.div>
+                     );
+                })}
                 <div ref={messagesEndRef} />
             </div>
-            <footer className="p-4 bg-white border-t">
-                <form onSubmit={handleSendMessage} className="flex items-center gap-4">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 p-3 border rounded-full bg-slate-100 focus:bg-white focus:ring-2 focus:ring-green-500 transition"/>
-                    <button type="submit" className="bg-green-600 text-white p-3 rounded-full hover:bg-green-700 transition-transform active:scale-90"><Send size={20}/></button>
+
+            {/* Input Area */}
+            <footer className="p-4 px-6 bg-white border-t border-slate-100">
+                <form onSubmit={handleSendMessage} className="flex items-end gap-3 bg-slate-50 p-2 rounded-[1.5rem] border border-slate-200 focus-within:ring-2 focus-within:ring-emerald-100 focus-within:border-emerald-300 transition-all">
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type your message..." className="flex-1 p-3 bg-transparent border-none focus:ring-0 text-sm text-slate-700 placeholder-slate-400 min-h-[44px]"/>
+                    <button type="submit" disabled={!newMessage.trim()} className="bg-emerald-600 text-white p-3 rounded-full hover:bg-emerald-700 disabled:opacity-50 disabled:hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200 active:scale-90 mb-0.5 mr-0.5"><Send size={18} className="ml-0.5"/></button>
                 </form>
             </footer>
         </div>
@@ -920,7 +1134,7 @@ const ChatView = ({ user, onBack }) => {
             });
             const result = await res.json();
             if (!res.ok) throw new Error(result.message);
-            
+             
             toast.success("Conversation deleted.");
             setConversations(prev => prev.filter(c => c._id !== deletingConvId));
             if (selectedConversation?._id === deletingConvId) {
@@ -950,7 +1164,7 @@ const ChatView = ({ user, onBack }) => {
         exit: { x: '100%' },
         transition: { type: 'spring', stiffness: 400, damping: 40 }
     };
-    
+      
     return (
         <>
             <AnimatePresence>
@@ -962,34 +1176,35 @@ const ChatView = ({ user, onBack }) => {
                     />
                 )}
             </AnimatePresence>
-            <div className="fixed inset-0 z-50 bg-white flex flex-col md:relative md:inset-auto md:h-[calc(100vh-10rem)] md:rounded-2xl md:shadow-lg md:border overflow-hidden">
+            <div className="fixed inset-0 z-50 bg-white flex flex-col md:relative md:inset-auto md:h-[calc(100vh-8rem)] md:rounded-[2rem] md:shadow-xl md:border md:border-slate-100 overflow-hidden">
                 <header className="p-4 border-b flex-shrink-0 flex items-center justify-between bg-white md:hidden">
-                    <button onClick={onBack} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold">
+                    <button onClick={onBack} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold">
                         <ArrowLeft size={20} />
-                        Back to Dashboard
+                        Dashboard
                     </button>
                     <div className="flex items-center gap-2">
                         <Image src={user.avatar} width={36} height={36} className="rounded-full object-cover" alt="User Avatar" />
                     </div>
                 </header>
-                <header className="p-4 border-b flex-shrink-0 hidden md:flex items-center justify-between bg-white">
-                    <h2 className="text-xl font-bold">Messages</h2>
-                    <button onClick={onBack} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold text-sm">
+                <header className="p-5 px-6 border-b border-slate-100 flex-shrink-0 hidden md:flex items-center justify-between bg-white">
+                    <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3"><MessageSquare className="text-emerald-500" fill="currentColor" /> Messages</h2>
+                    <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 font-bold text-sm bg-slate-50 hover:bg-emerald-50 px-4 py-2 rounded-xl transition-all">
+                        <ArrowLeft size={16} />
                         Back to Dashboard
                     </button>
                 </header>
                 <div className="flex flex-1 overflow-hidden relative">
-                    <div className={`w-full md:w-80 h-full flex-col border-r border-slate-200 bg-white ${isMobile && activeChatUser ? 'hidden' : 'flex'}`}>
+                    <div className={`w-full md:w-96 h-full flex-col bg-white ${isMobile && activeChatUser ? 'hidden' : 'flex'}`}>
                          <ChatSidebar conversations={conversations} users={allUsers} onSelect={handleSelectConversation} selectedConvId={selectedConversation?._id} currentUser={user} onDelete={setDeletingConvId} />
                     </div>
                     
-                    <div className="flex-1 hidden md:flex">
-                        {selectedUser ? <ChatBox selectedUser={selectedUser} conversation={selectedConversation} currentUser={user} onMessageSent={fetchChatData} onBack={() => {}} /> : <div className="flex-1 items-center justify-center bg-slate-50 hidden md:flex"><p>Select a conversation to start chatting</p></div>}
+                    <div className="flex-1 hidden md:flex border-l border-slate-100">
+                        {selectedUser ? <ChatBox selectedUser={selectedUser} conversation={selectedConversation} currentUser={user} onMessageSent={fetchChatData} onBack={() => {}} /> : <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50"><div className="bg-white p-8 rounded-full shadow-sm mb-4"><MessageSquare size={48} className="text-slate-200"/></div><p className="text-slate-400 font-semibold">Select a team member to start chatting</p></div>}
                     </div>
                     
                     <AnimatePresence>
                     {isMobile && activeChatUser && (
-                        <motion.div key="chatbox" className="absolute inset-0" variants={slideAnimation} initial="initial" animate="animate" exit="exit">
+                        <motion.div key="chatbox" className="absolute inset-0 z-20 bg-white" variants={slideAnimation} initial="initial" animate="animate" exit="exit">
                             <ChatBox selectedUser={selectedUser} conversation={selectedConversation} currentUser={user} onMessageSent={fetchChatData} onBack={handleBackToSidebar} />
                         </motion.div>
                     )}
@@ -1001,14 +1216,13 @@ const ChatView = ({ user, onBack }) => {
 };
 
 const DashboardSkeleton = () => (
-    <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-pulse">
+    <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-pulse p-4">
         <div className="xl:col-span-4 space-y-8">
-            <div className="h-72 bg-white rounded-2xl p-6 space-y-4"><div className="flex items-center space-x-4"><div className="h-24 w-24 bg-slate-200 rounded-full"></div><div className="space-y-2"><div className="h-8 w-40 bg-slate-200 rounded-md"></div><div className="h-5 w-24 bg-slate-200 rounded-md"></div></div></div><div className="h-20 w-full bg-slate-200 rounded-xl mt-6"></div></div>
-            <div className="h-48 bg-white rounded-2xl p-6 space-y-4"><div className="h-6 w-3/4 bg-slate-200 rounded-md"></div><div className="h-6 w-full bg-slate-200 rounded-md"></div><div className="h-6 w-1/2 bg-slate-200 rounded-md"></div></div>
+            <div className="h-80 bg-white rounded-[2rem] p-8 space-y-6"><div className="flex items-center space-x-6"><div className="h-24 w-24 bg-slate-100 rounded-full"></div><div className="space-y-3 flex-1"><div className="h-6 w-3/4 bg-slate-100 rounded-lg"></div><div className="h-4 w-1/2 bg-slate-100 rounded-lg"></div></div></div><div className="h-24 w-full bg-slate-50 rounded-2xl mt-6"></div></div>
+            <div className="h-56 bg-white rounded-[2rem] p-8 space-y-4"><div className="h-6 w-1/3 bg-slate-100 rounded-lg"></div><div className="h-32 w-full bg-slate-50 rounded-2xl"></div></div>
         </div>
         <div className="xl:col-span-8 space-y-8">
-            <div className="bg-white rounded-2xl p-6"><div className="flex justify-between items-center mb-6"><div className="h-8 w-1/3 bg-slate-200 rounded-md"></div><div className="h-10 w-40 bg-slate-200 rounded-lg"></div></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style={{height: '450px'}}><div className="bg-slate-100 h-full rounded-xl p-4 space-y-4"><div className="h-20 bg-slate-200 rounded-lg"></div><div className="h-20 bg-slate-200 rounded-lg"></div><div className="h-20 bg-slate-200 rounded-lg"></div></div><div className="bg-slate-100 h-full rounded-xl p-4 space-y-4"><div className="h-20 bg-slate-200 rounded-lg"></div><div className="h-20 bg-slate-200 rounded-lg"></div></div><div className="bg-slate-100 h-full rounded-xl p-4 space-y-4"><div className="h-20 bg-slate-200 rounded-lg"></div></div></div></div>
-            <div className="bg-white rounded-2xl p-6"><div className="h-8 w-1/4 bg-slate-200 rounded-md mb-6"></div><div className="space-y-2"><div className="h-12 w-full bg-slate-100 rounded-md"></div><div className="h-12 w-full bg-slate-100 rounded-md"></div><div className="h-12 w-full bg-slate-100 rounded-md"></div></div></div>
+            <div className="bg-white rounded-[2rem] p-8"><div className="flex justify-between items-center mb-8"><div className="h-8 w-1/4 bg-slate-100 rounded-xl"></div><div className="h-10 w-32 bg-slate-100 rounded-xl"></div></div><div className="grid grid-cols-1 md:grid-cols-3 gap-6" style={{height: '500px'}}><div className="bg-slate-50 h-full rounded-2xl"></div><div className="bg-slate-50 h-full rounded-2xl"></div><div className="bg-slate-50 h-full rounded-2xl"></div></div></div>
         </div>
     </div>
 );
@@ -1019,6 +1233,7 @@ export default function Dashboard({ user }) {
   const router = useRouter();
   const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' or 'chat'
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true); // Control splash screen duration
   const [attendance, setAttendance] = useState([]);
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
@@ -1044,12 +1259,86 @@ export default function Dashboard({ user }) {
   const [taskToSubmit, setTaskToSubmit] = useState(null);
   const [isPersonalTaskModalOpen, setIsPersonalTaskModalOpen] = useState(false);
   const [selectedTaskDetails, setSelectedTaskDetails] = useState(null);
-  
+    
   const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
 
   const notificationDropdownRef = useRef(null);
   const userDropdownRef = useRef(null);
   const isDesktop = useMediaQuery('(min-width: 768px)');
+  
+    // --- RE-IMPLEMENTED DRAG & DROP LOGIC ---
+    // Use PointerSensor for robust handling of both mouse and touch
+    // activationConstraint ensures a 'click' is not mistaken for a 'drag'
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    );
+
+    const handleDragEnd = async (event) => {
+        const { active, over } = event;
+        if (!over) return;
+        
+        // --- Calculate destination status ---
+        let destinationStatus = null;
+
+        // 1. Check if dropped directly on a Column (container)
+        // Since we didn't give explicit IDs to columns in DndContext (we used SortableContext),
+        // we usually drop "over" another item. 
+        // But if the column is empty, we might need a droppable area for it.
+        // For simplicity in this vertical list strategy, we infer column from the item we dropped over.
+        
+        // Find which column the `over` id belongs to
+        for (const status in taskColumns) {
+             // If we dropped over a task that is in this column
+            if (taskColumns[status].some(task => task._id === over.id)) {
+                destinationStatus = status;
+                break;
+            }
+        }
+        
+        // --- End Calculation ---
+
+        const activeTask = tasks.find(t => t._id === active.id);
+        
+        if (!activeTask || !destinationStatus || activeTask.status === destinationStatus) return;
+        
+        // Prevent moving to 'Completed' via drag (must use Submit Work)
+        if (destinationStatus === 'Completed') {
+            toast.error('Please use the "Submit Work" button to complete a task.');
+            return;
+        }
+        
+        // Prevent moving completed tasks
+        if (activeTask.status === 'Completed') {
+            toast.error('Completed tasks cannot be moved.');
+            return;
+        }
+        
+        // Optimistic UI Update
+        const originalTasks = [...tasks];
+        setTasks(tasks.map(t => t._id === active.id ? { ...t, status: destinationStatus } : t));
+        
+        try {
+            const res = await fetch('/api/tasks/update-status', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ taskId: active.id, newStatus: destinationStatus }),
+            });
+            
+            if (!res.ok) throw new Error(await handleApiError(res));
+            
+            toast.success(`Task moved to "${destinationStatus}"`);
+        } catch (err) {
+            toast.error(err.message);
+            // Revert on error
+            setTasks(originalTasks);
+        }
+    };
+
+  // Ensure Splash Screen shows for at least 1.5s for smoother UX
+  useEffect(() => {
+      const timer = setTimeout(() => setShowSplash(false), 1500);
+      return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const fetchUnreadCount = async () => {
@@ -1101,14 +1390,14 @@ export default function Dashboard({ user }) {
   }, [fetchDashboardData]);
 
   const unreadNotifications = useMemo(() => notifications.filter(n => !n.isRead), [notifications]);
-  
+    
   const taskColumns = useMemo(() => {
     const columns = { 'To Do': [], 'In Progress': [], 'Completed': [] };
     tasks.forEach(task => { if (columns[task.status]) columns[task.status].push(task); });
     columns['Completed'].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
     return columns;
   }, [tasks]);
-  
+    
   useEffect(() => { const handleScroll = () => setIsScrolled(window.scrollY > 10); window.addEventListener('scroll', handleScroll); return () => window.removeEventListener('scroll', handleScroll); }, []);
   useEffect(() => { if (checkInTime) { const timer = setInterval(() => setElapsedTime(formatElapsedTime(checkInTime)), 1000); return () => clearInterval(timer); } else { setElapsedTime(''); } }, [checkInTime]);
   useEffect(() => { const timer = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(timer); }, []);
@@ -1123,7 +1412,7 @@ export default function Dashboard({ user }) {
         setElapsedBreakTime('');
     }
   }, [isOnBreak, activeBreakStartTime]);
-  
+    
   useEffect(() => {
     function handleClickOutside(event) {
         if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target)) {
@@ -1136,7 +1425,7 @@ export default function Dashboard({ user }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  
+    
   const handleAction = async (action, actionFn, successMessage) => {
     setLoadingStates(prev => ({ ...prev, [action]: true }));
     const toastId = toast.loading(`Processing...`);
@@ -1158,7 +1447,7 @@ export default function Dashboard({ user }) {
     });
     const result = await res.json();
     if (!res.ok) throw new Error(result.message);
-    
+      
     setActiveAttendance(result.data);
     setCheckInTime(result.data.checkInTime);
     setAttendance(prev => [result.data, ...prev]);
@@ -1172,14 +1461,14 @@ export default function Dashboard({ user }) {
     setActiveAttendance(null); setCheckInTime(null); setDescription(''); setIsOnBreak(false); setActiveBreakStartTime(null);
     setAttendance(prev => prev.map(att => att._id === data._id ? data : att));
   }, 'Checked out successfully!');
-  
+    
   const handleBreakIn = () => handleAction('break-in', async () => {
     const res = await fetch('/api/attendance/break-in', { method: 'POST' });
     if (!res.ok) throw new Error(await handleApiError(res));
     setIsOnBreak(true);
     await fetchDashboardData();
   }, 'Break started.');
-  
+    
   const handleBreakOut = () => handleAction('break-out', async () => {
     const res = await fetch('/api/attendance/break-out', { method: 'POST' });
     if (!res.ok) throw new Error(await handleApiError(res));
@@ -1189,7 +1478,7 @@ export default function Dashboard({ user }) {
 
 const handleLogout = async () => {
     await fetch('/api/auth/logout');
-    
+      
     toast.success('Logged out successfully');
     setTimeout(() => {
         router.push('/login');
@@ -1216,58 +1505,19 @@ const handleLogout = async () => {
         })
     );
   };
-
-    const sensors = useSensors(useSensor(PointerSensor, {
-        activationConstraint: { distance: 8 },
-    }));
-
-    const handleDragEnd = async (event) => {
-        const { active, over } = event;
-        if (!over) return;
-        let destinationStatus = null;
-        for (const status in taskColumns) {
-            if (taskColumns[status].some(task => task._id === over.id)) {
-                destinationStatus = status;
-                break;
-            }
-        }
-        const activeTask = tasks.find(t => t._id === active.id);
-        if (!activeTask || !destinationStatus || activeTask.status === destinationStatus) return;
-        if (destinationStatus === 'Completed') {
-            toast.error('Please use the "Submit Work" button to complete a task.');
-            return;
-        }
-        if (activeTask.status === 'Completed') {
-            toast.error('Completed tasks cannot be moved.');
-            return;
-        }
-        const originalTasks = [...tasks];
-        setTasks(tasks.map(t => t._id === active.id ? { ...t, status: destinationStatus } : t));
-        try {
-            const res = await fetch('/api/tasks/update-status', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ taskId: active.id, newStatus: destinationStatus }),
-            });
-            if (!res.ok) throw new Error(await handleApiError(res));
-            toast.success(`Task moved to "${destinationStatus}"`);
-        } catch (err) {
-            toast.error(err.message);
-            setTasks(originalTasks);
-        }
-    };
-    
-  if (isDataLoading) {
+      
+  // Show Splash Screen logic - Replaces "Loading" state
+  if (showSplash || isDataLoading) {
     return (
-        <div className="min-h-screen bg-slate-100 font-sans text-slate-800 p-8">
-            <DashboardSkeleton />
-        </div>
+        <AnimatePresence mode="wait">
+            <DashboardEntryLoader key="loader" userName={user.name} />
+        </AnimatePresence>
     );
   }
-    
+      
   if (activeView === 'chat') {
       return (
-          <div className="min-h-screen bg-slate-100 md:p-4 lg:p-8">
+          <div className="min-h-screen bg-slate-50 md:p-6 lg:p-10">
               <ChatView user={user} onBack={() => setActiveView('dashboard')} />
           </div>
       );
@@ -1275,7 +1525,6 @@ const handleLogout = async () => {
 
   return (
     <>
-
       <AnimatePresence>
         {selectedTaskDetails && <TaskDetailsModal key={selectedTaskDetails._id} task={selectedTaskDetails} onClose={() => setSelectedTaskDetails(null)} onCommentAdded={handleCommentAdded} currentUser={user} />}
         {taskToSubmit && <SubmitWorkModal key="submit-modal" task={taskToSubmit} onClose={() => setTaskToSubmit(null)} onWorkSubmitted={fetchDashboardData} />}
@@ -1284,65 +1533,124 @@ const handleLogout = async () => {
             <MobileNotificationPanel key="mobile-notif-panel" notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />
         )}
       </AnimatePresence>
-      <div className="min-h-screen bg-slate-100 font-sans text-slate-800">
-        <div className="w-full h-full absolute inset-0 bg-slate-100 overflow-hidden"><div className="absolute top-0 -left-48 w-[40rem] h-[40rem] bg-green-200/50 rounded-full filter blur-3xl opacity-40 animate-blob"></div><div className="absolute top-0 -right-48 w-[40rem] h-[40rem] bg-sky-200/50 rounded-full filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div><div className="absolute bottom-0 left-1/4 w-[40rem] h-[40rem] bg-rose-200/50 rounded-full filter blur-3xl opacity-40 animate-blob animation-delay-4000"></div></div>
+
+      <motion.div 
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }} 
+        transition={{ duration: 0.5 }}
+        className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-emerald-100 selection:text-emerald-800"
+      >
+        
+        {/* Subtle Background Elements */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-100/30 rounded-full blur-[120px] opacity-60 will-change-transform"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-100/30 rounded-full blur-[120px] opacity-60 will-change-transform"></div>
+        </div>
+
         <div className="relative z-10">
-            <header className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-xl shadow-md' : 'bg-white/50'}`}>
-                <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-20">
+            {/* Header */}
+            <header className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-xl shadow-md border-b border-white/20' : 'bg-transparent'}`}>
+                <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
+                    <div className="flex justify-between items-center h-20 sm:h-24">
+                        {/* Logo Area */}
                         <div className="flex items-center space-x-4">
-                            <Link href="/dashboard" className="flex items-center space-x-3">
-                                <Image src="/geckoworks.png" alt="GeckoWorks Logo" width={42} height={42} className="rounded-full" style={{ height: 'auto', width: 'auto' }} />
-                                <h1 className="text-xl font-bold text-slate-900 tracking-tight">{user.name.split(' ')[0]}&apos;s Dashboard</h1>
+                            <Link href="/dashboard" className="flex items-center gap-3 sm:gap-4 group">
+                                <div className="relative">
+                                     <div className="absolute inset-0 bg-emerald-200 blur-md rounded-full opacity-0 group-hover:opacity-50 transition-opacity"></div>
+                                    <Image src="/geckoworks.png" alt="GeckoWorks Logo" width={40} height={40} className="" style={{ width: 'auto', height: 'auto' }} />
+                                </div>
+                                <div>
+                                    <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-none">Dashboard</h1>
+                                    <p className="text-[10px] sm:text-xs text-slate-500 font-medium hidden sm:block">{getGreeting()}, {user.name.split(' ')[0]}!</p>
+                                </div>
                             </Link>
                         </div>
-                        <div className="flex items-center space-x-2 sm:space-x-4">
-                            <div className="hidden md:flex items-center space-x-4 text-sm text-slate-500 bg-slate-100 px-4 py-2 rounded-full">
-                                <div className="flex items-center space-x-2"><Calendar className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span></div>
-                                <div className="h-4 w-px bg-slate-300"></div>
-                                <div className="flex items-center space-x-2"><Clock className="h-4 w-4 text-green-600" /><span>{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+
+                        {/* Controls Area */}
+                        <div className="flex items-center gap-2 sm:gap-6">
+                            
+                            {/* Date/Time Pill */}
+                            <div className="hidden lg:flex items-center gap-6 text-sm text-slate-600 bg-white/70 backdrop-blur-md border border-white/50 shadow-sm px-6 py-2.5 rounded-2xl">
+                                <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-emerald-500" /><span className="font-semibold">{currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' })}</span></div>
+                                <div className="h-4 w-px bg-slate-200"></div>
+                                <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-emerald-500" /><span className="font-mono font-bold">{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
                             </div>
-                            <button onClick={() => setActiveView('chat')} className="relative p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" title="Messages">
-                                <MessageSquare className="h-6 w-6"/>
-                                {totalUnreadMessages > 0 && <span className="absolute top-1.5 right-1.5 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>}
-                            </button>
-                            <div ref={notificationDropdownRef} className="relative">
-                                <button onClick={() => setIsNotificationOpen(prev => !prev)} className="relative p-2 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" title="Notifications">
-                                    <Bell className="h-6 w-6"/>
-                                    {unreadNotifications.length > 0 && (<span className="absolute top-1.5 right-1.5 flex h-5 w-5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">{unreadNotifications.length}</span></span>)}
-                                </button>
-                                <AnimatePresence>
-                                    {isDesktop && isNotificationOpen && (<DesktopNotificationPanel notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />)}
-                                </AnimatePresence>
+
+                            <div className="flex items-center gap-2">
+                                {/* Chat Button */}
+                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setActiveView('chat')} className="relative p-2.5 sm:p-3 text-slate-500 bg-white hover:bg-emerald-50 hover:text-emerald-600 rounded-2xl shadow-sm border border-slate-100 transition-all" title="Messages">
+                                    <MessageSquare className="h-5 w-5"/>
+                                    {totalUnreadMessages > 0 && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">{totalUnreadMessages}</span>}
+                                </motion.button>
+                                
+                                {/* Notification Button */}
+                                <div ref={notificationDropdownRef} className="relative">
+                                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setIsNotificationOpen(prev => !prev)} className={`relative p-2.5 sm:p-3 rounded-2xl shadow-sm border border-slate-100 transition-all ${isNotificationOpen ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-slate-500 hover:bg-emerald-50 hover:text-emerald-600'}`} title="Notifications">
+                                        <Bell className="h-5 w-5"/>
+                                        {unreadNotifications.length > 0 && (<span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">{unreadNotifications.length}</span>)}
+                                    </motion.button>
+                                    <AnimatePresence>
+                                        {isDesktop && isNotificationOpen && (<DesktopNotificationPanel notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />)}
+                                    </AnimatePresence>
+                                </div>
                             </div>
-                            <div ref={userDropdownRef} className="relative">
-                                <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 bg-white pl-1 pr-2 py-1 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                                    <Image src={profileUser.avatar} alt={profileUser.name} width={36} height={36} className="rounded-full object-cover aspect-square"/>
-                                    <span className="font-semibold text-sm text-slate-700 hidden sm:block">{profileUser.name.split(' ')[0]}</span>
-                                    <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+
+                            {/* Profile Dropdown */}
+                            <div ref={userDropdownRef} className="relative pl-4 border-l border-slate-200/60 ml-2">
+                                <button
+                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                    className="group flex items-center gap-3 pl-1 pr-1.5 py-1 rounded-full transition-all duration-300 hover:bg-slate-50 focus:outline-none"
+                                >
+                                    <div className="relative">
+                                        <div className="absolute -inset-0.5 bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-[2px]"></div>
+                                        <Image
+                                            src={profileUser.avatar}
+                                            alt={profileUser.name}
+                                            width={42}
+                                            height={42}
+                                            className="rounded-full object-cover border-2 border-white relative z-10 shadow-sm"
+                                            style={{ width: 'auto', height: 'auto' }}
+                                        />
+                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full z-20"></div>
+                                    </div>
+                                    
+                                    <div className="hidden md:flex flex-col items-start text-left">
+                                        <span className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">
+                                            {profileUser.name.split(' ')[0]}
+                                        </span>
+                                        <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md mt-0.5 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+                                            {profileUser.role}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="hidden md:flex items-center justify-center w-6 h-6 rounded-full bg-slate-50 group-hover:bg-emerald-50 transition-colors">
+                                         <ChevronDown size={14} className={`text-slate-400 group-hover:text-emerald-500 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                                    </div>
                                 </button>
+                                
                                 <AnimatePresence>
                                     {isDropdownOpen && (
-                                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className={`absolute top-full right-0 mt-3 w-64 rounded-xl shadow-2xl bg-white ring-1 ring-black ring-opacity-5 z-20 origin-top-right`}>
-                                            <div className="p-4 border-b border-slate-100">
+                                        <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className={`absolute top-full right-0 mt-4 w-72 rounded-3xl shadow-2xl bg-white/95 backdrop-blur-xl border border-white/50 z-50 origin-top-right overflow-hidden max-w-[calc(100vw-2rem)]`}>
+                                            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
                                                 <div className="flex items-center space-x-4">
-                                                    <Image src={profileUser.avatar} alt={profileUser.name} width={48} height={48} className="rounded-full object-cover aspect-square"/>
+                                                    <Image src={profileUser.avatar} alt={profileUser.name} width={56} height={56} className="rounded-2xl object-cover aspect-square shadow-sm" style={{ width: 'auto', height: 'auto' }}/>
                                                     <div>
-                                                        <p className="font-bold text-slate-800 truncate">{profileUser.name}</p>
-                                                        <p className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full inline-block mt-1">{profileUser.role}</p>
+                                                        <p className="font-bold text-slate-800 text-lg truncate">{profileUser.name}</p>
+                                                        <p className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg inline-block mt-1 border border-emerald-100">{profileUser.role}</p>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="p-2">
-                                                <Link href="/performance" className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/80 hover:text-green-600 flex items-center gap-3 transition-colors rounded-md">
+                                            <div className="p-3">
+                                                <Link href="/performance" className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-3 transition-colors rounded-2xl">
                                                     <TrendingUp className="h-5 w-5" />
                                                     <span>My Performance</span>
                                                 </Link>
-                                                <Link href="/leaves" className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-100/80 hover:text-green-600 flex items-center gap-3 transition-colors rounded-md">
+                                                <Link href="/leaves" className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-3 transition-colors rounded-2xl">
                                                     <FileText className="h-5 w-5" />
                                                     <span>My Leave Requests</span>
                                                 </Link>
-                                                <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-3 transition-colors rounded-md">
+                                                <div className="h-px bg-slate-100 my-2"></div>
+                                                <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm font-bold text-rose-500 hover:bg-rose-50 flex items-center gap-3 transition-colors rounded-2xl">
                                                     <LogOut className="h-5 w-5" />
                                                     <span>Sign Out</span>
                                                 </button>
@@ -1355,188 +1663,230 @@ const handleLogout = async () => {
                     </div>
                 </div>
             </header>
-            <main className={`max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10`}>
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-                    <motion.div className="xl:col-span-4 space-y-8" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
-                            <div className="p-6 flex flex-col items-center sm:flex-row sm:items-center sm:space-x-5">
-                                <div className="relative flex-shrink-0 mb-4 sm:mb-0">
-                                    <Image src={profileUser.avatar} alt="Profile Picture" width={88} height={88} className="rounded-full object-cover aspect-square shadow-md" priority />
-                                    <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 bg-green-600 text-white rounded-full p-2 cursor-pointer hover:bg-green-700 transition shadow-sm border-2 border-white transform hover:scale-110">
-                                        <input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
-                                        <>{isUploading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Edit size={16} />}</>
-                                    </label>
-                                </div>
-                                <div className="text-center sm:text-left">
-                                    <h2 className="text-2xl font-bold text-slate-900">{profileUser.name}</h2>
+
+            <main className={`max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-10`}>
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 sm:gap-8">
+                    
+                    {/* Left Column (Profile, Actions, Notes) */}
+                    <motion.div className="xl:col-span-4 space-y-6 sm:space-y-8" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+                        
+                        {/* Profile & Actions Card */}
+                        <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden relative">
+                             <div className="absolute top-0 w-full h-24 bg-gradient-to-r from-emerald-100 to-blue-50 opacity-50"></div>
+                            <div className="p-6 sm:p-8 pt-8 sm:pt-10 relative">
+                                <div className="flex flex-col items-center">
+                                    <div className="relative mb-4 group">
+                                        <div className="absolute inset-0 bg-emerald-300 rounded-3xl blur-md opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                                        <Image src={profileUser.avatar} alt="Profile Picture" width={110} height={110} className="rounded-[2rem] object-cover aspect-square shadow-lg border-4 border-white relative z-10" priority style={{ width: 'auto', height: 'auto' }} />
+                                        <label htmlFor="avatar-upload" className="absolute -bottom-2 -right-2 z-20 bg-white text-slate-700 p-2.5 rounded-2xl cursor-pointer hover:bg-emerald-50 hover:text-emerald-600 transition shadow-lg border border-slate-100 transform hover:scale-110 active:scale-95">
+                                            <input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
+                                            <>{isUploading ? <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div> : <Edit size={16} />}</>
+                                        </label>
+                                    </div>
+                                    <h2 className="text-2xl font-extrabold text-slate-800">{profileUser.name}</h2>
                                     <p className="text-slate-500 font-medium">{profileUser.role}</p>
                                 </div>
                             </div>
-                            <div className="bg-slate-50/70 p-6 border-t border-slate-200/80">
+                            
+                            <div className="px-6 sm:px-8 pb-8">
                                 {!checkInTime ? (
-                                    <div className="text-center py-4 space-y-4">
-                                        <h3 className="font-bold text-slate-800 text-lg">Ready to start your day?</h3>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Office')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-green-200 hover:bg-green-50 rounded-xl transition-colors disabled:opacity-70">
-                                                <Briefcase className="text-green-600" size={24}/>
-                                                <span className="font-semibold text-green-800">Work From Office</span>
-                                            </motion.button>
-                                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Home')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-indigo-200 hover:bg-indigo-50 rounded-xl transition-colors disabled:opacity-70">
-                                                <Home className="text-indigo-600" size={24}/>
-                                                <span className="font-semibold text-indigo-800">Work From Home</span>
-                                            </motion.button>
+                                    <div className="text-center py-2 space-y-6">
+                                        <div className="bg-slate-50 p-6 rounded-3xl border border-dashed border-slate-200">
+                                            <h3 className="font-bold text-slate-700 text-lg mb-4">Start your day</h3>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <motion.button whileHover={{ y: -3 }} whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Office')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-3 p-5 bg-white shadow-sm border border-slate-100 hover:border-emerald-200 hover:shadow-emerald-100/50 rounded-2xl transition-all disabled:opacity-70 group">
+                                                    <div className="bg-emerald-50 p-3 rounded-xl text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors"><Briefcase size={24}/></div>
+                                                    <span className="font-bold text-slate-700 text-sm">Office</span>
+                                                </motion.button>
+                                                <motion.button whileHover={{ y: -3 }} whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Home')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-3 p-5 bg-white shadow-sm border border-slate-100 hover:border-indigo-200 hover:shadow-indigo-100/50 rounded-2xl transition-all disabled:opacity-70 group">
+                                                    <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white transition-colors"><Home size={24}/></div>
+                                                    <span className="font-bold text-slate-700 text-sm">Remote</span>
+                                                </motion.button>
+                                            </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="space-y-5">
-                                        <div className="flex justify-between items-center">
-                                            <h3 className="text-lg font-semibold text-slate-800">Work Session Active</h3>
-                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${activeAttendance?.workLocation === 'Office' ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'}`}>
-                                                {activeAttendance?.workLocation === 'Office' ? <Briefcase size={14} className="mr-1.5"/> : <Home size={14} className="mr-1.5"/>}
-                                                {activeAttendance?.workLocation}
-                                            </span>
-                                        </div>
-                                        <div className={`text-center rounded-lg p-4 border shadow-inner relative overflow-hidden ${isOnBreak ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
-                                            <div className={`absolute inset-0 ${isOnBreak ? 'bg-amber-500/10' : 'bg-green-500/10'} animate-pulse`}></div>
-                                            <p className={`text-sm relative ${isOnBreak ? 'text-amber-600' : 'text-slate-500'}`}>{isOnBreak ? 'Total Elapsed Time' : 'Elapsed Time'}</p>
-                                            <div className={`text-3xl sm:text-5xl font-bold tracking-tighter my-1 relative ${isOnBreak ? 'text-amber-700' : 'text-green-600'}`}>{elapsedTime}</div>
-                                            <p className="text-xs text-slate-400 relative">Checked in at {new Date(checkInTime).toLocaleTimeString()}</p>
+                                    <div className="space-y-6">
+                                        <div className={`text-center rounded-3xl p-6 border shadow-sm relative overflow-hidden transition-all duration-500 ${isOnBreak ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                                            <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${isOnBreak ? 'text-amber-600' : 'text-emerald-600'}`}>{isOnBreak ? 'On Break' : 'Currently Working'}</p>
+                                            <div className={`text-5xl font-extrabold tracking-tighter my-2 tabular-nums ${isOnBreak ? 'text-amber-700' : 'text-emerald-700'}`}>{elapsedTime}</div>
+                                            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${isOnBreak ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                 {isOnBreak ? <Coffee size={12}/> : <Clock size={12}/>}
+                                                 Checked in: {new Date(checkInTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                            </div>
+                                            
                                             <AnimatePresence>
                                                 {isOnBreak && (
-                                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-2 pt-2 border-t border-amber-200/60">
-                                                        <p className="text-sm font-semibold text-slate-600 relative">On Break For</p>
-                                                        <p className="text-xl font-bold text-slate-800 relative">{elapsedBreakTime}</p>
+                                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-4 pt-4 border-t border-amber-200/50">
+                                                        <p className="text-xs font-bold text-amber-600/70 mb-1">BREAK DURATION</p>
+                                                        <p className="text-2xl font-bold text-amber-800">{elapsedBreakTime}</p>
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>
                                         </div>
-                                        <div>
-                                            <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">Work Description</label>
-                                            <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What are you working on?" rows={4} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/80 focus:border-transparent transition" disabled={isOnBreak} />
+
+                                        <div className="bg-white p-1 rounded-2xl border border-slate-100 shadow-sm">
+                                            <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What are you working on today?" rows={3} className="w-full px-4 py-3 border-none bg-transparent rounded-xl focus:ring-0 text-slate-700 placeholder-slate-400 text-sm resize-none" disabled={isOnBreak} />
                                         </div>
+
                                         <div className="grid grid-cols-2 gap-3">
                                             {!isOnBreak ? (
                                                 <>
-                                                    <button onClick={handleBreakIn} disabled={loadingStates['break-in']} className="flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200/80 text-amber-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70">{loadingStates['break-in'] ? <ButtonLoader /> : <Coffee size={16} />}Start Break</button>
-                                                    <button onClick={handleCheckOut} disabled={loadingStates['checkout']} className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70">{loadingStates['checkout'] ? <ButtonLoader /> : <LogOut size={16} />}Check Out</button>
+                                                    <motion.button whileTap={{ scale: 0.95 }} onClick={handleBreakIn} disabled={loadingStates['break-in']} className="flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70">{loadingStates['break-in'] ? <ButtonLoader /> : <Coffee size={18} />} Break</motion.button>
+                                                    <motion.button whileTap={{ scale: 0.95 }} onClick={handleCheckOut} disabled={loadingStates['checkout']} className="flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70 shadow-lg shadow-rose-200">{loadingStates['checkout'] ? <ButtonLoader /> : <LogOut size={18} />} Check Out</motion.button>
                                                 </>
                                             ) : (
-                                                <button onClick={handleBreakOut} disabled={loadingStates['break-out']} className="col-span-2 flex items-center justify-center gap-2 bg-green-100 hover:bg-green-200/80 text-green-800 font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-70">{loadingStates['break-out'] ? <ButtonLoader /> : <CheckCircle size={16} />}Resume Work</button>
+                                                <motion.button whileTap={{ scale: 0.95 }} onClick={handleBreakOut} disabled={loadingStates['break-out']} className="col-span-2 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70 shadow-lg shadow-emerald-200">{loadingStates['break-out'] ? <ButtonLoader /> : <Play size={18} />} Resume Work</motion.button>
                                             )}
                                         </div>
                                     </div>
                                 )}
                             </div>
                         </div>
+
                         <MyStatsWidget tasks={tasks} attendance={attendance} />
                         <WorkHoursChartCard attendance={attendance} />
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
-                            <div className="px-6 py-5 border-b border-slate-200/80"><h2 className="text-xl font-semibold text-slate-800">Daily Notes</h2></div>
+
+                        {/* Notes Section */}
+                        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden relative z-10">
+                            <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                                <h2 className="text-lg font-bold text-slate-800">Quick Notes</h2>
+                                <div className="bg-yellow-100 text-yellow-600 p-1.5 rounded-lg"><Edit size={16}/></div>
+                            </div>
                             <div className="p-6">
-                                <form onSubmit={handleCreateNote} className="space-y-3 mb-6">
-                                    <textarea value={newNoteContent} onChange={(e) => setNewNoteContent(e.target.value)} placeholder="Write down a quick note..." rows="3" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/80"/>
-                                    <button type="submit" disabled={isSubmittingNote || !newNoteContent.trim()} className="px-5 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2">{isSubmittingNote ? 'Saving...' : 'Save Note'}</button>
+                                <form onSubmit={handleCreateNote} className="mb-6 relative">
+                                    <textarea value={newNoteContent} onChange={(e) => setNewNoteContent(e.target.value)} placeholder="Draft notes to remember..." rows="3" className="w-full pl-4 pr-12 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-yellow-200 transition-all resize-none placeholder-slate-400"/>
+                                    <button type="submit" disabled={isSubmittingNote || !newNoteContent.trim()} className="absolute right-2 bottom-2 p-2 bg-yellow-400 text-yellow-900 rounded-xl hover:bg-yellow-500 disabled:opacity-50 disabled:bg-slate-200 disabled:text-slate-400 transition-all shadow-sm"><Plus size={18}/></button>
                                 </form>
-                                <div className="space-y-4 max-h-96 overflow-y-auto pr-2 -mr-2">
+                                <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                                    <AnimatePresence>
                                     {notes.map((note) => (
-                                        <div key={note._id} className="p-4 bg-slate-50/70 rounded-lg group">
+                                        <motion.div initial={{opacity: 0, y: 10}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, scale: 0.9}} key={note._id} className="p-4 bg-yellow-50/50 hover:bg-yellow-50 rounded-2xl border border-yellow-100 group transition-colors relative z-0">
                                             {editingNote?._id === note._id ? (
-                                                <div className="space-y-3">
-                                                    <textarea value={editingNote.content} onChange={(e) => setEditingNote({...editingNote, content: e.target.value})} className="w-full px-2 py-1 border border-slate-300 rounded-md" rows="3"/>
-                                                    <div className="flex items-center gap-2">
-                                                        <button onClick={handleUpdateNote} disabled={isSubmittingNote} className="p-2 text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50"><Save size={18} /></button>
-                                                        <button onClick={() => setEditingNote(null)} className="p-2 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-md"><X size={18} /></button>
+                                                <div className="space-y-2">
+                                                    <textarea value={editingNote.content} onChange={(e) => setEditingNote({...editingNote, content: e.target.value})} className="w-full p-2 bg-white border border-yellow-200 rounded-xl text-sm" rows="3"/>
+                                                    <div className="flex items-center gap-2 justify-end">
+                                                        <button onClick={() => setEditingNote(null)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-lg"><X size={16} /></button>
+                                                        <button onClick={handleUpdateNote} disabled={isSubmittingNote} className="p-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg shadow-sm"><Save size={16} /></button>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div>
-                                                    <p className="text-slate-700 whitespace-pre-wrap">{note.content}</p>
-                                                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200">
-                                                        <p className="text-xs text-slate-400">{formatEnglishDate(note.createdAt, true)}</p>
-                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button onClick={() => setEditingNote(note)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-full hover:text-blue-600" title="Edit Note"><Edit size={15} /></button>
-                                                            <button onClick={() => handleDeleteNote(note._id)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-full hover:text-red-600" title="Delete Note"><Trash2 size={15} /></button>
+                                                <div className="relative">
+                                                    <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                                                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-yellow-200/50">
+                                                        <p className="text-[10px] font-bold text-yellow-700/60 uppercase">{formatEnglishDate(note.createdAt)}</p>
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button onClick={() => setEditingNote(note)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
+                                                            <button onClick={() => handleDeleteNote(note._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
                                                         </div>
                                                     </div>
                                                 </div>
                                             )}
-                                        </div>
+                                        </motion.div>
                                     ))}
-                                    {notes.length === 0 && <p className="text-center text-slate-500 py-8">No notes for today.</p>}
+                                    </AnimatePresence>
+                                    {notes.length === 0 && <div className="text-center py-8 opacity-50"><FileText className="mx-auto h-8 w-8 text-slate-300 mb-2"/><p className="text-xs text-slate-400">Empty notepad</p></div>}
                                 </div>
                             </div>
                         </div>
+
                     </motion.div>
-                    <motion.div className="xl:col-span-8 space-y-8" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
-                            <div className="px-6 py-5 border-b border-slate-200/80 flex justify-between items-center">
-                                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-3"><Briefcase className="text-green-600"/>My Task Board</h2>
-                                <button onClick={() => setIsPersonalTaskModalOpen(true)} className="flex items-center gap-2 text-sm font-semibold bg-green-100 text-green-700 px-3 py-2 rounded-lg hover:bg-green-200 transition-colors">
-                                    <Plus size={16} /> Add Personal Task
-                                </button>
+
+                    {/* Right Column (Tasks & Reports) */}
+                    <motion.div className="xl:col-span-8 space-y-6 sm:space-y-8" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+                        
+                        {/* Task Board */}
+                        <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                            <div className="px-6 sm:px-8 py-5 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/30">
+                                <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-3">
+                                    <div className="bg-green-600 text-white p-2 rounded-xl"><Briefcase size={20}/></div>
+                                    Task Board
+                                </h2>
+                                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={() => setIsPersonalTaskModalOpen(true)} className="flex items-center gap-2 text-sm font-bold bg-emerald-50 text-emerald-600 px-5 py-2.5 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-colors shadow-sm">
+                                    <Plus size={18} strokeWidth={3} /> Add Personal Task
+                                </motion.button>
                             </div>
+                            
                             <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 bg-slate-50/50">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 p-6 min-h-[500px] bg-slate-50/30">
                                     <TaskColumn title="To Do" tasks={taskColumns['To Do']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} onOpenDetails={setSelectedTaskDetails} />
                                     <TaskColumn title="In Progress" tasks={taskColumns['In Progress']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} onOpenDetails={setSelectedTaskDetails} />
-                                    <div className="bg-white/60 p-4 rounded-xl shadow-sm">
-                                        <h2 className={`font-bold text-lg mb-4 flex items-center gap-2 text-green-800`}><CheckCircle size={16} className="text-green-600"/>Completed<span className="text-sm font-mono bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">{taskColumns['Completed'].length}</span></h2>
-                                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 -mr-2">
+                                    
+                                    {/* Completed Column (Compact & Limited) */}
+                                    <div className="bg-white/40 p-1 rounded-3xl h-full flex flex-col">
+                                        <div className="flex items-center justify-between mb-3 p-3 rounded-2xl bg-gradient-to-b from-emerald-50/50 to-transparent">
+                                            <h2 className="font-bold text-sm flex items-center gap-2 text-emerald-800">
+                                                <div className="bg-emerald-100 p-1.5 rounded-lg"><CheckCircle size={14} className="text-emerald-600"/></div>
+                                                Done
+                                            </h2>
+                                            <span className="text-[10px] font-bold bg-white shadow-sm text-emerald-600 px-2 py-0.5 rounded-lg border border-emerald-100">{taskColumns['Completed'].length}</span>
+                                        </div>
+                                        <div className="space-y-3 h-full overflow-y-auto px-1 pb-4 custom-scrollbar">
                                             {taskColumns['Completed'].length > 0 ? (
                                             <>
-                                                {taskColumns['Completed'].slice(0, 5).map(task => <CompletedTaskCard key={task._id} task={task} onOpenDetails={setSelectedTaskDetails} />)}
-                                                {taskColumns['Completed'].length > 5 && (
-                                                    <Link href="/tasks/completed" className="block text-center mt-4 py-2 text-sm font-semibold text-green-600 hover:text-indigo-800 bg-slate-100 hover:bg-slate-200 rounded-lg">
-                                                        View All {taskColumns['Completed'].length} Completed Tasks
+                                                {taskColumns['Completed'].slice(0, 2).map(task => <CompletedTaskCard key={task._id} task={task} onOpenDetails={setSelectedTaskDetails} />)}
+                                                {taskColumns['Completed'].length > 2 && (
+                                                    <Link href="/tasks/completed" className="block text-center mt-4 py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
+                                                        View All {taskColumns['Completed'].length} Tasks
                                                     </Link>
                                                 )}
                                             </>
-                                            ) : (<div className="text-center py-10"><Star className="mx-auto h-12 w-12 text-slate-300"/><p className="mt-2 text-sm text-slate-500">No tasks completed yet.</p></div>)}
+                                            ) : (
+                                                <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50"><Star className="mx-auto h-8 w-8 text-slate-300 mb-1"/><p className="text-[10px] font-semibold text-slate-400">Empty</p></div>
+                                            )}
                                         </div>
                                     </div>
+
                                 </div>
                             </DndContext>
                         </div>
+
                         <DailyStandupReport />
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80">
-                            <div className="px-6 py-5 border-b border-slate-200/80"><h2 className="text-xl font-semibold text-slate-800">Attendance History</h2></div>
+
+                        {/* Attendance History */}
+                        <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                            <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/30"><h2 className="text-xl font-bold text-slate-800">Attendance Log</h2></div>
                             <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-slate-200">
-                                    <thead className="bg-slate-50">
+                                <table className="min-w-full divide-y divide-slate-100">
+                                    <thead className="bg-slate-50/80">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                                            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
-                                            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Time</th>
-                                            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Work</th>
-                                            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Break</th>
-                                            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
+                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
+                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Location</th>
+                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Timeline</th>
+                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Duration</th>
+                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Break</th>
+                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Note</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-white divide-y divide-slate-200/80">
+                                    <tbody className="bg-white divide-y divide-slate-50">
                                         {attendance.slice(0, 7).map((att) => (
-                                            <tr key={att._id} className="hover:bg-slate-50/70">
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">{formatEnglishDate(att.checkInTime)}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${att.workLocation === 'Office' ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'}`}>
+                                            <tr key={att._id} className="hover:bg-slate-50/80 transition-colors group">
+                                                <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-700">{formatEnglishDate(att.checkInTime)}</td>
+                                                <td className="px-8 py-5 whitespace-nowrap text-sm">
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${att.workLocation === 'Office' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-indigo-50 text-indigo-700 border-indigo-100'}`}>
                                                         {att.workLocation || 'N/A'}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{att.checkInTime && new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{att.checkOutTime && ` - ${new Date(att.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm"><span className={`font-bold ${att.checkOutTime ? att.duration >= MIN_WORK_SECONDS ? 'text-green-600' : 'text-red-600' : 'text-blue-600'}`}>{formatDuration(att.duration)}</span></td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{formatDuration(att.totalBreakDuration)}</td>
-                                                <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate" title={att.description}>{att.description || '-'}</td>
+                                                <td className="px-8 py-5 whitespace-nowrap text-sm text-slate-500 font-medium font-mono text-[13px]">
+                                                    {att.checkInTime && new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    <span className="mx-2 text-slate-300">→</span>
+                                                    {att.checkOutTime ? new Date(att.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : <span className="text-emerald-500 font-bold animate-pulse">Active</span>}
+                                                </td>
+                                                <td className="px-8 py-5 whitespace-nowrap text-sm"><span className={`font-bold ${att.checkOutTime ? att.duration >= MIN_WORK_SECONDS ? 'text-emerald-600' : 'text-rose-500' : 'text-blue-600'}`}>{formatDuration(att.duration)}</span></td>
+                                                <td className="px-8 py-5 whitespace-nowrap text-sm text-slate-400">{formatDuration(att.totalBreakDuration)}</td>
+                                                <td className="px-8 py-5 text-sm text-slate-500 max-w-xs truncate group-hover:text-slate-800 transition-colors" title={att.description}>{att.description || '-'}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                            {attendance.length === 0 && <p className="text-center text-slate-500 py-10">No attendance history found.</p>}
+                            {attendance.length === 0 && <div className="text-center text-slate-400 py-12 italic">No attendance history found.</div>}
                         </div>
                     </motion.div>
                 </div>
             </main>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }
@@ -1545,7 +1895,7 @@ export async function getServerSideProps(context) {
     const jwt = require('jsonwebtoken');
     const dbConnect = require('../../lib/dbConnect').default;
     const User = require('../../models/User').default;
-    
+      
     await dbConnect();
     const { token } = context.req.cookies;
     if (!token) {
@@ -1555,12 +1905,12 @@ export async function getServerSideProps(context) {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.userId).select('-password').lean();
-        
+          
         if (!user) {
             context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
             return { redirect: { destination: '/login', permanent: false } };
         }
-        
+          
         const roleRedirects = {
             'HR': '/hr/dashboard',
             'Project Manager': '/pm/dashboard',
@@ -1570,7 +1920,7 @@ export async function getServerSideProps(context) {
         if (roleRedirects[user.role]) {
             return { redirect: { destination: roleRedirects[user.role], permanent: false } };
         }
-        
+          
         return { props: { user: JSON.parse(JSON.stringify(user)) } };
 
     } catch (error) {
