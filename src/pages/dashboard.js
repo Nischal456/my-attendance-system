@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'; // Uses global _app.js Toaster
 import { Bar } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DndContext, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCorners, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Pusher from 'pusher-js';
@@ -45,65 +45,65 @@ const formatEnglishDate = (dateString, includeTime = false) => {
     return date.toLocaleDateString('en-US', options);
 };
 
-const formatDuration = (totalSeconds) => { 
-    if (totalSeconds == null || totalSeconds < 0) return '0m'; 
-    if (totalSeconds < 60) return `${totalSeconds}s`; 
-    const h = Math.floor(totalSeconds / 3600); 
-    const m = Math.floor((totalSeconds % 3600) / 60); 
-    const parts = []; 
-    if (h > 0) parts.push(`${h}h`); 
-    if (m > 0) parts.push(`${m}m`); 
-    return parts.join(' ') || '0m'; 
+const formatDuration = (totalSeconds) => {
+    if (totalSeconds == null || totalSeconds < 0) return '0m';
+    if (totalSeconds < 60) return `${totalSeconds}s`;
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const parts = [];
+    if (h > 0) parts.push(`${h}h`);
+    if (m > 0) parts.push(`${m}m`);
+    return parts.join(' ') || '0m';
 };
 
-const formatElapsedTime = (startTime) => { 
-    if (!startTime) return '00:00:00'; 
-    const now = new Date(); 
-    const start = new Date(startTime); 
-    const s = Math.floor((now - start) / 1000); 
-    if (s < 0) return '00:00:00'; 
-    const hh = Math.floor(s / 3600).toString().padStart(2, '0'); 
-    const mm = Math.floor((s % 3600) / 60).toString().padStart(2, '0'); 
-    const ss = (s % 60).toString().padStart(2, '0'); 
-    return `${hh}:${mm}:${ss}`; 
+const formatElapsedTime = (startTime) => {
+    if (!startTime) return '00:00:00';
+    const now = new Date();
+    const start = new Date(startTime);
+    const s = Math.floor((now - start) / 1000);
+    if (s < 0) return '00:00:00';
+    const hh = Math.floor(s / 3600).toString().padStart(2, '0');
+    const mm = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+    const ss = (s % 60).toString().padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
 };
 
-const formatDeadline = (dateString) => { 
-    if (!dateString) return 'No deadline'; 
-    return new Date(dateString).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }); 
+const formatDeadline = (dateString) => {
+    if (!dateString) return 'No deadline';
+    return new Date(dateString).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 };
 
-const MIN_WORK_SECONDS = 21600; 
+const MIN_WORK_SECONDS = 21600;
 
-const getStatusPill = (status) => { 
-    switch (status) { 
-        case 'In Progress': return 'bg-amber-100 text-amber-800 border border-amber-200'; 
-        case 'Completed': return 'bg-emerald-100 text-emerald-800 border border-emerald-200'; 
-        default: return 'bg-slate-100 text-slate-600 border border-slate-200'; 
-    } 
+const getStatusPill = (status) => {
+    switch (status) {
+        case 'In Progress': return 'bg-amber-100 text-amber-800 border border-amber-200';
+        case 'Completed': return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+        default: return 'bg-slate-100 text-slate-600 border border-slate-200';
+    }
 };
 
-const getDeadlineInfo = (task) => { 
-    if (!task.deadline || task.status === 'Completed') return { classes: 'text-slate-400' }; 
-    if (new Date(task.deadline) < new Date()) { return { classes: 'text-rose-500 font-bold' }; } 
-    return { classes: 'text-slate-500' }; 
+const getDeadlineInfo = (task) => {
+    if (!task.deadline || task.status === 'Completed') return { classes: 'text-slate-400' };
+    if (new Date(task.deadline) < new Date()) { return { classes: 'text-rose-500 font-bold' }; }
+    return { classes: 'text-slate-500' };
 };
 
-const handleApiError = async (response) => { 
-    const contentType = response.headers.get("content-type"); 
-    if (contentType && contentType.indexOf("application/json") !== -1) { 
-        const errorData = await response.json(); 
-        return errorData.message || `HTTP error! status: ${response.status}`; 
-    } 
-    return `HTTP error! status: ${response.status}`; 
+const handleApiError = async (response) => {
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+        const errorData = await response.json();
+        return errorData.message || `HTTP error! status: ${response.status}`;
+    }
+    return `HTTP error! status: ${response.status}`;
 };
 
-const getSenderUI = (author) => { 
-    const lower = author?.toLowerCase() || ''; 
-    if (lower.includes('hr')) return { Icon: UserIcon, iconBg: 'bg-rose-100 text-rose-600' }; 
-    if (lower.includes('project')) return { Icon: Briefcase, iconBg: 'bg-purple-100 text-purple-600' }; 
-    if (lower.includes('finance')) return { Icon: DollarSign, iconBg: 'bg-emerald-100 text-emerald-600' }; 
-    return { Icon: Info, iconBg: 'bg-blue-100 text-blue-600' }; 
+const getSenderUI = (author) => {
+    const lower = author?.toLowerCase() || '';
+    if (lower.includes('hr')) return { Icon: UserIcon, iconBg: 'bg-rose-100 text-rose-600' };
+    if (lower.includes('project')) return { Icon: Briefcase, iconBg: 'bg-purple-100 text-purple-600' };
+    if (lower.includes('finance')) return { Icon: DollarSign, iconBg: 'bg-emerald-100 text-emerald-600' };
+    return { Icon: Info, iconBg: 'bg-blue-100 text-blue-600' };
 };
 
 // --- Sub-Components ---
@@ -119,7 +119,7 @@ const DashboardEntryLoader = ({ userName }) => (
     <motion.div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center font-sans" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5, ease: "easeInOut" }}>
         <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 20 }} className="relative mb-8">
             <div className="absolute inset-0 bg-emerald-200 blur-2xl rounded-full opacity-40 animate-pulse"></div>
-            <Image src="/logo.png" alt="Logo" width={80} height={80} className="" priority style={{ width: 'auto', height: 'auto' }} />
+            <Image src="/user.png" alt="Logo" width={100} height={100} className="" priority style={{ width: 'auto', height: 'auto' }} />
         </motion.div>
         <h2 className="text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">Welcome, {userName.split(' ')[0]}</h2>
         <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
@@ -140,16 +140,16 @@ const NotificationContent = ({ notifications, onLinkClick }) => (
                     const isUnread = !notif.isRead;
                     return (
                         <Link key={notif._id} href={notif.link || '#'} onClick={onLinkClick} className={`block group`}>
-                                <div className={`flex items-start gap-4 p-4 transition-all duration-200 ${isUnread ? 'bg-emerald-50/60' : 'hover:bg-slate-50'}`}>
-                                    <div className={`flex-shrink-0 mt-0.5 w-10 h-10 flex items-center justify-center rounded-2xl shadow-sm ${senderUI.iconBg}`}>
-                                        <senderUI.Icon size={18}/>
-                                    </div>
-                                    <div className="flex-1 text-sm">
-                                        <p className={`leading-snug ${isUnread ? 'text-slate-800 font-bold' : 'text-slate-600'}`}>{notif.content}</p>
-                                        <p className={`text-xs mt-1.5 ${isUnread ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>{formatEnglishDate(notif.createdAt, true)}</p>
-                                    </div>
-                                    {isUnread && (<div className="mt-2 w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0 shadow-sm shadow-emerald-200" title="Unread"></div>)}
+                            <div className={`flex items-start gap-4 p-4 transition-all duration-200 ${isUnread ? 'bg-emerald-50/60' : 'hover:bg-slate-50'}`}>
+                                <div className={`flex-shrink-0 mt-0.5 w-10 h-10 flex items-center justify-center rounded-2xl shadow-sm ${senderUI.iconBg}`}>
+                                    <senderUI.Icon size={18} />
                                 </div>
+                                <div className="flex-1 text-sm">
+                                    <p className={`leading-snug ${isUnread ? 'text-slate-800 font-bold' : 'text-slate-600'}`}>{notif.content}</p>
+                                    <p className={`text-xs mt-1.5 ${isUnread ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>{formatEnglishDate(notif.createdAt, true)}</p>
+                                </div>
+                                {isUnread && (<div className="mt-2 w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0 shadow-sm shadow-emerald-200" title="Unread"></div>)}
+                            </div>
                         </Link>
                     );
                 })}
@@ -157,7 +157,7 @@ const NotificationContent = ({ notifications, onLinkClick }) => (
         ) : (
             <div className="p-10 text-center flex flex-col justify-center items-center h-full">
                 <div className="bg-slate-50 p-4 rounded-full mb-4">
-                    <Bell className="h-8 w-8 text-slate-300"/>
+                    <Bell className="h-8 w-8 text-slate-300" />
                 </div>
                 <h4 className="text-base font-semibold text-slate-700">All caught up!</h4>
                 <p className="mt-1 text-xs text-slate-400">You have no new notifications.</p>
@@ -218,80 +218,80 @@ const SubmitWorkModal = ({ task, onClose, onWorkSubmitted }) => {
         } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmitting(false); }
     };
     return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg border border-white/50"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold text-slate-800">Submit Work</h3><button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 transition-colors"><X size={20} className="text-slate-500" /></button></div><div className="bg-slate-50 p-4 rounded-xl mb-6 border border-slate-100"><p className="text-sm text-slate-500">Submitting for task:</p><p className="font-bold text-slate-800 text-lg">{task.title}</p></div><form
-    onSubmit={handleSubmit}
-    className="space-y-6"
->
-    <div>
-        <label
-            htmlFor="submissionDescription"
-            className="block text-sm font-semibold text-slate-700 mb-2"
-        >
-            Work Description <span className="text-rose-500">*</span>
-        </label>
-        <textarea
-            id="submissionDescription"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            required
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all outline-none resize-none"
-            placeholder="Describe the task or work completed..."
-        />
-    </div>
-    <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Attach Files <span className="text-slate-400 text-xs font-normal">(optional)</span>
-        </label>
-        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <Upload className="w-8 h-8 text-slate-400 mb-2" />
-                <p className="text-sm text-slate-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-            </div>
-            <input type="file" multiple onChange={handleFileChange} className="hidden" />
-        </label>
-    </div>
-    {attachments.length > 0 && (
-        <div className="bg-white border border-slate-100 rounded-xl p-3">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Selected Files:</p>
-            <div className="flex flex-wrap gap-2">
-                {attachments.map((f, i) => (
-                    <span
-                        key={i}
-                        className="bg-emerald-50 text-emerald-700 px-3 py-1 text-xs font-medium rounded-full border border-emerald-100 shadow-sm flex items-center gap-1"
-                    >
-                        <Paperclip size={10} /> {f.filename}
-                    </span>
-                ))}
-            </div>
+        onSubmit={handleSubmit}
+        className="space-y-6"
+    >
+        <div>
+            <label
+                htmlFor="submissionDescription"
+                className="block text-sm font-semibold text-slate-700 mb-2"
+            >
+                Work Description <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+                id="submissionDescription"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                required
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all outline-none resize-none"
+                placeholder="Describe the task or work completed..."
+            />
         </div>
-    )}
-    {error && (
-        <div className="p-3 bg-rose-50 text-rose-600 text-sm rounded-lg flex items-center gap-2">
-             <AlertTriangle size={16} /> {error}
+        <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Attach Files <span className="text-slate-400 text-xs font-normal">(optional)</span>
+            </label>
+            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                    <p className="text-sm text-slate-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                </div>
+                <input type="file" multiple onChange={handleFileChange} className="hidden" />
+            </label>
         </div>
-    )}
-    <div className="pt-4 flex justify-end gap-3">
-        <button
-            type="button"
-            onClick={onClose}
-            className="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition active:scale-95"
-        >
-            Cancel
-        </button>
-        <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl flex items-center gap-2 transition shadow-lg shadow-emerald-200 active:scale-95 disabled:opacity-70 disabled:active:scale-100"
-        >
-            {isSubmitting ? (
-                <span className="flex items-center gap-2"><ButtonLoader /> Processing...</span>
-            ) : (
-                <>Submit & Complete <CheckCircle size={18} /></>
-            )}
-        </button>
-    </div>
-</form>
-</motion.div></motion.div>);
+        {attachments.length > 0 && (
+            <div className="bg-white border border-slate-100 rounded-xl p-3">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Selected Files:</p>
+                <div className="flex flex-wrap gap-2">
+                    {attachments.map((f, i) => (
+                        <span
+                            key={i}
+                            className="bg-emerald-50 text-emerald-700 px-3 py-1 text-xs font-medium rounded-full border border-emerald-100 shadow-sm flex items-center gap-1"
+                        >
+                            <Paperclip size={10} /> {f.filename}
+                        </span>
+                    ))}
+                </div>
+            </div>
+        )}
+        {error && (
+            <div className="p-3 bg-rose-50 text-rose-600 text-sm rounded-lg flex items-center gap-2">
+                <AlertTriangle size={16} /> {error}
+            </div>
+        )}
+        <div className="pt-4 flex justify-end gap-3">
+            <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition active:scale-95"
+            >
+                Cancel
+            </button>
+            <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl flex items-center gap-2 transition shadow-lg shadow-emerald-200 active:scale-95 disabled:opacity-70 disabled:active:scale-100"
+            >
+                {isSubmitting ? (
+                    <span className="flex items-center gap-2"><ButtonLoader /> Processing...</span>
+                ) : (
+                    <>Submit & Complete <CheckCircle size={18} /></>
+                )}
+            </button>
+        </div>
+    </form>
+    </motion.div></motion.div>);
 };
 
 const PersonalTaskModal = ({ onClose, onTaskCreated }) => {
@@ -311,7 +311,7 @@ const PersonalTaskModal = ({ onClose, onTaskCreated }) => {
             onClose();
         } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmitting(false); }
     };
-    return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg border border-white/50"><div className="flex justify-between items-center mb-8"><h3 className="text-2xl font-bold text-slate-800">Add Personal Task</h3><button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 text-slate-500 transition"><X size={22} /></button></div><form onSubmit={handleSubmit} className="space-y-6"><div><label htmlFor="title" className="block text-sm font-bold text-slate-700 mb-2">Task Title <span className="text-rose-500">*</span></label><input id="title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all outline-none" placeholder="e.g. Update portfolio design" required /></div><div><label htmlFor="description" className="block text-sm font-bold text-slate-700 mb-2">Description <span className="font-normal text-slate-400 text-xs">(Optional)</span></label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all outline-none resize-none" placeholder="Add more details..."/></div>{error && <p className="text-sm text-rose-600 bg-rose-50 p-3 rounded-lg flex items-center gap-2"><AlertCircle size={16}/>{error}</p>}<div className="pt-4 flex items-center justify-end gap-3"><button type="button" onClick={onClose} className="px-5 py-3 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition active:scale-95">Cancel</button><button type="submit" disabled={isSubmitting} className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white bg-emerald-600 rounded-xl shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:shadow-emerald-300 transition-all active:scale-95 disabled:opacity-70">{isSubmitting && (<ButtonLoader />)}{isSubmitting ? 'Adding...' : 'Add Task'}</button></div></form></motion.div></motion.div>);
+    return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-50 flex justify-center items-center p-4"><motion.div initial={{ y: 20, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg border border-white/50"><div className="flex justify-between items-center mb-8"><h3 className="text-2xl font-bold text-slate-800">Add Personal Task</h3><button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 text-slate-500 transition"><X size={22} /></button></div><form onSubmit={handleSubmit} className="space-y-6"><div><label htmlFor="title" className="block text-sm font-bold text-slate-700 mb-2">Task Title <span className="text-rose-500">*</span></label><input id="title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all outline-none" placeholder="e.g. Update portfolio design" required /></div><div><label htmlFor="description" className="block text-sm font-bold text-slate-700 mb-2">Description <span className="font-normal text-slate-400 text-xs">(Optional)</span></label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all outline-none resize-none" placeholder="Add more details..." /></div>{error && <p className="text-sm text-rose-600 bg-rose-50 p-3 rounded-lg flex items-center gap-2"><AlertCircle size={16} />{error}</p>}<div className="pt-4 flex items-center justify-end gap-3"><button type="button" onClick={onClose} className="px-5 py-3 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition active:scale-95">Cancel</button><button type="submit" disabled={isSubmitting} className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white bg-emerald-600 rounded-xl shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:shadow-emerald-300 transition-all active:scale-95 disabled:opacity-70">{isSubmitting && (<ButtonLoader />)}{isSubmitting ? 'Adding...' : 'Add Task'}</button></div></form></motion.div></motion.div>);
 };
 
 const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
@@ -339,7 +339,7 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
             setIsSubmitting(false);
         }
     };
-      
+
     useEffect(() => {
         commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [task.comments]);
@@ -358,41 +358,38 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
                             <span className="text-sm text-slate-500 font-medium"> {formatEnglishDate(task.createdAt)}</span>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-full transition-all transform hover:rotate-90"><X size={24}/></button>
+                    <button onClick={onClose} className="p-2 bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-full transition-all transform hover:rotate-90"><X size={24} /></button>
                 </header>
                 <div className="flex-grow overflow-y-auto p-8 pt-6 space-y-8 custom-scrollbar">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {/* Left Column: Details */}
                         <div className="md:col-span-2 space-y-8">
-                             <div>
-                                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm uppercase tracking-wide"><FileText size={16} className="text-emerald-500"/> Description</h4>
+                            <div>
+                                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm uppercase tracking-wide"><FileText size={16} className="text-emerald-500" /> Description</h4>
                                 <div className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50/50 p-6 rounded-2xl border border-slate-100 leading-relaxed">
                                     {task.description || <span className="italic text-slate-400">No description provided.</span>}
                                 </div>
                             </div>
-                            
                             {(pmAttachments.length > 0 || userAttachments.length > 0) && (
-                                 <div>
-                                    <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide"><Paperclip size={16} className="text-emerald-500"/> Attachments</h4>
+                                <div>
+                                    <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide"><Paperclip size={16} className="text-emerald-500" /> Attachments</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {pmAttachments.length > 0 && (
                                             <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100">
                                                 <h5 className="text-xs font-bold text-blue-600 mb-3 uppercase">Project Files</h5>
-                                                <div className="flex flex-col gap-2">{pmAttachments.map(file => (<a key={file.url} href={file.url} target="_blank" rel="noopener noreferrer" className="text-sm bg-white p-2.5 rounded-xl hover:shadow-md transition-all flex items-center gap-3 text-slate-700 border border-blue-100/50"><div className="bg-blue-100 p-1.5 rounded-lg"><Paperclip size={14} className="text-blue-600"/></div><span className="truncate">{file.filename}</span></a>))}</div>
+                                                <div className="flex flex-col gap-2">{pmAttachments.map(file => (<a key={file.url} href={file.url} target="_blank" rel="noopener noreferrer" className="text-sm bg-white p-2.5 rounded-xl hover:shadow-md transition-all flex items-center gap-3 text-slate-700 border border-blue-100/50"><div className="bg-blue-100 p-1.5 rounded-lg"><Paperclip size={14} className="text-blue-600" /></div><span className="truncate">{file.filename}</span></a>))}</div>
                                             </div>
                                         )}
-                                         {userAttachments.length > 0 && (
+                                        {userAttachments.length > 0 && (
                                             <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100">
                                                 <h5 className="text-xs font-bold text-emerald-600 mb-3 uppercase">My Submissions</h5>
-                                                <div className="flex flex-col gap-2">{userAttachments.map(file => (<a key={file.url} href={file.url} target="_blank" rel="noopener noreferrer" className="text-sm bg-white p-2.5 rounded-xl hover:shadow-md transition-all flex items-center gap-3 text-slate-700 border border-emerald-100/50"><div className="bg-emerald-100 p-1.5 rounded-lg"><CheckCircle size={14} className="text-emerald-600"/></div><span className="truncate">{file.filename}</span></a>))}</div>
+                                                <div className="flex flex-col gap-2">{userAttachments.map(file => (<a key={file.url} href={file.url} target="_blank" rel="noopener noreferrer" className="text-sm bg-white p-2.5 rounded-xl hover:shadow-md transition-all flex items-center gap-3 text-slate-700 border border-emerald-100/50"><div className="bg-emerald-100 p-1.5 rounded-lg"><CheckCircle size={14} className="text-emerald-600" /></div><span className="truncate">{file.filename}</span></a>))}</div>
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             )}
-
                             <div>
-                                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide"><MessageSquare size={16} className="text-emerald-500"/> Discussion</h4>
+                                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide"><MessageSquare size={16} className="text-emerald-500" /> Discussion</h4>
                                 <div className="space-y-4 max-h-80 overflow-y-auto p-1 pr-2">
                                     {task.comments && task.comments.length > 0 ? (
                                         task.comments.map(comment => (
@@ -411,7 +408,7 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
                                         ))
                                     ) : (
                                         <div className="text-center py-8 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                                            <MessageSquare className="mx-auto h-8 w-8 text-slate-300 mb-2"/>
+                                            <MessageSquare className="mx-auto h-8 w-8 text-slate-300 mb-2" />
                                             <p className="text-sm text-slate-500">No comments yet. Start the conversation!</p>
                                         </div>
                                     )}
@@ -421,7 +418,7 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
                                     <Image src={currentUser.avatar} width={36} height={36} className="rounded-xl object-cover shadow-sm" alt="Your avatar" />
                                     <div className="flex-1 relative">
                                         <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write a comment..." rows="1" className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm shadow-inner focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all resize-none overflow-hidden min-h-[46px]" required />
-                                        <button type="submit" disabled={isSubmitting || !newComment.trim()} className="absolute right-2 top-2 p-1.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 disabled:opacity-50 disabled:hover:bg-emerald-500 transition-all shadow-md shadow-emerald-200"><Send size={16}/></button>
+                                        <button type="submit" disabled={isSubmitting || !newComment.trim()} className="absolute right-2 top-2 p-1.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 disabled:opacity-50 disabled:hover:bg-emerald-500 transition-all shadow-md shadow-emerald-200"><Send size={16} /></button>
                                     </div>
                                 </form>
                             </div>
@@ -429,24 +426,58 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
 
                         {/* Right Column: Meta Info */}
                         <div className="space-y-6">
-                             <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
-                                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide"><Users size={16} className="text-emerald-500"/> The Team</h4>
+                            <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide"><Users size={16} className="text-emerald-500" /> The Team</h4>
                                 <div className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative"><Image src={task.assignedBy?.avatar || '/default-avatar.png'} width={44} height={44} className="rounded-2xl object-cover shadow-sm" alt={task.assignedBy?.name} /><div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5"><div className="bg-purple-500 p-1 rounded-full"><Briefcase size={8} className="text-white"/></div></div></div>
-                                        <div>
-                                            <p className="font-bold text-sm text-slate-800">{task.assignedBy?.name}</p>
-                                            <p className="text-xs text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded-full inline-block mt-0.5">Manager</p>
+                                    {/* Assigned By */}
+                                    {task.assignedBy && (
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative">
+                                                <Image src={task.assignedBy.avatar || '/default-avatar.png'} width={44} height={44} className="rounded-2xl object-cover shadow-sm" alt={task.assignedBy.name} />
+                                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5"><div className="bg-purple-500 p-1 rounded-full"><Briefcase size={8} className="text-white" /></div></div>
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-sm text-slate-800">{task.assignedBy.name}</p>
+                                                <p className="text-xs text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded-full inline-block mt-0.5">Manager</p>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                     <div className="w-full h-px bg-slate-200/50"></div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative"><Image src={task.assignedTo?.avatar || '/default-avatar.png'} width={44} height={44} className="rounded-2xl object-cover shadow-sm" alt={task.assignedTo?.name} /><div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5"><div className="bg-emerald-500 p-1 rounded-full"><UserIcon size={8} className="text-white"/></div></div></div>
-                                        <div>
-                                            <p className="font-bold text-sm text-slate-800">{task.assignedTo?.name}</p>
-                                            <p className="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-0.5">Assigned To</p>
+                                    {/* Assigned To */}
+                                    {task.assignedTo && (
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative">
+                                                <Image src={task.assignedTo.avatar || '/default-avatar.png'} width={44} height={44} className="rounded-2xl object-cover shadow-sm" alt={task.assignedTo.name} />
+                                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5"><div className="bg-emerald-500 p-1 rounded-full"><UserIcon size={8} className="text-white" /></div></div>
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-sm text-slate-800">{task.assignedTo.name}</p>
+                                                <p className="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-0.5">Assigned To</p>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
+                                    {/* [FIX] Collaborators Section Added Here */}
+                                    {task.assistedBy && task.assistedBy.length > 0 && (
+                                        <>
+                                            <div className="w-full h-px bg-slate-200/50"></div>
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Collaborators</p>
+                                                <div className="flex flex-col gap-3">
+                                                    {task.assistedBy.map(assistant => (
+                                                        <div key={assistant._id} className="flex items-center gap-3">
+                                                            <div className="relative">
+                                                                <Image src={assistant.avatar || '/default-avatar.png'} width={36} height={36} className="rounded-xl object-cover shadow-sm" alt={assistant.name} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-sm text-slate-700">{assistant.name}</p>
+                                                                <p className="text-[10px] text-blue-500 font-semibold bg-blue-50 px-1.5 py-0.5 rounded-full inline-block">Assistant</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
@@ -454,7 +485,7 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
                                 <div>
                                     <h4 className="font-bold text-slate-400 text-xs uppercase tracking-wide mb-1">Deadline</h4>
                                     <div className={`flex items-center gap-2 font-bold ${getDeadlineInfo(task).classes.replace('text-slate-500', 'text-slate-700')}`}>
-                                        <Clock size={18}/>
+                                        <Clock size={18} />
                                         <span>{formatDeadline(task.deadline)}</span>
                                     </div>
                                 </div>
@@ -462,7 +493,7 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
                                     <div>
                                         <h4 className="font-bold text-slate-400 text-xs uppercase tracking-wide mb-1">Completed On</h4>
                                         <div className="flex items-center gap-2 font-bold text-emerald-600">
-                                            <CheckCircle size={18}/>
+                                            <CheckCircle size={18} />
                                             <span>{formatEnglishDate(task.completedAt, true)}</span>
                                         </div>
                                     </div>
@@ -483,7 +514,7 @@ const CompletedTaskCard = ({ task, onOpenDetails }) => {
             <div className="flex justify-between items-start gap-3">
                 <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-sm text-slate-700 group-hover:text-emerald-700 transition-colors line-through decoration-emerald-500/50 truncate">{task.title}</h4>
-                    <p className="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1"><CheckCircle size={10}/> {formatEnglishDate(task.completedAt)}</p>
+                    <p className="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1"><CheckCircle size={10} /> {formatEnglishDate(task.completedAt)}</p>
                 </div>
                 <div className="bg-emerald-100 text-emerald-600 p-1 rounded-lg flex-shrink-0"><CheckCircle size={14} /></div>
             </div>
@@ -493,25 +524,25 @@ const CompletedTaskCard = ({ task, onOpenDetails }) => {
 
 const DraggableTaskCard = ({ task, onUpdateTaskStatus, onOpenSubmitModal, onOpenDetails }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task._id });
-    const style = { 
-        transform: CSS.Transform.toString(transform), 
-        transition, 
-        zIndex: isDragging ? 50 : 'auto', 
-        opacity: isDragging ? 0.9 : 1, 
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 'auto',
+        opacity: isDragging ? 0.9 : 1,
         scale: isDragging ? 1.05 : 1,
         touchAction: 'none' // CRITICAL: Allows dragging on mobile without scrolling page
     };
     const isSelfAssigned = task.assignedBy?._id === task.assignedTo?._id;
-      
+
     return (
         <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={`p-3 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 touch-none cursor-grab active:cursor-grabbing group will-change-transform ${isDragging ? 'shadow-2xl ring-2 ring-emerald-400 rotate-2' : ''}`} onClick={() => onOpenDetails(task)}>
             <div className="flex justify-between items-start gap-2 mb-1.5">
                 <h4 className="font-bold text-slate-800 text-sm leading-tight line-clamp-2">{task.title}</h4>
                 {isSelfAssigned && <span className="flex-shrink-0 text-[9px] uppercase font-bold bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md border border-indigo-100">Personal</span>}
             </div>
-            
+
             {task.description && <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed">{task.description}</p>}
-            
+
             <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-50">
                 <div className={`flex items-center gap-1 text-[10px] font-semibold ${getDeadlineInfo(task).classes}`}>
                     <Clock size={12} />
@@ -528,10 +559,10 @@ const DraggableTaskCard = ({ task, onUpdateTaskStatus, onOpenSubmitModal, onOpen
             {(task.status === 'To Do' || task.status === 'In Progress') && (
                 <div className="mt-3 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     {task.status === 'To Do' && (
-                        <button onClick={(e) => { e.stopPropagation(); onUpdateTaskStatus(task._id, 'In Progress');}} className="w-full flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold py-1.5 px-2 rounded-lg text-[10px] transition-all shadow-lg shadow-slate-200"><Play size={10} fill="currentColor" /> Start</button>
+                        <button onClick={(e) => { e.stopPropagation(); onUpdateTaskStatus(task._id, 'In Progress'); }} className="w-full flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold py-1.5 px-2 rounded-lg text-[10px] transition-all shadow-lg shadow-slate-200"><Play size={10} fill="currentColor" /> Start</button>
                     )}
                     {task.status === 'In Progress' && (
-                        <button onClick={(e) => { e.stopPropagation(); onOpenSubmitModal(task);}} className="w-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-1.5 px-2 rounded-lg text-[10px] transition-all shadow-lg shadow-emerald-200"><Upload size={10} /> Submit</button>
+                        <button onClick={(e) => { e.stopPropagation(); onOpenSubmitModal(task); }} className="w-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-1.5 px-2 rounded-lg text-[10px] transition-all shadow-lg shadow-emerald-200"><Upload size={10} /> Submit</button>
                     )}
                 </div>
             )}
@@ -540,21 +571,25 @@ const DraggableTaskCard = ({ task, onUpdateTaskStatus, onOpenSubmitModal, onOpen
 };
 
 const TaskColumn = ({ title, tasks, onUpdateTaskStatus, onOpenSubmitModal, onOpenDetails }) => {
+    // [FIX] Enable drop on empty column
+    const { setNodeRef } = useDroppable({ id: title });
+
     let titleColor, icon, bgGradient;
     switch (title) {
-        case 'In Progress': 
-            titleColor = 'text-amber-700'; 
-            icon = <div className="bg-amber-100 p-1.5 rounded-lg"><Play size={14} className="text-amber-600 fill-amber-600"/></div>; 
+        case 'In Progress':
+            titleColor = 'text-amber-700';
+            icon = <div className="bg-amber-100 p-1.5 rounded-lg"><Play size={14} className="text-amber-600 fill-amber-600" /></div>;
             bgGradient = 'from-amber-50/50 to-transparent';
             break;
-        default: 
-            titleColor = 'text-slate-700'; 
-            icon = <div className="bg-slate-200 p-1.5 rounded-lg"><List size={14} className="text-slate-600"/></div>; 
+        default:
+            titleColor = 'text-slate-700';
+            icon = <div className="bg-slate-200 p-1.5 rounded-lg"><List size={14} className="text-slate-600" /></div>;
             bgGradient = 'from-slate-50/50 to-transparent';
             break;
     }
     return (
-        <div className={`bg-white/40 p-1 rounded-3xl h-full flex flex-col`}>
+        // [FIX] Added ref={setNodeRef} here
+        <div ref={setNodeRef} className={`bg-white/40 p-1 rounded-3xl h-full flex flex-col min-h-[150px]`}>
             <div className={`flex items-center justify-between mb-3 p-3 rounded-2xl bg-gradient-to-b ${bgGradient}`}>
                 <h2 className={`font-bold text-sm flex items-center gap-2 ${titleColor}`}>{icon}{title}</h2>
                 <span className="text-[10px] font-bold bg-white shadow-sm text-slate-600 px-2 py-0.5 rounded-lg border border-slate-100">{tasks.length}</span>
@@ -564,7 +599,7 @@ const TaskColumn = ({ title, tasks, onUpdateTaskStatus, onOpenSubmitModal, onOpe
                     {tasks.length > 0 ? (
                         tasks.map(task => <DraggableTaskCard key={task._id} task={task} onUpdateTaskStatus={onUpdateTaskStatus} onOpenSubmitModal={onOpenSubmitModal} onOpenDetails={onOpenDetails} />)
                     ) : (
-                        <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50"><Inbox className="mx-auto h-8 w-8 text-slate-300 mb-1"/><p className="text-[10px] font-semibold text-slate-400">Empty</p></div>
+                        <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50"><Inbox className="mx-auto h-8 w-8 text-slate-300 mb-1" /><p className="text-[10px] font-semibold text-slate-400">Empty</p></div>
                     )}
                 </SortableContext>
             </div>
@@ -578,14 +613,14 @@ const MyStatsWidget = ({ tasks, attendance }) => {
         const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
         startOfWeek.setHours(0, 0, 0, 0);
 
-        const completedThisWeek = tasks.filter(task => 
+        const completedThisWeek = tasks.filter(task =>
             task.status === 'Completed' && new Date(task.completedAt) >= startOfWeek
         ).length;
 
-        const overdueTasks = tasks.filter(task => 
+        const overdueTasks = tasks.filter(task =>
             task.status !== 'Completed' && task.deadline && new Date(task.deadline) < new Date()
         ).length;
-        
+
         const currentMonthRecords = attendance.filter(att => {
             const checkInDate = new Date(att.checkInTime);
             const today = new Date();
@@ -595,34 +630,34 @@ const MyStatsWidget = ({ tasks, attendance }) => {
         const totalOfficeSeconds = currentMonthRecords
             .filter(att => att.workLocation === 'Office')
             .reduce((acc, att) => acc + (att.duration || 0), 0);
-            
+
         const totalHomeSeconds = currentMonthRecords
             .filter(att => att.workLocation === 'Home')
             .reduce((acc, att) => acc + (att.duration || 0), 0);
 
-        return { 
-            completedThisWeek, 
-            overdueTasks, 
+        return {
+            completedThisWeek,
+            overdueTasks,
             totalHoursOffice: totalOfficeSeconds / 3600,
             totalHoursHome: totalHomeSeconds / 3600
         };
     }, [tasks, attendance]);
 
     return (
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ delay: 0.3 }} 
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
             className="bg-white rounded-[2.5rem] shadow-lg shadow-slate-200/50 border border-slate-100 overflow-hidden relative"
         >
-             {/* Background Decoration */}
-             <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-full blur-3xl opacity-60 pointer-events-none"></div>
+            {/* Background Decoration */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-full blur-3xl opacity-60 pointer-events-none"></div>
 
             <div className="px-8 py-6 border-b border-slate-50 relative z-10 flex justify-between items-center">
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3">
                     <div className="bg-green-600 text-white p-2.5 rounded-xl shadow-md">
-                        <TrendingUp size={18}/>
-                    </div> 
+                        <TrendingUp size={18} />
+                    </div>
                     My Stats
                 </h2>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50 px-3 py-1 rounded-full">Monthly Overview</span>
@@ -631,7 +666,7 @@ const MyStatsWidget = ({ tasks, attendance }) => {
             <div className="p-8 grid grid-cols-2 gap-5 relative z-10">
                 {/* Office Hours Card */}
                 <motion.div whileHover={{ scale: 1.02 }} className="col-span-2 sm:col-span-1 p-5 rounded-3xl bg-gradient-to-br from-emerald-50/80 to-teal-50/30 border border-emerald-100/60 shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><Briefcase size={60} className="text-emerald-600"/></div>
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><Briefcase size={60} className="text-emerald-600" /></div>
                     <p className="text-xs font-bold text-emerald-600/80 uppercase tracking-wider mb-1">Office Hours</p>
                     <div className="flex items-baseline gap-1">
                         <span className="text-3xl font-extrabold text-slate-800">{stats.totalHoursOffice.toFixed(1)}</span>
@@ -641,7 +676,7 @@ const MyStatsWidget = ({ tasks, attendance }) => {
 
                 {/* Remote Hours Card */}
                 <motion.div whileHover={{ scale: 1.02 }} className="col-span-2 sm:col-span-1 p-5 rounded-3xl bg-gradient-to-br from-indigo-50/80 to-blue-50/30 border border-indigo-100/60 shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><Home size={60} className="text-indigo-600"/></div>
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><Home size={60} className="text-indigo-600" /></div>
                     <p className="text-xs font-bold text-indigo-600/80 uppercase tracking-wider mb-1">Remote Hours</p>
                     <div className="flex items-baseline gap-1">
                         <span className="text-3xl font-extrabold text-slate-800">{stats.totalHoursHome.toFixed(1)}</span>
@@ -653,7 +688,7 @@ const MyStatsWidget = ({ tasks, attendance }) => {
                 <div className="col-span-2 grid grid-cols-2 gap-4 mt-2">
                     <div className="col-span-2 sm:col-span-1 flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-white hover:border-emerald-200 hover:shadow-md transition-all">
                         <div className="flex items-center gap-3">
-                            <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-xl"><CheckCircle size={18}/></div>
+                            <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-xl"><CheckCircle size={18} /></div>
                             <div>
                                 <p className="text-xs text-slate-400 font-semibold uppercase">Done (Week)</p>
                                 <p className="text-lg font-bold text-slate-800">{stats.completedThisWeek} Tasks</p>
@@ -664,7 +699,7 @@ const MyStatsWidget = ({ tasks, attendance }) => {
                     <div className={`col-span-2 sm:col-span-1 flex items-center justify-between p-4 rounded-2xl border hover:shadow-md transition-all ${stats.overdueTasks > 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-white border-slate-100'}`}>
                         <div className="flex items-center gap-3">
                             <div className={`p-2.5 rounded-xl ${stats.overdueTasks > 0 ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-400'}`}>
-                                <AlertOctagon size={18}/>
+                                <AlertOctagon size={18} />
                             </div>
                             <div>
                                 <p className={`text-xs font-semibold uppercase ${stats.overdueTasks > 0 ? 'text-rose-400' : 'text-slate-400'}`}>Overdue</p>
@@ -697,7 +732,7 @@ const WorkHoursChartCard = ({ attendance }) => {
                 const checkInDate = new Date(att.checkInTime);
                 if (checkInDate >= startOfWeek) {
                     const dayIndex = checkInDate.getDay();
-                    data[dayIndex] += att.duration / 3600; 
+                    data[dayIndex] += att.duration / 3600;
                 }
             }
         });
@@ -720,7 +755,7 @@ const WorkHoursChartCard = ({ attendance }) => {
         maintainAspectRatio: false,
         plugins: {
             legend: { display: false },
-            title: { display: true, text: 'Weekly Activity', font: { size: 13, weight: 'bold', family: 'sans-serif' }, color: '#64748b', padding: {bottom: 15} },
+            title: { display: true, text: 'Weekly Activity', font: { size: 13, weight: 'bold', family: 'sans-serif' }, color: '#64748b', padding: { bottom: 15 } },
             tooltip: {
                 backgroundColor: '#1e293b',
                 padding: 10,
@@ -731,13 +766,13 @@ const WorkHoursChartCard = ({ attendance }) => {
             }
         },
         scales: {
-            y: { 
-                beginAtZero: true, 
+            y: {
+                beginAtZero: true,
                 grid: { color: '#f1f5f9', borderDash: [5, 5] },
                 border: { display: false },
                 ticks: { font: { size: 10 }, color: '#94a3b8' }
             },
-            x: { 
+            x: {
                 grid: { display: false },
                 border: { display: false },
                 ticks: { font: { size: 10, weight: '600' }, color: '#64748b' }
@@ -775,7 +810,7 @@ const DailyStandupReport = () => {
 
     useEffect(() => {
         fetchReports();
-        const interval = setInterval(fetchReports, 60000); 
+        const interval = setInterval(fetchReports, 60000);
         return () => clearInterval(interval);
     }, [fetchReports]);
 
@@ -783,7 +818,7 @@ const DailyStandupReport = () => {
         <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
             <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/30">
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-3">
-                    <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600"><Calendar size={18}/></div>
+                    <div className="bg-green-100 p-2 rounded-xl text-green-600"><Calendar size={18} /></div>
                     Team Daily Updates
                 </h2>
             </div>
@@ -792,7 +827,7 @@ const DailyStandupReport = () => {
                     <div className="flex justify-center py-10"><ButtonLoader /></div>
                 ) : reports.length > 0 ? (
                     reports.map((report, idx) => (
-                        <motion.div 
+                        <motion.div
                             key={report._id}
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
@@ -817,9 +852,9 @@ const DailyStandupReport = () => {
                     ))
                 ) : (
                     <div className="text-center py-10">
-                         <div className="bg-slate-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <Clock className="text-slate-300" size={24}/>
-                         </div>
+                        <div className="bg-slate-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <Clock className="text-slate-300" size={24} />
+                        </div>
                         <p className="font-semibold text-sm text-slate-600">No updates yet.</p>
                         <p className="text-xs text-slate-400">Updates appear when team members check out.</p>
                     </div>
@@ -873,7 +908,7 @@ const ChatSidebar = ({ conversations, users, onSelect, selectedConvId, currentUs
                         <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Results</h3>
                         {filteredUsers.length > 0 ? filteredUsers.map(user => (
                             <div key={user._id} onClick={() => onSelect(user)} className="p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 rounded-2xl transition-all">
-                                <Image src={user.avatar} width={44} height={44} className="rounded-xl object-cover" alt={user.name}/>
+                                <Image src={user.avatar} width={44} height={44} className="rounded-xl object-cover" alt={user.name} />
                                 <p className="font-bold text-slate-700 text-sm">{user.name}</p>
                             </div>
                         )) : <p className="p-4 text-center text-sm text-slate-400 italic">No users found.</p>}
@@ -889,13 +924,13 @@ const ChatSidebar = ({ conversations, users, onSelect, selectedConvId, currentUs
                             return (
                                 <div key={conv._id} onClick={() => onSelect(otherUser, conv)} className={`group relative p-3 flex items-center gap-4 cursor-pointer rounded-2xl transition-all duration-200 ${isSelected ? 'bg-emerald-50/80 shadow-sm' : 'hover:bg-slate-50'}`}>
                                     <div className="relative flex-shrink-0">
-                                        <Image src={otherUser.avatar} width={48} height={48} className={`rounded-2xl object-cover transition-all ${isUnread ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`} alt={otherUser.name}/>
+                                        <Image src={otherUser.avatar} width={48} height={48} className={`rounded-2xl object-cover transition-all ${isUnread ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`} alt={otherUser.name} />
                                         {isUnread && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">{conv.unreadCount}</span>}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-baseline mb-0.5">
                                             <p className={`font-bold truncate text-sm ${isUnread ? 'text-slate-900' : 'text-slate-700'}`}>{otherUser.name}</p>
-                                            <span className="text-[10px] text-slate-400 font-medium">{conv.lastMessage && formatDistanceToNow(new Date(conv.lastMessage.createdAt), {addSuffix: false})}</span>
+                                            <span className="text-[10px] text-slate-400 font-medium">{conv.lastMessage && formatDistanceToNow(new Date(conv.lastMessage.createdAt), { addSuffix: false })}</span>
                                         </div>
                                         <p className={`text-xs truncate ${isUnread ? 'text-slate-800 font-semibold' : 'text-slate-500'}`}>{conv.lastMessage?.message || 'No messages yet'}</p>
                                     </div>
@@ -927,11 +962,11 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
                 try {
                     const res = await fetch(`/api/chat/messages?conversationId=${conversation._id}`);
                     const data = await res.json();
-                    if (data.success && isMounted) setMessages((data.messages || []).map(m => ({...m, status: 'sent'})));
+                    if (data.success && isMounted) setMessages((data.messages || []).map(m => ({ ...m, status: 'sent' })));
                 } catch (err) {
                     toast.error("Failed to load messages.");
                 } finally {
-                    if(isMounted) setIsLoading(false);
+                    if (isMounted) setIsLoading(false);
                 }
             } else {
                 setMessages([]);
@@ -949,18 +984,18 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
             channel = pusher.subscribe(`chat-${conversation._id}`);
             channel.bind('new-message', (data) => {
                 if (data.senderId._id !== currentUser._id) {
-                    setMessages(prev => [...prev, {...data, status: 'sent'}]);
+                    setMessages(prev => [...prev, { ...data, status: 'sent' }]);
                 }
             });
         }
-        
+
         return () => {
             isMounted = false;
             if (channel && conversation) {
-                 pusher.unsubscribe(`chat-${conversation._id}`);
+                pusher.unsubscribe(`chat-${conversation._id}`);
             }
             if (pusher) {
-                 pusher.disconnect();
+                pusher.disconnect();
             }
         };
     }, [conversation, currentUser._id]);
@@ -978,7 +1013,7 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
         };
         markAsRead();
     }, [conversation, onMessageSent]);
-      
+
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
@@ -987,7 +1022,7 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
         e.preventDefault();
         const messageText = newMessage.trim();
         if (!messageText) return;
-      
+
         const tempId = `temp_${Date.now()}`;
         const optimisticMessage = {
             _id: tempId,
@@ -996,10 +1031,10 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
             createdAt: new Date().toISOString(),
             status: 'sending'
         };
-      
+
         setMessages(prev => [...prev, optimisticMessage]);
         setNewMessage('');
-      
+
         try {
             const res = await fetch('/api/chat/messages', {
                 method: 'POST',
@@ -1008,17 +1043,17 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
             });
             const result = await res.json();
             if (!res.ok) throw new Error(result.message);
-      
+
             setMessages(prev => prev.map(msg => msg._id === tempId ? { ...result.data, status: 'sent' } : msg));
             onMessageSent();
         } catch (err) {
             toast.error("Failed to send message.");
             setMessages(prev => prev.map(msg => msg._id === tempId ? { ...msg, status: 'failed' } : msg));
         }
-    };    
+    };
 
     if (!selectedUser) {
-        return <div className="hidden md:flex flex-1 items-center justify-center bg-white"><div className="text-center"><div className="bg-slate-50 inline-block p-6 rounded-full mb-4"><MessageSquare size={40} className="text-slate-300"/></div><p className="text-slate-500 font-medium">Select a conversation to start chatting</p></div></div>;
+        return <div className="hidden md:flex flex-1 items-center justify-center bg-white"><div className="text-center"><div className="bg-slate-50 inline-block p-6 rounded-full mb-4"><MessageSquare size={40} className="text-slate-300" /></div><p className="text-slate-500 font-medium">Select a conversation to start chatting</p></div></div>;
     }
 
     return (
@@ -1031,7 +1066,7 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
                     </button>
                 )}
                 <div className="relative">
-                    <Image src={selectedUser.avatar} width={44} height={44} className="rounded-xl object-cover shadow-sm" alt={selectedUser.name}/>
+                    <Image src={selectedUser.avatar} width={44} height={44} className="rounded-xl object-cover shadow-sm" alt={selectedUser.name} />
                     <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                 </div>
                 <div>
@@ -1039,15 +1074,15 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
                     <p className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-full inline-block">{selectedUser.role}</p>
                 </div>
             </header>
-            
+
             {/* Messages Area */}
             <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/30">
                 {messages.map((msg, i) => {
-                     const isMe = msg.senderId._id === currentUser._id;
-                     const isSequence = i > 0 && messages[i-1].senderId._id === msg.senderId._id;
-                     return (
-                        <motion.div 
-                            key={msg._id} 
+                    const isMe = msg.senderId._id === currentUser._id;
+                    const isSequence = i > 0 && messages[i - 1].senderId._id === msg.senderId._id;
+                    return (
+                        <motion.div
+                            key={msg._id}
                             layout
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1055,22 +1090,22 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
                         >
                             {!isMe && !isSequence && <Image src={msg.senderId.avatar} width={32} height={32} className="rounded-full object-cover shadow-sm mb-1" alt={msg.senderId.name} />}
                             {!isMe && isSequence && <div className="w-8" />}
-                            
+
                             <div className={`relative px-5 py-3 shadow-sm text-sm leading-relaxed ${isMe ? 'bg-emerald-600 text-white rounded-[1.2rem] rounded-br-sm' : 'bg-white text-slate-700 rounded-[1.2rem] rounded-bl-sm border border-slate-100'}`}>
                                 <p>{msg.message}</p>
                                 <span className={`text-[10px] block mt-1 opacity-70 ${isMe ? 'text-emerald-100 text-right' : 'text-slate-400'}`}>
-                                    {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
-                            
+
                             {isMe && (
                                 <div className="flex-shrink-0 mb-3 text-slate-400">
-                                    {msg.status === 'sending' && <Clock size={12} className="animate-spin"/>}
-                                    {msg.status === 'failed' && <AlertCircle size={12} className="text-rose-500"/>}
+                                    {msg.status === 'sending' && <Clock size={12} className="animate-spin" />}
+                                    {msg.status === 'failed' && <AlertCircle size={12} className="text-rose-500" />}
                                 </div>
                             )}
                         </motion.div>
-                     );
+                    );
                 })}
                 <div ref={messagesEndRef} />
             </div>
@@ -1078,8 +1113,8 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
             {/* Input Area */}
             <footer className="p-4 px-6 bg-white border-t border-slate-100">
                 <form onSubmit={handleSendMessage} className="flex items-end gap-3 bg-slate-50 p-2 rounded-[1.5rem] border border-slate-200 focus-within:ring-2 focus-within:ring-emerald-100 focus-within:border-emerald-300 transition-all">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type your message..." className="flex-1 p-3 bg-transparent border-none focus:ring-0 text-sm text-slate-700 placeholder-slate-400 min-h-[44px]"/>
-                    <button type="submit" disabled={!newMessage.trim()} className="bg-emerald-600 text-white p-3 rounded-full hover:bg-emerald-700 disabled:opacity-50 disabled:hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200 active:scale-90 mb-0.5 mr-0.5"><Send size={18} className="ml-0.5"/></button>
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type your message..." className="flex-1 p-3 bg-transparent border-none focus:ring-0 text-sm text-slate-700 placeholder-slate-400 min-h-[44px]" />
+                    <button type="submit" disabled={!newMessage.trim()} className="bg-emerald-600 text-white p-3 rounded-full hover:bg-emerald-700 disabled:opacity-50 disabled:hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200 active:scale-90 mb-0.5 mr-0.5"><Send size={18} className="ml-0.5" /></button>
                 </form>
             </footer>
         </div>
@@ -1134,13 +1169,13 @@ const ChatView = ({ user, onBack }) => {
             });
             const result = await res.json();
             if (!res.ok) throw new Error(result.message);
-             
+
             toast.success("Conversation deleted.");
             setConversations(prev => prev.filter(c => c._id !== deletingConvId));
             if (selectedConversation?._id === deletingConvId) {
                 setSelectedConversation(null);
                 setSelectedUser(null);
-                if(isMobile) setActiveChatUser(null);
+                if (isMobile) setActiveChatUser(null);
             }
         } catch (err) {
             toast.error(err.message || "Failed to delete conversation.");
@@ -1164,12 +1199,12 @@ const ChatView = ({ user, onBack }) => {
         exit: { x: '100%' },
         transition: { type: 'spring', stiffness: 400, damping: 40 }
     };
-      
+
     return (
         <>
             <AnimatePresence>
                 {deletingConvId && (
-                    <DeleteChatModal 
+                    <DeleteChatModal
                         onClose={() => setDeletingConvId(null)}
                         onConfirm={handleDeleteConversation}
                         isDeleting={isDeleting}
@@ -1195,19 +1230,19 @@ const ChatView = ({ user, onBack }) => {
                 </header>
                 <div className="flex flex-1 overflow-hidden relative">
                     <div className={`w-full md:w-96 h-full flex-col bg-white ${isMobile && activeChatUser ? 'hidden' : 'flex'}`}>
-                         <ChatSidebar conversations={conversations} users={allUsers} onSelect={handleSelectConversation} selectedConvId={selectedConversation?._id} currentUser={user} onDelete={setDeletingConvId} />
+                        <ChatSidebar conversations={conversations} users={allUsers} onSelect={handleSelectConversation} selectedConvId={selectedConversation?._id} currentUser={user} onDelete={setDeletingConvId} />
                     </div>
-                    
+
                     <div className="flex-1 hidden md:flex border-l border-slate-100">
-                        {selectedUser ? <ChatBox selectedUser={selectedUser} conversation={selectedConversation} currentUser={user} onMessageSent={fetchChatData} onBack={() => {}} /> : <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50"><div className="bg-white p-8 rounded-full shadow-sm mb-4"><MessageSquare size={48} className="text-slate-200"/></div><p className="text-slate-400 font-semibold">Select a team member to start chatting</p></div>}
+                        {selectedUser ? <ChatBox selectedUser={selectedUser} conversation={selectedConversation} currentUser={user} onMessageSent={fetchChatData} onBack={() => { }} /> : <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50"><div className="bg-white p-8 rounded-full shadow-sm mb-4"><MessageSquare size={48} className="text-slate-200" /></div><p className="text-slate-400 font-semibold">Select a team member to start chatting</p></div>}
                     </div>
-                    
+
                     <AnimatePresence>
-                    {isMobile && activeChatUser && (
-                        <motion.div key="chatbox" className="absolute inset-0 z-20 bg-white" variants={slideAnimation} initial="initial" animate="animate" exit="exit">
-                            <ChatBox selectedUser={selectedUser} conversation={selectedConversation} currentUser={user} onMessageSent={fetchChatData} onBack={handleBackToSidebar} />
-                        </motion.div>
-                    )}
+                        {isMobile && activeChatUser && (
+                            <motion.div key="chatbox" className="absolute inset-0 z-20 bg-white" variants={slideAnimation} initial="initial" animate="animate" exit="exit">
+                                <ChatBox selectedUser={selectedUser} conversation={selectedConversation} currentUser={user} onMessageSent={fetchChatData} onBack={handleBackToSidebar} />
+                            </motion.div>
+                        )}
                     </AnimatePresence>
                 </div>
             </div>
@@ -1222,7 +1257,7 @@ const DashboardSkeleton = () => (
             <div className="h-56 bg-white rounded-[2rem] p-8 space-y-4"><div className="h-6 w-1/3 bg-slate-100 rounded-lg"></div><div className="h-32 w-full bg-slate-50 rounded-2xl"></div></div>
         </div>
         <div className="xl:col-span-8 space-y-8">
-            <div className="bg-white rounded-[2rem] p-8"><div className="flex justify-between items-center mb-8"><div className="h-8 w-1/4 bg-slate-100 rounded-xl"></div><div className="h-10 w-32 bg-slate-100 rounded-xl"></div></div><div className="grid grid-cols-1 md:grid-cols-3 gap-6" style={{height: '500px'}}><div className="bg-slate-50 h-full rounded-2xl"></div><div className="bg-slate-50 h-full rounded-2xl"></div><div className="bg-slate-50 h-full rounded-2xl"></div></div></div>
+            <div className="bg-white rounded-[2rem] p-8"><div className="flex justify-between items-center mb-8"><div className="h-8 w-1/4 bg-slate-100 rounded-xl"></div><div className="h-10 w-32 bg-slate-100 rounded-xl"></div></div><div className="grid grid-cols-1 md:grid-cols-3 gap-6" style={{ height: '500px' }}><div className="bg-slate-50 h-full rounded-2xl"></div><div className="bg-slate-50 h-full rounded-2xl"></div><div className="bg-slate-50 h-full rounded-2xl"></div></div></div>
         </div>
     </div>
 );
@@ -1230,42 +1265,42 @@ const DashboardSkeleton = () => (
 
 // --- Main Component ---
 export default function Dashboard({ user }) {
-  const router = useRouter();
-  const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' or 'chat'
-  const [isDataLoading, setIsDataLoading] = useState(true);
-  const [showSplash, setShowSplash] = useState(true); // Control splash screen duration
-  const [attendance, setAttendance] = useState([]);
-  const [description, setDescription] = useState('');
-  const [error, setError] = useState('');
-  const [activeAttendance, setActiveAttendance] = useState(null);
-  const [checkInTime, setCheckInTime] = useState(null);
-  const [elapsedTime, setElapsedTime] = useState('');
-  const [isOnBreak, setIsOnBreak] = useState(false);
-  const [activeBreakStartTime, setActiveBreakStartTime] = useState(null);
-  const [elapsedBreakTime, setElapsedBreakTime] = useState('');
-  const [loadingStates, setLoadingStates] = useState({});
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [tasks, setTasks] = useState([]);
-  const [profileUser, setProfileUser] = useState(user);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [notes, setNotes] = useState([]);
-  const [newNoteContent, setNewNoteContent] = useState('');
-  const [editingNote, setEditingNote] = useState(null);
-  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [taskToSubmit, setTaskToSubmit] = useState(null);
-  const [isPersonalTaskModalOpen, setIsPersonalTaskModalOpen] = useState(false);
-  const [selectedTaskDetails, setSelectedTaskDetails] = useState(null);
-    
-  const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+    const router = useRouter();
+    const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' or 'chat'
+    const [isDataLoading, setIsDataLoading] = useState(true);
+    const [showSplash, setShowSplash] = useState(true); // Control splash screen duration
+    const [attendance, setAttendance] = useState([]);
+    const [description, setDescription] = useState('');
+    const [error, setError] = useState('');
+    const [activeAttendance, setActiveAttendance] = useState(null);
+    const [checkInTime, setCheckInTime] = useState(null);
+    const [elapsedTime, setElapsedTime] = useState('');
+    const [isOnBreak, setIsOnBreak] = useState(false);
+    const [activeBreakStartTime, setActiveBreakStartTime] = useState(null);
+    const [elapsedBreakTime, setElapsedBreakTime] = useState('');
+    const [loadingStates, setLoadingStates] = useState({});
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [tasks, setTasks] = useState([]);
+    const [profileUser, setProfileUser] = useState(user);
+    const [isUploading, setIsUploading] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [notes, setNotes] = useState([]);
+    const [newNoteContent, setNewNoteContent] = useState('');
+    const [editingNote, setEditingNote] = useState(null);
+    const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+    const [taskToSubmit, setTaskToSubmit] = useState(null);
+    const [isPersonalTaskModalOpen, setIsPersonalTaskModalOpen] = useState(false);
+    const [selectedTaskDetails, setSelectedTaskDetails] = useState(null);
 
-  const notificationDropdownRef = useRef(null);
-  const userDropdownRef = useRef(null);
-  const isDesktop = useMediaQuery('(min-width: 768px)');
-  
+    const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+
+    const notificationDropdownRef = useRef(null);
+    const userDropdownRef = useRef(null);
+    const isDesktop = useMediaQuery('(min-width: 768px)');
+
     // --- RE-IMPLEMENTED DRAG & DROP LOGIC ---
     // Use PointerSensor for robust handling of both mouse and touch
     // activationConstraint ensures a 'click' is not mistaken for a 'drag'
@@ -1276,56 +1311,53 @@ export default function Dashboard({ user }) {
     const handleDragEnd = async (event) => {
         const { active, over } = event;
         if (!over) return;
-        
-        // --- Calculate destination status ---
+
+        const activeId = active.id;
+        const overId = over.id;
+
+        // Find the active task
+        const activeTask = tasks.find(t => t._id === activeId);
+        if (!activeTask) return;
+
         let destinationStatus = null;
 
-        // 1. Check if dropped directly on a Column (container)
-        // Since we didn't give explicit IDs to columns in DndContext (we used SortableContext),
-        // we usually drop "over" another item. 
-        // But if the column is empty, we might need a droppable area for it.
-        // For simplicity in this vertical list strategy, we infer column from the item we dropped over.
-        
-        // Find which column the `over` id belongs to
-        for (const status in taskColumns) {
-             // If we dropped over a task that is in this column
-            if (taskColumns[status].some(task => task._id === over.id)) {
-                destinationStatus = status;
-                break;
-            }
+        // 1. Check if dropped over a Task ID
+        const overTask = tasks.find(t => t._id === overId);
+        if (overTask) {
+            destinationStatus = overTask.status;
         }
-        
-        // --- End Calculation ---
+        // 2. Check if dropped over a Column ID (we used title as ID in useDroppable)
+        else if (['To Do', 'In Progress', 'Completed'].includes(overId)) {
+            destinationStatus = overId;
+        }
 
-        const activeTask = tasks.find(t => t._id === active.id);
-        
-        if (!activeTask || !destinationStatus || activeTask.status === destinationStatus) return;
-        
+        if (!destinationStatus || activeTask.status === destinationStatus) return;
+
         // Prevent moving to 'Completed' via drag (must use Submit Work)
         if (destinationStatus === 'Completed') {
             toast.error('Please use the "Submit Work" button to complete a task.');
             return;
         }
-        
+
         // Prevent moving completed tasks
         if (activeTask.status === 'Completed') {
             toast.error('Completed tasks cannot be moved.');
             return;
         }
-        
+
         // Optimistic UI Update
         const originalTasks = [...tasks];
         setTasks(tasks.map(t => t._id === active.id ? { ...t, status: destinationStatus } : t));
-        
+
         try {
             const res = await fetch('/api/tasks/update-status', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ taskId: active.id, newStatus: destinationStatus }),
             });
-            
+
             if (!res.ok) throw new Error(await handleApiError(res));
-            
+
             toast.success(`Task moved to "${destinationStatus}"`);
         } catch (err) {
             toast.error(err.message);
@@ -1334,568 +1366,574 @@ export default function Dashboard({ user }) {
         }
     };
 
-  // Ensure Splash Screen shows for at least 1.5s for smoother UX
-  useEffect(() => {
-      const timer = setTimeout(() => setShowSplash(false), 1500);
-      return () => clearTimeout(timer);
-  }, []);
+    // Ensure Splash Screen shows for at least 1.5s for smoother UX
+    useEffect(() => {
+        const timer = setTimeout(() => setShowSplash(false), 1500);
+        return () => clearTimeout(timer);
+    }, []);
 
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-        try {
-            const res = await fetch('/api/chat/messages?getTotalUnread=true');
-            const data = await res.json();
-            if (data.success) {
-                setTotalUnreadMessages(data.totalUnreadCount);
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            try {
+                const res = await fetch('/api/chat/messages?getTotalUnread=true');
+                const data = await res.json();
+                if (data.success) {
+                    setTotalUnreadMessages(data.totalUnreadCount);
+                }
+            } catch (error) {
+                console.error("Failed to fetch unread message count");
             }
-        } catch (error) {
-            console.error("Failed to fetch unread message count");
+        };
+        fetchUnreadCount();
+    }, [activeView]);
+
+    const fetchDashboardData = useCallback(async () => {
+        try {
+            const res = await fetch('/api/dashboard/data');
+            if (!res.ok) throw new Error('Failed to fetch dashboard data');
+            const data = await res.json();
+            setAttendance(data.initialAttendance || []);
+            setTasks(data.initialTasks || []);
+            setNotes(data.initialNotes || []);
+            setNotifications(data.initialNotifications || []);
+            if (data.activeCheckIn) {
+                setActiveAttendance(data.activeCheckIn);
+                setCheckInTime(data.activeCheckIn.checkInTime);
+                setDescription(data.activeCheckIn.description || '');
+                setIsOnBreak(data.initialIsOnBreak);
+                setActiveBreakStartTime(data.activeBreakStartTime);
+            } else {
+                setActiveAttendance(null);
+                setCheckInTime(null);
+                setDescription('');
+                setIsOnBreak(false);
+                setActiveBreakStartTime(null);
+            }
+        } catch (err) {
+            setError(err.message);
+            toast.error(err.message);
+        } finally {
+            setIsDataLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, [fetchDashboardData]);
+
+    const unreadNotifications = useMemo(() => notifications.filter(n => !n.isRead), [notifications]);
+
+    const taskColumns = useMemo(() => {
+        const columns = { 'To Do': [], 'In Progress': [], 'Completed': [] };
+        tasks.forEach(task => { if (columns[task.status]) columns[task.status].push(task); });
+        columns['Completed'].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+        return columns;
+    }, [tasks]);
+
+    useEffect(() => { const handleScroll = () => setIsScrolled(window.scrollY > 10); window.addEventListener('scroll', handleScroll); return () => window.removeEventListener('scroll', handleScroll); }, []);
+    useEffect(() => { if (checkInTime) { const timer = setInterval(() => setElapsedTime(formatElapsedTime(checkInTime)), 1000); return () => clearInterval(timer); } else { setElapsedTime(''); } }, [checkInTime]);
+    useEffect(() => { const timer = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(timer); }, []);
+
+    useEffect(() => {
+        if (isOnBreak && activeBreakStartTime) {
+            const timer = setInterval(() => {
+                setElapsedBreakTime(formatElapsedTime(activeBreakStartTime));
+            }, 1000);
+            return () => clearInterval(timer);
+        } else {
+            setElapsedBreakTime('');
+        }
+    }, [isOnBreak, activeBreakStartTime]);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target)) {
+                setIsNotificationOpen(false);
+            }
+            if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleAction = async (action, actionFn, successMessage) => {
+        setLoadingStates(prev => ({ ...prev, [action]: true }));
+        const toastId = toast.loading(`Processing...`);
+        try {
+            await actionFn();
+            toast.success(successMessage, { id: toastId });
+        } catch (err) {
+            toast.error(err.message || `Failed to process ${action}.`, { id: toastId });
+        } finally {
+            setLoadingStates(prev => ({ ...prev, [action]: false }));
         }
     };
-    fetchUnreadCount();
-  }, [activeView]);
 
-  const fetchDashboardData = useCallback(async () => {
-      try {
-          const res = await fetch('/api/dashboard/data');
-          if (!res.ok) throw new Error('Failed to fetch dashboard data');
-          const data = await res.json();
-          setAttendance(data.initialAttendance || []);
-          setTasks(data.initialTasks || []);
-          setNotes(data.initialNotes || []);
-          setNotifications(data.initialNotifications || []);
-          if (data.activeCheckIn) {
-              setActiveAttendance(data.activeCheckIn);
-              setCheckInTime(data.activeCheckIn.checkInTime);
-              setDescription(data.activeCheckIn.description || '');
-              setIsOnBreak(data.initialIsOnBreak);
-              setActiveBreakStartTime(data.activeBreakStartTime);
-          } else {
-              setActiveAttendance(null);
-              setCheckInTime(null);
-              setDescription('');
-              setIsOnBreak(false);
-              setActiveBreakStartTime(null);
-          }
-      } catch (err) {
-          setError(err.message);
-          toast.error(err.message);
-      } finally {
-          setIsDataLoading(false);
-      }
-  }, []);
+    const handleCheckIn = (location) => handleAction(`check-in`, async () => {
+        const res = await fetch('/api/attendance/checkin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ workLocation: location })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+        setActiveAttendance(result.data);
+        setCheckInTime(result.data.checkInTime);
+        setAttendance(prev => [result.data, ...prev]);
+    }, `Checked in from ${location}!`);
 
-  const unreadNotifications = useMemo(() => notifications.filter(n => !n.isRead), [notifications]);
-    
-  const taskColumns = useMemo(() => {
-    const columns = { 'To Do': [], 'In Progress': [], 'Completed': [] };
-    tasks.forEach(task => { if (columns[task.status]) columns[task.status].push(task); });
-    columns['Completed'].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
-    return columns;
-  }, [tasks]);
-    
-  useEffect(() => { const handleScroll = () => setIsScrolled(window.scrollY > 10); window.addEventListener('scroll', handleScroll); return () => window.removeEventListener('scroll', handleScroll); }, []);
-  useEffect(() => { if (checkInTime) { const timer = setInterval(() => setElapsedTime(formatElapsedTime(checkInTime)), 1000); return () => clearInterval(timer); } else { setElapsedTime(''); } }, [checkInTime]);
-  useEffect(() => { const timer = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(timer); }, []);
- 
-  useEffect(() => {
-    if (isOnBreak && activeBreakStartTime) {
-        const timer = setInterval(() => {
-            setElapsedBreakTime(formatElapsedTime(activeBreakStartTime));
-        }, 1000);
-        return () => clearInterval(timer);
-    } else {
-        setElapsedBreakTime('');
-    }
-  }, [isOnBreak, activeBreakStartTime]);
-    
-  useEffect(() => {
-    function handleClickOutside(event) {
-        if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target)) {
-            setIsNotificationOpen(false);
-        }
-        if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
-            setIsDropdownOpen(false);
-        }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-    
-  const handleAction = async (action, actionFn, successMessage) => {
-    setLoadingStates(prev => ({ ...prev, [action]: true }));
-    const toastId = toast.loading(`Processing...`);
-    try {
-        await actionFn();
-        toast.success(successMessage, { id: toastId });
-    } catch (err) {
-        toast.error(err.message || `Failed to process ${action}.`, { id: toastId });
-    } finally {
-        setLoadingStates(prev => ({ ...prev, [action]: false }));
-    }
-  };
+    const handleCheckOut = () => handleAction('checkout', async () => {
+        if (!description.trim()) throw new Error('Work description is required.');
+        const res = await fetch('/api/attendance/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description, attendanceId: activeAttendance._id }) });
+        if (!res.ok) throw new Error(await handleApiError(res));
+        const { data } = await res.json();
+        setActiveAttendance(null); setCheckInTime(null); setDescription(''); setIsOnBreak(false); setActiveBreakStartTime(null);
+        setAttendance(prev => prev.map(att => att._id === data._id ? data : att));
+    }, 'Checked out successfully!');
 
-  const handleCheckIn = (location) => handleAction(`check-in`, async () => {
-    const res = await fetch('/api/attendance/checkin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workLocation: location })
-    });
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.message);
-      
-    setActiveAttendance(result.data);
-    setCheckInTime(result.data.checkInTime);
-    setAttendance(prev => [result.data, ...prev]);
-  }, `Checked in from ${location}!`);
+    const handleBreakIn = () => handleAction('break-in', async () => {
+        const res = await fetch('/api/attendance/break-in', { method: 'POST' });
+        if (!res.ok) throw new Error(await handleApiError(res));
+        setIsOnBreak(true);
+        await fetchDashboardData();
+    }, 'Break started.');
 
-  const handleCheckOut = () => handleAction('checkout', async () => {
-    if (!description.trim()) throw new Error('Work description is required.');
-    const res = await fetch('/api/attendance/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description, attendanceId: activeAttendance._id }) });
-    if (!res.ok) throw new Error(await handleApiError(res));
-    const { data } = await res.json();
-    setActiveAttendance(null); setCheckInTime(null); setDescription(''); setIsOnBreak(false); setActiveBreakStartTime(null);
-    setAttendance(prev => prev.map(att => att._id === data._id ? data : att));
-  }, 'Checked out successfully!');
-    
-  const handleBreakIn = () => handleAction('break-in', async () => {
-    const res = await fetch('/api/attendance/break-in', { method: 'POST' });
-    if (!res.ok) throw new Error(await handleApiError(res));
-    setIsOnBreak(true);
-    await fetchDashboardData();
-  }, 'Break started.');
-    
-  const handleBreakOut = () => handleAction('break-out', async () => {
-    const res = await fetch('/api/attendance/break-out', { method: 'POST' });
-    if (!res.ok) throw new Error(await handleApiError(res));
-    setIsOnBreak(false);
-    setActiveBreakStartTime(null);
-  }, 'Resumed work.');
+    const handleBreakOut = () => handleAction('break-out', async () => {
+        const res = await fetch('/api/attendance/break-out', { method: 'POST' });
+        if (!res.ok) throw new Error(await handleApiError(res));
+        setIsOnBreak(false);
+        setActiveBreakStartTime(null);
+    }, 'Resumed work.');
 
-const handleLogout = async () => {
-    await fetch('/api/auth/logout');
-      
-    toast.success('Logged out successfully');
-    setTimeout(() => {
-        router.push('/login');
-    }, 800); 
-};  const handleUpdateTaskStatus = async (taskId, newStatus) => { setError(''); try { const res = await fetch('/api/tasks/update-status', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId, newStatus }), }); if (!res.ok) throw new Error(await handleApiError(res)); await fetchDashboardData(); toast.success(`Task marked as '${newStatus}'`); } catch (err) { setError(err.message); toast.error(err.message); }};
-  const handleAvatarUpload = async (base64Image) => { setIsUploading(true); setError(''); try { const res = await fetch('/api/user/upload-avatar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: base64Image }), }); if (!res.ok) throw new Error(await handleApiError(res)); const data = await res.json(); setProfileUser(prev => ({ ...prev, avatar: data.avatar })); toast.success('Avatar updated!'); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsUploading(false); }};
-  const handleFileChange = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.readAsDataURL(file); reader.onloadend = () => { handleAvatarUpload(reader.result); }; reader.onerror = () => { toast.error("Could not read file."); }; };
-  const handleCreateNote = async (e) => { e.preventDefault(); if (!newNoteContent.trim()) return; setIsSubmittingNote(true); setError(''); try { const res = await fetch('/api/notes/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: newNoteContent }), }); if (!res.ok) throw new Error(await handleApiError(res)); const result = await res.json(); setNotes(prevNotes => [result.data, ...prevNotes]); setNewNoteContent(''); toast.success('Note saved.'); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmittingNote(false); }};
-  const handleUpdateNote = async () => { if (!editingNote || !editingNote.content.trim()) return; setIsSubmittingNote(true); setError(''); try { const res = await fetch('/api/notes/edit', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ noteId: editingNote._id, content: editingNote.content }), }); if (!res.ok) throw new Error(await handleApiError(res)); const result = await res.json(); setNotes(prevNotes => prevNotes.map(n => n._id === editingNote._id ? result.data : n)); setEditingNote(null); toast.success('Note updated.'); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmittingNote(false); }};
-  const handleDeleteNote = async (noteId) => { if (!window.confirm('Are you sure you want to delete this note?')) return; setError(''); try { const res = await fetch('/api/notes/delete', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ noteId }), }); if (!res.ok) throw new Error(await handleApiError(res)); setNotes(prevNotes => prevNotes.filter(n => n._id !== noteId)); toast.success('Note deleted.'); } catch (err) { setError(err.message); toast.error(err.message); }};
-  const handleMarkAsRead = async () => { if (unreadNotifications.length === 0) return; try { await fetch('/api/notification/mark-as-read', { method: 'POST' }); setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))); } catch (err) { console.error(err); toast.error("Failed to mark notifications as read."); } };
+    const handleLogout = async () => {
+        await fetch('/api/auth/logout');
 
-  const handleCommentAdded = (taskId, newComment) => {
-    setTasks(currentTasks => 
-        currentTasks.map(task => {
-            if (task._id === taskId) {
-                const updatedComments = task.comments ? [...task.comments, newComment] : [newComment];
-                if (selectedTaskDetails && selectedTaskDetails._id === taskId) {
-                    setSelectedTaskDetails(prev => ({ ...prev, comments: updatedComments }));
+        toast.success('Logged out successfully');
+        setTimeout(() => {
+            router.push('/login');
+        }, 800);
+    }; const handleUpdateTaskStatus = async (taskId, newStatus) => { setError(''); try { const res = await fetch('/api/tasks/update-status', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId, newStatus }), }); if (!res.ok) throw new Error(await handleApiError(res)); await fetchDashboardData(); toast.success(`Task marked as '${newStatus}'`); } catch (err) { setError(err.message); toast.error(err.message); } };
+    const handleAvatarUpload = async (base64Image) => { setIsUploading(true); setError(''); try { const res = await fetch('/api/user/upload-avatar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: base64Image }), }); if (!res.ok) throw new Error(await handleApiError(res)); const data = await res.json(); setProfileUser(prev => ({ ...prev, avatar: data.avatar })); toast.success('Avatar updated!'); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsUploading(false); } };
+    const handleFileChange = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.readAsDataURL(file); reader.onloadend = () => { handleAvatarUpload(reader.result); }; reader.onerror = () => { toast.error("Could not read file."); }; };
+    const handleCreateNote = async (e) => { e.preventDefault(); if (!newNoteContent.trim()) return; setIsSubmittingNote(true); setError(''); try { const res = await fetch('/api/notes/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: newNoteContent }), }); if (!res.ok) throw new Error(await handleApiError(res)); const result = await res.json(); setNotes(prevNotes => [result.data, ...prevNotes]); setNewNoteContent(''); toast.success('Note saved.'); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmittingNote(false); } };
+    const handleUpdateNote = async () => { if (!editingNote || !editingNote.content.trim()) return; setIsSubmittingNote(true); setError(''); try { const res = await fetch('/api/notes/edit', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ noteId: editingNote._id, content: editingNote.content }), }); if (!res.ok) throw new Error(await handleApiError(res)); const result = await res.json(); setNotes(prevNotes => prevNotes.map(n => n._id === editingNote._id ? result.data : n)); setEditingNote(null); toast.success('Note updated.'); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmittingNote(false); } };
+    const handleDeleteNote = async (noteId) => { if (!window.confirm('Are you sure you want to delete this note?')) return; setError(''); try { const res = await fetch('/api/notes/delete', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ noteId }), }); if (!res.ok) throw new Error(await handleApiError(res)); setNotes(prevNotes => prevNotes.filter(n => n._id !== noteId)); toast.success('Note deleted.'); } catch (err) { setError(err.message); toast.error(err.message); } };
+    const handleMarkAsRead = async () => { if (unreadNotifications.length === 0) return; try { await fetch('/api/notification/mark-as-read', { method: 'POST' }); setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))); } catch (err) { console.error(err); toast.error("Failed to mark notifications as read."); } };
+
+    const handleCommentAdded = (taskId, newComment) => {
+        setTasks(currentTasks =>
+            currentTasks.map(task => {
+                if (task._id === taskId) {
+                    const updatedComments = task.comments ? [...task.comments, newComment] : [newComment];
+                    if (selectedTaskDetails && selectedTaskDetails._id === taskId) {
+                        setSelectedTaskDetails(prev => ({ ...prev, comments: updatedComments }));
+                    }
+                    return { ...task, comments: updatedComments };
                 }
-                return { ...task, comments: updatedComments };
-            }
-            return task;
-        })
-    );
-  };
-      
-  // Show Splash Screen logic - Replaces "Loading" state
-  if (showSplash || isDataLoading) {
+                return task;
+            })
+        );
+    };
+
+    // Show Splash Screen logic - Replaces "Loading" state
+    if (showSplash || isDataLoading) {
+        return (
+            <AnimatePresence mode="wait">
+                <DashboardEntryLoader key="loader" userName={user.name} />
+            </AnimatePresence>
+        );
+    }
+
+    if (activeView === 'chat') {
+        return (
+            <div className="min-h-screen bg-slate-50 md:p-6 lg:p-10">
+                <ChatView user={user} onBack={() => setActiveView('dashboard')} />
+            </div>
+        );
+    }
+
     return (
-        <AnimatePresence mode="wait">
-            <DashboardEntryLoader key="loader" userName={user.name} />
-        </AnimatePresence>
-    );
-  }
-      
-  if (activeView === 'chat') {
-      return (
-          <div className="min-h-screen bg-slate-50 md:p-6 lg:p-10">
-              <ChatView user={user} onBack={() => setActiveView('dashboard')} />
-          </div>
-      );
-  }
+        <>
+            <AnimatePresence>
+                {selectedTaskDetails && <TaskDetailsModal key={selectedTaskDetails._id} task={selectedTaskDetails} onClose={() => setSelectedTaskDetails(null)} onCommentAdded={handleCommentAdded} currentUser={user} />}
+                {taskToSubmit && <SubmitWorkModal key="submit-modal" task={taskToSubmit} onClose={() => setTaskToSubmit(null)} onWorkSubmitted={fetchDashboardData} />}
+                {isPersonalTaskModalOpen && <PersonalTaskModal key="personal-task-modal" onClose={() => setIsPersonalTaskModalOpen(false)} onTaskCreated={fetchDashboardData} />}
+                {!isDesktop && isNotificationOpen && (
+                    <MobileNotificationPanel key="mobile-notif-panel" notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />
+                )}
+            </AnimatePresence>
 
-  return (
-    <>
-      <AnimatePresence>
-        {selectedTaskDetails && <TaskDetailsModal key={selectedTaskDetails._id} task={selectedTaskDetails} onClose={() => setSelectedTaskDetails(null)} onCommentAdded={handleCommentAdded} currentUser={user} />}
-        {taskToSubmit && <SubmitWorkModal key="submit-modal" task={taskToSubmit} onClose={() => setTaskToSubmit(null)} onWorkSubmitted={fetchDashboardData} />}
-        {isPersonalTaskModalOpen && <PersonalTaskModal key="personal-task-modal" onClose={() => setIsPersonalTaskModalOpen(false)} onTaskCreated={fetchDashboardData} />}
-        {!isDesktop && isNotificationOpen && (
-            <MobileNotificationPanel key="mobile-notif-panel" notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />
-        )}
-      </AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-emerald-100 selection:text-emerald-800"
+            >
 
-      <motion.div 
-        initial={{ opacity: 0 }} 
-        animate={{ opacity: 1 }} 
-        transition={{ duration: 0.5 }}
-        className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-emerald-100 selection:text-emerald-800"
-      >
-        
-        {/* Subtle Background Elements */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-100/30 rounded-full blur-[120px] opacity-60 will-change-transform"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-100/30 rounded-full blur-[120px] opacity-60 will-change-transform"></div>
-        </div>
-
-        <div className="relative z-10">
-            {/* Header */}
-            <header className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-xl shadow-md border-b border-white/20' : 'bg-transparent'}`}>
-                <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
-                    <div className="flex justify-between items-center h-20 sm:h-24">
-                        {/* Logo Area */}
-                        <div className="flex items-center space-x-4">
-                            <Link href="/dashboard" className="flex items-center gap-3 sm:gap-4 group">
-                                <div className="relative">
-                                     <div className="absolute inset-0 bg-emerald-200 blur-md rounded-full opacity-0 group-hover:opacity-50 transition-opacity"></div>
-                                    <Image src="/geckoworks.png" alt="GeckoWorks Logo" width={40} height={40} className="" style={{ width: 'auto', height: 'auto' }} />
-                                </div>
-                                <div>
-                                    <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-none">Dashboard</h1>
-                                    <p className="text-[10px] sm:text-xs text-slate-500 font-medium hidden sm:block">{getGreeting()}, {user.name.split(' ')[0]}!</p>
-                                </div>
-                            </Link>
-                        </div>
-
-                        {/* Controls Area */}
-                        <div className="flex items-center gap-2 sm:gap-6">
-                            
-                            {/* Date/Time Pill */}
-                            <div className="hidden lg:flex items-center gap-6 text-sm text-slate-600 bg-white/70 backdrop-blur-md border border-white/50 shadow-sm px-6 py-2.5 rounded-2xl">
-                                <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-emerald-500" /><span className="font-semibold">{currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' })}</span></div>
-                                <div className="h-4 w-px bg-slate-200"></div>
-                                <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-emerald-500" /><span className="font-mono font-bold">{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                {/* Chat Button */}
-                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setActiveView('chat')} className="relative p-2.5 sm:p-3 text-slate-500 bg-white hover:bg-emerald-50 hover:text-emerald-600 rounded-2xl shadow-sm border border-slate-100 transition-all" title="Messages">
-                                    <MessageSquare className="h-5 w-5"/>
-                                    {totalUnreadMessages > 0 && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">{totalUnreadMessages}</span>}
-                                </motion.button>
-                                
-                                {/* Notification Button */}
-                                <div ref={notificationDropdownRef} className="relative">
-                                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setIsNotificationOpen(prev => !prev)} className={`relative p-2.5 sm:p-3 rounded-2xl shadow-sm border border-slate-100 transition-all ${isNotificationOpen ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-slate-500 hover:bg-emerald-50 hover:text-emerald-600'}`} title="Notifications">
-                                        <Bell className="h-5 w-5"/>
-                                        {unreadNotifications.length > 0 && (<span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">{unreadNotifications.length}</span>)}
-                                    </motion.button>
-                                    <AnimatePresence>
-                                        {isDesktop && isNotificationOpen && (<DesktopNotificationPanel notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />)}
-                                    </AnimatePresence>
-                                </div>
-                            </div>
-
-                            {/* Profile Dropdown */}
-                            <div ref={userDropdownRef} className="relative pl-4 border-l border-slate-200/60 ml-2">
-                                <button
-                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                    className="group flex items-center gap-3 pl-1 pr-1.5 py-1 rounded-full transition-all duration-300 hover:bg-slate-50 focus:outline-none"
-                                >
-                                    <div className="relative">
-                                        <div className="absolute -inset-0.5 bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-[2px]"></div>
-                                        <Image
-                                            src={profileUser.avatar}
-                                            alt={profileUser.name}
-                                            width={42}
-                                            height={42}
-                                            className="rounded-full object-cover border-2 border-white relative z-10 shadow-sm"
-                                            style={{ width: 'auto', height: 'auto' }}
-                                        />
-                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full z-20"></div>
-                                    </div>
-                                    
-                                    <div className="hidden md:flex flex-col items-start text-left">
-                                        <span className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">
-                                            {profileUser.name.split(' ')[0]}
-                                        </span>
-                                        <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md mt-0.5 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
-                                            {profileUser.role}
-                                        </span>
-                                    </div>
-                                    
-                                    <div className="hidden md:flex items-center justify-center w-6 h-6 rounded-full bg-slate-50 group-hover:bg-emerald-50 transition-colors">
-                                         <ChevronDown size={14} className={`text-slate-400 group-hover:text-emerald-500 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                                    </div>
-                                </button>
-                                
-                                <AnimatePresence>
-                                    {isDropdownOpen && (
-                                        <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className={`absolute top-full right-0 mt-4 w-72 rounded-3xl shadow-2xl bg-white/95 backdrop-blur-xl border border-white/50 z-50 origin-top-right overflow-hidden max-w-[calc(100vw-2rem)]`}>
-                                            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-                                                <div className="flex items-center space-x-4">
-                                                    <Image src={profileUser.avatar} alt={profileUser.name} width={56} height={56} className="rounded-2xl object-cover aspect-square shadow-sm" style={{ width: 'auto', height: 'auto' }}/>
-                                                    <div>
-                                                        <p className="font-bold text-slate-800 text-lg truncate">{profileUser.name}</p>
-                                                        <p className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg inline-block mt-1 border border-emerald-100">{profileUser.role}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="p-3">
-                                                <Link href="/performance" className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-3 transition-colors rounded-2xl">
-                                                    <TrendingUp className="h-5 w-5" />
-                                                    <span>My Performance</span>
-                                                </Link>
-                                                <Link href="/leaves" className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-3 transition-colors rounded-2xl">
-                                                    <FileText className="h-5 w-5" />
-                                                    <span>My Leave Requests</span>
-                                                </Link>
-                                                <div className="h-px bg-slate-100 my-2"></div>
-                                                <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm font-bold text-rose-500 hover:bg-rose-50 flex items-center gap-3 transition-colors rounded-2xl">
-                                                    <LogOut className="h-5 w-5" />
-                                                    <span>Sign Out</span>
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        </div>
-                    </div>
+                {/* Subtle Background Elements */}
+                <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-100/30 rounded-full blur-[120px] opacity-60 will-change-transform"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-100/30 rounded-full blur-[120px] opacity-60 will-change-transform"></div>
                 </div>
-            </header>
 
-            <main className={`max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-10`}>
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 sm:gap-8">
-                    
-                    {/* Left Column (Profile, Actions, Notes) */}
-                    <motion.div className="xl:col-span-4 space-y-6 sm:space-y-8" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-                        
-                        {/* Profile & Actions Card */}
-                        <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden relative">
-                             <div className="absolute top-0 w-full h-24 bg-gradient-to-r from-emerald-100 to-blue-50 opacity-50"></div>
-                            <div className="p-6 sm:p-8 pt-8 sm:pt-10 relative">
-                                <div className="flex flex-col items-center">
-                                    <div className="relative mb-4 group">
-                                        <div className="absolute inset-0 bg-emerald-300 rounded-3xl blur-md opacity-30 group-hover:opacity-50 transition-opacity"></div>
-                                        <Image src={profileUser.avatar} alt="Profile Picture" width={110} height={110} className="rounded-[2rem] object-cover aspect-square shadow-lg border-4 border-white relative z-10" priority style={{ width: 'auto', height: 'auto' }} />
-                                        <label htmlFor="avatar-upload" className="absolute -bottom-2 -right-2 z-20 bg-white text-slate-700 p-2.5 rounded-2xl cursor-pointer hover:bg-emerald-50 hover:text-emerald-600 transition shadow-lg border border-slate-100 transform hover:scale-110 active:scale-95">
-                                            <input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
-                                            <>{isUploading ? <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div> : <Edit size={16} />}</>
-                                        </label>
-                                    </div>
-                                    <h2 className="text-2xl font-extrabold text-slate-800">{profileUser.name}</h2>
-                                    <p className="text-slate-500 font-medium">{profileUser.role}</p>
-                                </div>
-                            </div>
-                            
-                            <div className="px-6 sm:px-8 pb-8">
-                                {!checkInTime ? (
-                                    <div className="text-center py-2 space-y-6">
-                                        <div className="bg-slate-50 p-6 rounded-3xl border border-dashed border-slate-200">
-                                            <h3 className="font-bold text-slate-700 text-lg mb-4">Start your day</h3>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <motion.button whileHover={{ y: -3 }} whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Office')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-3 p-5 bg-white shadow-sm border border-slate-100 hover:border-emerald-200 hover:shadow-emerald-100/50 rounded-2xl transition-all disabled:opacity-70 group">
-                                                    <div className="bg-emerald-50 p-3 rounded-xl text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors"><Briefcase size={24}/></div>
-                                                    <span className="font-bold text-slate-700 text-sm">Office</span>
-                                                </motion.button>
-                                                <motion.button whileHover={{ y: -3 }} whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Home')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-3 p-5 bg-white shadow-sm border border-slate-100 hover:border-indigo-200 hover:shadow-indigo-100/50 rounded-2xl transition-all disabled:opacity-70 group">
-                                                    <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white transition-colors"><Home size={24}/></div>
-                                                    <span className="font-bold text-slate-700 text-sm">Remote</span>
-                                                </motion.button>
-                                            </div>
+                <div className="relative z-10">
+                    {/* Header */}
+                    <header className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-xl shadow-md border-b border-white/20' : 'bg-transparent'}`}>
+                        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
+                            <div className="flex justify-between items-center h-20 sm:h-24">
+                                {/* Logo Area */}
+                                <div className="flex items-center space-x-4">
+                                    <Link href="/dashboard" className="flex items-center gap-3 sm:gap-4 group">
+                                        <div className="relative">
+                                            <div className="absolute inset-0 bg-emerald-200 blur-md rounded-full opacity-0 group-hover:opacity-50 transition-opacity"></div>
+                                            <Image src="/logo.png" alt="GeckoWorks Logo" width={55} height={55} className="" style={{ width: 'auto', height: 'auto' }} />
                                         </div>
+                                        <div>
+                                            <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-none">
+                                                Dashboard
+                                            </h1>
+
+                                            <p className="text-[10px] sm:text-xs text-slate-500 font-medium hidden sm:block">
+                                                {getGreeting()}, <span className="font-semibold text-slate-700">{user.name.split(' ')[0]}</span>
+                                            </p>
+                                        </div>
+
+                                    </Link>
+                                </div>
+
+                                {/* Controls Area */}
+                                <div className="flex items-center gap-2 sm:gap-6">
+
+                                    {/* Date/Time Pill */}
+                                    <div className="hidden lg:flex items-center gap-6 text-sm text-slate-600 bg-white/70 backdrop-blur-md border border-white/50 shadow-sm px-6 py-2.5 rounded-2xl">
+                                        <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-emerald-500" /><span className="font-semibold">{currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' })}</span></div>
+                                        <div className="h-4 w-px bg-slate-200"></div>
+                                        <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-emerald-500" /><span className="font-mono font-bold">{currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
                                     </div>
-                                ) : (
-                                    <div className="space-y-6">
-                                        <div className={`text-center rounded-3xl p-6 border shadow-sm relative overflow-hidden transition-all duration-500 ${isOnBreak ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'}`}>
-                                            <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${isOnBreak ? 'text-amber-600' : 'text-emerald-600'}`}>{isOnBreak ? 'On Break' : 'Currently Working'}</p>
-                                            <div className={`text-5xl font-extrabold tracking-tighter my-2 tabular-nums ${isOnBreak ? 'text-amber-700' : 'text-emerald-700'}`}>{elapsedTime}</div>
-                                            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${isOnBreak ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                                 {isOnBreak ? <Coffee size={12}/> : <Clock size={12}/>}
-                                                 Checked in: {new Date(checkInTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                            </div>
-                                            
+
+                                    <div className="flex items-center gap-2">
+                                        {/* Chat Button */}
+                                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setActiveView('chat')} className="relative p-2.5 sm:p-3 text-slate-500 bg-white hover:bg-emerald-50 hover:text-emerald-600 rounded-2xl shadow-sm border border-slate-100 transition-all" title="Messages">
+                                            <MessageSquare className="h-5 w-5" />
+                                            {totalUnreadMessages > 0 && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">{totalUnreadMessages}</span>}
+                                        </motion.button>
+
+                                        {/* Notification Button */}
+                                        <div ref={notificationDropdownRef} className="relative">
+                                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setIsNotificationOpen(prev => !prev)} className={`relative p-2.5 sm:p-3 rounded-2xl shadow-sm border border-slate-100 transition-all ${isNotificationOpen ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-slate-500 hover:bg-emerald-50 hover:text-emerald-600'}`} title="Notifications">
+                                                <Bell className="h-5 w-5" />
+                                                {unreadNotifications.length > 0 && (<span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">{unreadNotifications.length}</span>)}
+                                            </motion.button>
                                             <AnimatePresence>
-                                                {isOnBreak && (
-                                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-4 pt-4 border-t border-amber-200/50">
-                                                        <p className="text-xs font-bold text-amber-600/70 mb-1">BREAK DURATION</p>
-                                                        <p className="text-2xl font-bold text-amber-800">{elapsedBreakTime}</p>
-                                                    </motion.div>
-                                                )}
+                                                {isDesktop && isNotificationOpen && (<DesktopNotificationPanel notifications={notifications} unreadCount={unreadNotifications.length} handleMarkAsRead={handleMarkAsRead} onClose={() => setIsNotificationOpen(false)} />)}
                                             </AnimatePresence>
                                         </div>
-
-                                        <div className="bg-white p-1 rounded-2xl border border-slate-100 shadow-sm">
-                                            <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What are you working on today?" rows={3} className="w-full px-4 py-3 border-none bg-transparent rounded-xl focus:ring-0 text-slate-700 placeholder-slate-400 text-sm resize-none" disabled={isOnBreak} />
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {!isOnBreak ? (
-                                                <>
-                                                    <motion.button whileTap={{ scale: 0.95 }} onClick={handleBreakIn} disabled={loadingStates['break-in']} className="flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70">{loadingStates['break-in'] ? <ButtonLoader /> : <Coffee size={18} />} Break</motion.button>
-                                                    <motion.button whileTap={{ scale: 0.95 }} onClick={handleCheckOut} disabled={loadingStates['checkout']} className="flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70 shadow-lg shadow-rose-200">{loadingStates['checkout'] ? <ButtonLoader /> : <LogOut size={18} />} Check Out</motion.button>
-                                                </>
-                                            ) : (
-                                                <motion.button whileTap={{ scale: 0.95 }} onClick={handleBreakOut} disabled={loadingStates['break-out']} className="col-span-2 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70 shadow-lg shadow-emerald-200">{loadingStates['break-out'] ? <ButtonLoader /> : <Play size={18} />} Resume Work</motion.button>
-                                            )}
-                                        </div>
                                     </div>
-                                )}
-                            </div>
-                        </div>
 
-                        <MyStatsWidget tasks={tasks} attendance={attendance} />
-                        <WorkHoursChartCard attendance={attendance} />
+                                    {/* Profile Dropdown */}
+                                    <div ref={userDropdownRef} className="relative pl-4 border-l border-slate-200/60 ml-2">
+                                        <button
+                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                            className="group flex items-center gap-3 pl-1 pr-1.5 py-1 rounded-full transition-all duration-300 hover:bg-slate-50 focus:outline-none"
+                                        >
+                                            <div className="relative">
+                                                <div className="absolute -inset-0.5 bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-[2px]"></div>
+                                                <Image
+                                                    src={profileUser.avatar}
+                                                    alt={profileUser.name}
+                                                    width={42}
+                                                    height={42}
+                                                    className="rounded-full object-cover border-2 border-white relative z-10 shadow-sm"
+                                                    style={{ width: 'auto', height: 'auto' }}
+                                                />
+                                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full z-20"></div>
+                                            </div>
 
-                        {/* Notes Section */}
-                        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden relative z-10">
-                            <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
-                                <h2 className="text-lg font-bold text-slate-800">Quick Notes</h2>
-                                <div className="bg-yellow-100 text-yellow-600 p-1.5 rounded-lg"><Edit size={16}/></div>
-                            </div>
-                            <div className="p-6">
-                                <form onSubmit={handleCreateNote} className="mb-6 relative">
-                                    <textarea value={newNoteContent} onChange={(e) => setNewNoteContent(e.target.value)} placeholder="Draft notes to remember..." rows="3" className="w-full pl-4 pr-12 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-yellow-200 transition-all resize-none placeholder-slate-400"/>
-                                    <button type="submit" disabled={isSubmittingNote || !newNoteContent.trim()} className="absolute right-2 bottom-2 p-2 bg-yellow-400 text-yellow-900 rounded-xl hover:bg-yellow-500 disabled:opacity-50 disabled:bg-slate-200 disabled:text-slate-400 transition-all shadow-sm"><Plus size={18}/></button>
-                                </form>
-                                <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
-                                    <AnimatePresence>
-                                    {notes.map((note) => (
-                                        <motion.div initial={{opacity: 0, y: 10}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, scale: 0.9}} key={note._id} className="p-4 bg-yellow-50/50 hover:bg-yellow-50 rounded-2xl border border-yellow-100 group transition-colors relative z-0">
-                                            {editingNote?._id === note._id ? (
-                                                <div className="space-y-2">
-                                                    <textarea value={editingNote.content} onChange={(e) => setEditingNote({...editingNote, content: e.target.value})} className="w-full p-2 bg-white border border-yellow-200 rounded-xl text-sm" rows="3"/>
-                                                    <div className="flex items-center gap-2 justify-end">
-                                                        <button onClick={() => setEditingNote(null)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-lg"><X size={16} /></button>
-                                                        <button onClick={handleUpdateNote} disabled={isSubmittingNote} className="p-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg shadow-sm"><Save size={16} /></button>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="relative">
-                                                    <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">{note.content}</p>
-                                                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-yellow-200/50">
-                                                        <p className="text-[10px] font-bold text-yellow-700/60 uppercase">{formatEnglishDate(note.createdAt)}</p>
-                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button onClick={() => setEditingNote(note)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
-                                                            <button onClick={() => handleDeleteNote(note._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                                            <div className="hidden md:flex flex-col items-start text-left">
+                                                <span className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">
+                                                    {profileUser.name.split(' ')[0]}
+                                                </span>
+                                                <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md mt-0.5 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+                                                    {profileUser.role}
+                                                </span>
+                                            </div>
+
+                                            <div className="hidden md:flex items-center justify-center w-6 h-6 rounded-full bg-slate-50 group-hover:bg-emerald-50 transition-colors">
+                                                <ChevronDown size={14} className={`text-slate-400 group-hover:text-emerald-500 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </div>
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {isDropdownOpen && (
+                                                <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className={`absolute top-full right-0 mt-4 w-72 rounded-3xl shadow-2xl bg-white/95 backdrop-blur-xl border border-white/50 z-50 origin-top-right overflow-hidden max-w-[calc(100vw-2rem)]`}>
+                                                    <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                                                        <div className="flex items-center space-x-4">
+                                                            <Image src={profileUser.avatar} alt={profileUser.name} width={56} height={56} className="rounded-2xl object-cover aspect-square shadow-sm" style={{ width: 'auto', height: 'auto' }} />
+                                                            <div>
+                                                                <p className="font-bold text-slate-800 text-lg truncate">{profileUser.name}</p>
+                                                                <p className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg inline-block mt-1 border border-emerald-100">{profileUser.role}</p>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
+                                                    <div className="p-3">
+                                                        <Link href="/performance" className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-3 transition-colors rounded-2xl">
+                                                            <TrendingUp className="h-5 w-5" />
+                                                            <span>My Performance</span>
+                                                        </Link>
+                                                        <Link href="/leaves" className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-3 transition-colors rounded-2xl">
+                                                            <FileText className="h-5 w-5" />
+                                                            <span>My Leave Requests</span>
+                                                        </Link>
+                                                        <div className="h-px bg-slate-100 my-2"></div>
+                                                        <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm font-bold text-rose-500 hover:bg-rose-50 flex items-center gap-3 transition-colors rounded-2xl">
+                                                            <LogOut className="h-5 w-5" />
+                                                            <span>Sign Out</span>
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
                                             )}
-                                        </motion.div>
-                                    ))}
-                                    </AnimatePresence>
-                                    {notes.length === 0 && <div className="text-center py-8 opacity-50"><FileText className="mx-auto h-8 w-8 text-slate-300 mb-2"/><p className="text-xs text-slate-400">Empty notepad</p></div>}
+                                        </AnimatePresence>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    </header>
 
-                    </motion.div>
+                    <main className={`max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-10`}>
+                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 sm:gap-8">
 
-                    {/* Right Column (Tasks & Reports) */}
-                    <motion.div className="xl:col-span-8 space-y-6 sm:space-y-8" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
-                        
-                        {/* Task Board */}
-                        <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-                            <div className="px-6 sm:px-8 py-5 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/30">
-                                <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-3">
-                                    <div className="bg-green-600 text-white p-2 rounded-xl"><Briefcase size={20}/></div>
-                                    Task Board
-                                </h2>
-                                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={() => setIsPersonalTaskModalOpen(true)} className="flex items-center gap-2 text-sm font-bold bg-emerald-50 text-emerald-600 px-5 py-2.5 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-colors shadow-sm">
-                                    <Plus size={18} strokeWidth={3} /> Add Personal Task
-                                </motion.button>
-                            </div>
-                            
-                            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 p-6 min-h-[500px] bg-slate-50/30">
-                                    <TaskColumn title="To Do" tasks={taskColumns['To Do']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} onOpenDetails={setSelectedTaskDetails} />
-                                    <TaskColumn title="In Progress" tasks={taskColumns['In Progress']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} onOpenDetails={setSelectedTaskDetails} />
-                                    
-                                    {/* Completed Column (Compact & Limited) */}
-                                    <div className="bg-white/40 p-1 rounded-3xl h-full flex flex-col">
-                                        <div className="flex items-center justify-between mb-3 p-3 rounded-2xl bg-gradient-to-b from-emerald-50/50 to-transparent">
-                                            <h2 className="font-bold text-sm flex items-center gap-2 text-emerald-800">
-                                                <div className="bg-emerald-100 p-1.5 rounded-lg"><CheckCircle size={14} className="text-emerald-600"/></div>
-                                                Done
-                                            </h2>
-                                            <span className="text-[10px] font-bold bg-white shadow-sm text-emerald-600 px-2 py-0.5 rounded-lg border border-emerald-100">{taskColumns['Completed'].length}</span>
-                                        </div>
-                                        <div className="space-y-3 h-full overflow-y-auto px-1 pb-4 custom-scrollbar">
-                                            {taskColumns['Completed'].length > 0 ? (
-                                            <>
-                                                {taskColumns['Completed'].slice(0, 2).map(task => <CompletedTaskCard key={task._id} task={task} onOpenDetails={setSelectedTaskDetails} />)}
-                                                {taskColumns['Completed'].length > 2 && (
-                                                    <Link href="/tasks/completed" className="block text-center mt-4 py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
-                                                        View All {taskColumns['Completed'].length} Tasks
-                                                    </Link>
-                                                )}
-                                            </>
-                                            ) : (
-                                                <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50"><Star className="mx-auto h-8 w-8 text-slate-300 mb-1"/><p className="text-[10px] font-semibold text-slate-400">Empty</p></div>
-                                            )}
+                            {/* Left Column (Profile, Actions, Notes) */}
+                            <motion.div className="xl:col-span-4 space-y-6 sm:space-y-8" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+
+                                {/* Profile & Actions Card */}
+                                <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden relative">
+                                    <div className="absolute top-0 w-full h-24 bg-gradient-to-r from-emerald-100 to-blue-50 opacity-50"></div>
+                                    <div className="p-6 sm:p-8 pt-8 sm:pt-10 relative">
+                                        <div className="flex flex-col items-center">
+                                            <div className="relative mb-4 group">
+                                                <div className="absolute inset-0 bg-emerald-300 rounded-3xl blur-md opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                                                <Image src={profileUser.avatar} alt="Profile Picture" width={110} height={110} className="rounded-[2rem] object-cover aspect-square shadow-lg border-4 border-white relative z-10" priority style={{ width: 'auto', height: 'auto' }} />
+                                                <label htmlFor="avatar-upload" className="absolute -bottom-2 -right-2 z-20 bg-white text-slate-700 p-2.5 rounded-2xl cursor-pointer hover:bg-emerald-50 hover:text-emerald-600 transition shadow-lg border border-slate-100 transform hover:scale-110 active:scale-95">
+                                                    <input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
+                                                    <>{isUploading ? <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div> : <Edit size={16} />}</>
+                                                </label>
+                                            </div>
+                                            <h2 className="text-2xl font-extrabold text-slate-800">{profileUser.name}</h2>
+                                            <p className="text-slate-500 font-medium">{profileUser.role}</p>
                                         </div>
                                     </div>
 
+                                    <div className="px-6 sm:px-8 pb-8">
+                                        {!checkInTime ? (
+                                            <div className="text-center py-2 space-y-6">
+                                                <div className="bg-slate-50 p-6 rounded-3xl border border-dashed border-slate-200">
+                                                    <h3 className="font-bold text-slate-700 text-lg mb-4">Start your day</h3>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <motion.button whileHover={{ y: -3 }} whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Office')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-3 p-5 bg-white shadow-sm border border-slate-100 hover:border-emerald-200 hover:shadow-emerald-100/50 rounded-2xl transition-all disabled:opacity-70 group">
+                                                            <div className="bg-emerald-50 p-3 rounded-xl text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors"><Briefcase size={24} /></div>
+                                                            <span className="font-bold text-slate-700 text-sm">Office</span>
+                                                        </motion.button>
+                                                        <motion.button whileHover={{ y: -3 }} whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Home')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-3 p-5 bg-white shadow-sm border border-slate-100 hover:border-indigo-200 hover:shadow-indigo-100/50 rounded-2xl transition-all disabled:opacity-70 group">
+                                                            <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white transition-colors"><Home size={24} /></div>
+                                                            <span className="font-bold text-slate-700 text-sm">Remote</span>
+                                                        </motion.button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-6">
+                                                <div className={`text-center rounded-3xl p-6 border shadow-sm relative overflow-hidden transition-all duration-500 ${isOnBreak ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                                                    <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${isOnBreak ? 'text-amber-600' : 'text-emerald-600'}`}>{isOnBreak ? 'On Break' : 'Currently Working'}</p>
+                                                    <div className={`text-5xl font-extrabold tracking-tighter my-2 tabular-nums ${isOnBreak ? 'text-amber-700' : 'text-emerald-700'}`}>{elapsedTime}</div>
+                                                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${isOnBreak ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                        {isOnBreak ? <Coffee size={12} /> : <Clock size={12} />}
+                                                        Checked in: {new Date(checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
+
+                                                    <AnimatePresence>
+                                                        {isOnBreak && (
+                                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-4 pt-4 border-t border-amber-200/50">
+                                                                <p className="text-xs font-bold text-amber-600/70 mb-1">BREAK DURATION</p>
+                                                                <p className="text-2xl font-bold text-amber-800">{elapsedBreakTime}</p>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </div>
+
+                                                <div className="bg-white p-1 rounded-2xl border border-slate-100 shadow-sm">
+                                                    <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What are you working on today?" rows={3} className="w-full px-4 py-3 border-none bg-transparent rounded-xl focus:ring-0 text-slate-700 placeholder-slate-400 text-sm resize-none" disabled={isOnBreak} />
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {!isOnBreak ? (
+                                                        <>
+                                                            <motion.button whileTap={{ scale: 0.95 }} onClick={handleBreakIn} disabled={loadingStates['break-in']} className="flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70">{loadingStates['break-in'] ? <ButtonLoader /> : <Coffee size={18} />} Break</motion.button>
+                                                            <motion.button whileTap={{ scale: 0.95 }} onClick={handleCheckOut} disabled={loadingStates['checkout']} className="flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70 shadow-lg shadow-rose-200">{loadingStates['checkout'] ? <ButtonLoader /> : <LogOut size={18} />} Check Out</motion.button>
+                                                        </>
+                                                    ) : (
+                                                        <motion.button whileTap={{ scale: 0.95 }} onClick={handleBreakOut} disabled={loadingStates['break-out']} className="col-span-2 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70 shadow-lg shadow-emerald-200">{loadingStates['break-out'] ? <ButtonLoader /> : <Play size={18} />} Resume Work</motion.button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </DndContext>
-                        </div>
 
-                        <DailyStandupReport />
+                                <MyStatsWidget tasks={tasks} attendance={attendance} />
+                                <WorkHoursChartCard attendance={attendance} />
 
-                        {/* Attendance History */}
-                        <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-                            <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/30"><h2 className="text-xl font-bold text-slate-800">Attendance Log</h2></div>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-slate-100">
-                                    <thead className="bg-slate-50/80">
-                                        <tr>
-                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
-                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Location</th>
-                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Timeline</th>
-                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Duration</th>
-                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Break</th>
-                                            <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Note</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-slate-50">
-                                        {attendance.slice(0, 7).map((att) => (
-                                            <tr key={att._id} className="hover:bg-slate-50/80 transition-colors group">
-                                                <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-700">{formatEnglishDate(att.checkInTime)}</td>
-                                                <td className="px-8 py-5 whitespace-nowrap text-sm">
-                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${att.workLocation === 'Office' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-indigo-50 text-indigo-700 border-indigo-100'}`}>
-                                                        {att.workLocation || 'N/A'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-8 py-5 whitespace-nowrap text-sm text-slate-500 font-medium font-mono text-[13px]">
-                                                    {att.checkInTime && new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    <span className="mx-2 text-slate-300">→</span>
-                                                    {att.checkOutTime ? new Date(att.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : <span className="text-emerald-500 font-bold animate-pulse">Active</span>}
-                                                </td>
-                                                <td className="px-8 py-5 whitespace-nowrap text-sm"><span className={`font-bold ${att.checkOutTime ? att.duration >= MIN_WORK_SECONDS ? 'text-emerald-600' : 'text-rose-500' : 'text-blue-600'}`}>{formatDuration(att.duration)}</span></td>
-                                                <td className="px-8 py-5 whitespace-nowrap text-sm text-slate-400">{formatDuration(att.totalBreakDuration)}</td>
-                                                <td className="px-8 py-5 text-sm text-slate-500 max-w-xs truncate group-hover:text-slate-800 transition-colors" title={att.description}>{att.description || '-'}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {attendance.length === 0 && <div className="text-center text-slate-400 py-12 italic">No attendance history found.</div>}
+                                {/* Notes Section */}
+                                <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden relative z-10">
+                                    <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                                        <h2 className="text-lg font-bold text-slate-800">Quick Notes</h2>
+                                        <div className="bg-yellow-100 text-yellow-600 p-1.5 rounded-lg"><Edit size={16} /></div>
+                                    </div>
+                                    <div className="p-6">
+                                        <form onSubmit={handleCreateNote} className="mb-6 relative">
+                                            <textarea value={newNoteContent} onChange={(e) => setNewNoteContent(e.target.value)} placeholder="Draft notes to remember..." rows="3" className="w-full pl-4 pr-12 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-yellow-200 transition-all resize-none placeholder-slate-400" />
+                                            <button type="submit" disabled={isSubmittingNote || !newNoteContent.trim()} className="absolute right-2 bottom-2 p-2 bg-yellow-400 text-yellow-900 rounded-xl hover:bg-yellow-500 disabled:opacity-50 disabled:bg-slate-200 disabled:text-slate-400 transition-all shadow-sm"><Plus size={18} /></button>
+                                        </form>
+                                        <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                                            <AnimatePresence>
+                                                {notes.map((note) => (
+                                                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} key={note._id} className="p-4 bg-yellow-50/50 hover:bg-yellow-50 rounded-2xl border border-yellow-100 group transition-colors relative z-0">
+                                                        {editingNote?._id === note._id ? (
+                                                            <div className="space-y-2">
+                                                                <textarea value={editingNote.content} onChange={(e) => setEditingNote({ ...editingNote, content: e.target.value })} className="w-full p-2 bg-white border border-yellow-200 rounded-xl text-sm" rows="3" />
+                                                                <div className="flex items-center gap-2 justify-end">
+                                                                    <button onClick={() => setEditingNote(null)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-lg"><X size={16} /></button>
+                                                                    <button onClick={handleUpdateNote} disabled={isSubmittingNote} className="p-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg shadow-sm"><Save size={16} /></button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="relative">
+                                                                <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                                                                <div className="flex items-center justify-between mt-3 pt-2 border-t border-yellow-200/50">
+                                                                    <p className="text-[10px] font-bold text-yellow-700/60 uppercase">{formatEnglishDate(note.createdAt)}</p>
+                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <button onClick={() => setEditingNote(note)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
+                                                                        <button onClick={() => handleDeleteNote(note._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </motion.div>
+                                                ))}
+                                            </AnimatePresence>
+                                            {notes.length === 0 && <div className="text-center py-8 opacity-50"><FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" /><p className="text-xs text-slate-400">Empty notepad</p></div>}
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </motion.div>
+
+                            {/* Right Column (Tasks & Reports) */}
+                            <motion.div className="xl:col-span-8 space-y-6 sm:space-y-8" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+
+                                {/* Task Board */}
+                                <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                                    <div className="px-6 sm:px-8 py-5 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/30">
+                                        <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-3">
+                                            <div className="bg-green-600 text-white p-2 rounded-xl"><Briefcase size={20} /></div>
+                                            Task Board
+                                        </h2>
+                                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={() => setIsPersonalTaskModalOpen(true)} className="flex items-center gap-2 text-sm font-bold bg-emerald-50 text-emerald-600 px-5 py-2.5 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-colors shadow-sm">
+                                            <Plus size={18} strokeWidth={3} /> Add Personal Task
+                                        </motion.button>
+                                    </div>
+
+                                    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 p-6 min-h-[500px] bg-slate-50/30">
+                                            <TaskColumn title="To Do" tasks={taskColumns['To Do']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} onOpenDetails={setSelectedTaskDetails} />
+                                            <TaskColumn title="In Progress" tasks={taskColumns['In Progress']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} onOpenDetails={setSelectedTaskDetails} />
+
+                                            {/* Completed Column (Compact & Limited) */}
+                                            <div className="bg-white/40 p-1 rounded-3xl h-full flex flex-col">
+                                                <div className="flex items-center justify-between mb-3 p-3 rounded-2xl bg-gradient-to-b from-emerald-50/50 to-transparent">
+                                                    <h2 className="font-bold text-sm flex items-center gap-2 text-emerald-800">
+                                                        <div className="bg-emerald-100 p-1.5 rounded-lg"><CheckCircle size={14} className="text-emerald-600" /></div>
+                                                        Done
+                                                    </h2>
+                                                    <span className="text-[10px] font-bold bg-white shadow-sm text-emerald-600 px-2 py-0.5 rounded-lg border border-emerald-100">{taskColumns['Completed'].length}</span>
+                                                </div>
+                                                <div className="space-y-3 h-full overflow-y-auto px-1 pb-4 custom-scrollbar">
+                                                    {taskColumns['Completed'].length > 0 ? (
+                                                        <>
+                                                            {taskColumns['Completed'].slice(0, 2).map(task => <CompletedTaskCard key={task._id} task={task} onOpenDetails={setSelectedTaskDetails} />)}
+                                                            {taskColumns['Completed'].length > 2 && (
+                                                                <Link href="/tasks/completed" className="block text-center mt-4 py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
+                                                                    View All {taskColumns['Completed'].length} Tasks
+                                                                </Link>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50"><Star className="mx-auto h-8 w-8 text-slate-300 mb-1" /><p className="text-[10px] font-semibold text-slate-400">Empty</p></div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </DndContext>
+                                </div>
+
+                                <DailyStandupReport />
+
+                                {/* Attendance History */}
+                                <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                                    <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/30"><h2 className="text-xl font-bold text-slate-800">Attendance Log</h2></div>
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-slate-100">
+                                            <thead className="bg-slate-50/80">
+                                                <tr>
+                                                    <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
+                                                    <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Location</th>
+                                                    <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Timeline</th>
+                                                    <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Duration</th>
+                                                    <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Break</th>
+                                                    <th className="px-8 py-4 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Note</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-slate-50">
+                                                {attendance.slice(0, 7).map((att) => (
+                                                    <tr key={att._id} className="hover:bg-slate-50/80 transition-colors group">
+                                                        <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-700">{formatEnglishDate(att.checkInTime)}</td>
+                                                        <td className="px-8 py-5 whitespace-nowrap text-sm">
+                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${att.workLocation === 'Office' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-indigo-50 text-indigo-700 border-indigo-100'}`}>
+                                                                {att.workLocation || 'N/A'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-8 py-5 whitespace-nowrap text-sm text-slate-500 font-medium font-mono text-[13px]">
+                                                            {att.checkInTime && new Date(att.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            <span className="mx-2 text-slate-300">→</span>
+                                                            {att.checkOutTime ? new Date(att.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : <span className="text-emerald-500 font-bold animate-pulse">Active</span>}
+                                                        </td>
+                                                        <td className="px-8 py-5 whitespace-nowrap text-sm"><span className={`font-bold ${att.checkOutTime ? att.duration >= MIN_WORK_SECONDS ? 'text-emerald-600' : 'text-rose-500' : 'text-blue-600'}`}>{formatDuration(att.duration)}</span></td>
+                                                        <td className="px-8 py-5 whitespace-nowrap text-sm text-slate-400">{formatDuration(att.totalBreakDuration)}</td>
+                                                        <td className="px-8 py-5 text-sm text-slate-500 max-w-xs truncate group-hover:text-slate-800 transition-colors" title={att.description}>{att.description || '-'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {attendance.length === 0 && <div className="text-center text-slate-400 py-12 italic">No attendance history found.</div>}
+                                </div>
+                            </motion.div>
                         </div>
-                    </motion.div>
+                    </main>
                 </div>
-            </main>
-        </div>
-      </motion.div>
-    </>
-  );
+            </motion.div>
+        </>
+    );
 }
 
 export async function getServerSideProps(context) {
     const jwt = require('jsonwebtoken');
     const dbConnect = require('../../lib/dbConnect').default;
     const User = require('../../models/User').default;
-      
+
     await dbConnect();
     const { token } = context.req.cookies;
     if (!token) {
@@ -1905,12 +1943,12 @@ export async function getServerSideProps(context) {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.userId).select('-password').lean();
-          
+
         if (!user) {
             context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
             return { redirect: { destination: '/login', permanent: false } };
         }
-          
+
         const roleRedirects = {
             'HR': '/hr/dashboard',
             'Project Manager': '/pm/dashboard',
@@ -1920,7 +1958,7 @@ export async function getServerSideProps(context) {
         if (roleRedirects[user.role]) {
             return { redirect: { destination: roleRedirects[user.role], permanent: false } };
         }
-          
+
         return { props: { user: JSON.parse(JSON.stringify(user)) } };
 
     } catch (error) {

@@ -75,7 +75,7 @@ const DashboardEntryLoader = ({ userName }) => (
             className="relative mb-8"
         >
             <div className="absolute inset-0 bg-green-200 blur-2xl rounded-full opacity-40 animate-pulse"></div>
-            <Image src="/logo.png" alt="Logo" width={80} height={80} className="" priority style={{ width: 'auto', height: 'auto' }} />
+            <Image src="/pm.png" alt="Logo" width={80} height={80} className="" priority style={{ width: 'auto', height: 'auto' }} />
         </motion.div>
         
         <h2 className="text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">Welcome, {userName.split(' ')[0]}</h2>
@@ -644,7 +644,7 @@ export default function PMDashboard({ pmUser, allUsers, initialTasks }) {
                     <Link href="/dashboard" className="flex items-center gap-3 group">
                          <div className="relative">
                               <div className="absolute inset-0 bg-green-200 blur-md rounded-full opacity-0 group-hover:opacity-50 transition-opacity"></div>
-                              <Image src="/logo.png" alt="Logo" width={52} height={52} className="" />
+                              <Image src="/pm.png" alt="Logo" width={55} height={55} className="" />
                          </div>
                          <div>
                              <h1 className="text-xl font-extrabold text-slate-900 tracking-tight leading-none hidden sm:block">Command Center</h1>

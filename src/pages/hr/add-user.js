@@ -5,14 +5,17 @@ import Link from 'next/link';
 import jwt from 'jsonwebtoken';
 import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
-import { ArrowLeft, User as UserIcon, Mail, Lock, Phone, Briefcase, Shield, UserPlus, AlertTriangle, CheckCircle, Loader } from 'react-feather';
+import { ArrowLeft, User as UserIcon, Mail, Lock, Phone, Briefcase, Shield, AlertTriangle, CheckCircle, Loader, DollarSign } from 'react-feather';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// --- Reusable Form Field Component ---
+// --- Reusable Form Field Component (Memoized for Speed) ---
 const FormField = ({ id, label, type, name, value, onChange, required, icon, placeholder }) => (
-    <div className="relative">
-        <label htmlFor={id} className="block text-sm font-semibold text-slate-600 mb-1">{label} {required && <span className="text-red-500">*</span>}</label>
+    <div className="relative group">
+        <label htmlFor={id} className="block text-sm font-bold text-slate-700 mb-1.5 transition-colors group-focus-within:text-emerald-600">
+            {label} {required && <span className="text-rose-500">*</span>}
+        </label>
         <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors duration-200">
                 {icon}
             </div>
             <input 
@@ -23,7 +26,7 @@ const FormField = ({ id, label, type, name, value, onChange, required, icon, pla
                 onChange={onChange} 
                 required={required}
                 placeholder={placeholder}
-                className="w-full pl-11 pr-4 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500/80 focus:border-transparent transition"
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200 shadow-sm hover:border-slate-300"
             />
         </div>
     </div>
@@ -36,26 +39,32 @@ const RoleCard = ({ label, icon, value, selectedValue, onSelect }) => {
         <button
             type="button"
             onClick={() => onSelect(value)}
-            className={`group w-full p-4 rounded-xl border-2 text-left transition-all duration-200 flex items-center gap-4 ${
+            className={`relative group w-full p-4 rounded-xl border-2 text-left transition-all duration-200 flex items-center gap-4 overflow-hidden ${
                 isSelected 
-                ? 'bg-green-50 border-green-500 shadow-md' 
-                : 'bg-slate-50/80 border-slate-200 hover:border-green-400'
+                ? 'bg-emerald-50 border-emerald-500 shadow-md ring-1 ring-emerald-500/20' 
+                : 'bg-white border-slate-100 hover:border-emerald-200 hover:shadow-lg hover:-translate-y-0.5'
             }`}
         >
-            <div className={`p-3 rounded-full transition-all duration-200 ${
-                isSelected ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-500 group-hover:bg-green-100 group-hover:text-green-600'
+            <div className={`p-3 rounded-full transition-all duration-200 relative z-10 ${
+                isSelected ? 'bg-emerald-500 text-white shadow-sm' : 'bg-slate-50 text-slate-400 group-hover:bg-emerald-100 group-hover:text-emerald-600'
             }`}>
                 {icon}
             </div>
-            <span className={`font-bold text-md transition-colors duration-200 ${
-                isSelected ? 'text-green-800' : 'text-slate-700'
-            }`}>
-                {label}
-            </span>
+            <div className="relative z-10">
+                <span className={`font-bold text-sm block transition-colors duration-200 ${
+                    isSelected ? 'text-emerald-900' : 'text-slate-700 group-hover:text-emerald-900'
+                }`}>
+                    {label}
+                </span>
+                <span className={`text-[10px] font-semibold uppercase tracking-wider ${isSelected ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    Role
+                </span>
+            </div>
+            {/* Background Decor */}
+            {isSelected && <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-emerald-100/50 to-transparent pointer-events-none"></div>}
         </button>
     );
 };
-
 
 export default function AddUserPage() {
   const router = useRouter();
@@ -86,6 +95,9 @@ export default function AddUserPage() {
     setError('');
     setIsSubmitting(true);
 
+    // Simulate smoother interaction delay if fast network
+    await new Promise(r => setTimeout(r, 600));
+
     try {
       const res = await fetch('/api/hr/create-user', {
         method: 'POST',
@@ -102,9 +114,8 @@ export default function AddUserPage() {
       setMessage(`Success! User '${formData.name}' has been created.`);
       setFormData({ name: '', email: '', password: '', role: 'Staff', phoneNumber: '' });
       
-      setTimeout(() => {
-        setMessage('');
-      }, 4000);
+      // Auto-dismiss success message
+      setTimeout(() => setMessage(''), 5000);
 
     } catch (err) {
       setError(err.message);
@@ -114,77 +125,127 @@ export default function AddUserPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
-      <header className="bg-white/80 backdrop-blur-xl shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto py-5 px-4 sm:px-6 lg:px-8">
-            <Link href="/hr/dashboard" className="text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center gap-1.5 mb-2 transition-colors">
-                <ArrowLeft size={16} />
-                Back to HR Dashboard
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-emerald-100 selection:text-emerald-900">
+      
+      {/* --- Header --- */}
+      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-30 transition-all">
+        <div className="max-w-5xl mx-auto py-5 px-6">
+            <Link href="/hr/dashboard" className="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-emerald-600 mb-3 transition-colors">
+                <div className="p-1 rounded-lg bg-slate-100 group-hover:bg-emerald-50 transition-colors">
+                    <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform"/>
+                </div>
+                Back to Dashboard
             </Link>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Add New Employee</h1>
-          <p className="text-slate-500 mt-1">Create a new user account and assign them a role in the system.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Onboard New Employee</h1>
+                    <p className="text-slate-500 font-medium mt-1">Create a secure account and assign system access.</p>
+                </div>
+                {/* Visual Indicator Step */}
+                <div className="hidden sm:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">System Active</span>
+                </div>
+            </div>
         </div>
       </header>
 
-      <main className="py-10">
-        <div className={`max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-out ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 sm:p-8">
-                <form onSubmit={handleSubmit} className="space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                        <FormField id="name" label="Full Name" type="text" name="name" value={formData.name} onChange={handleChange} required icon={<UserIcon size={20} />} placeholder="e.g., Nischal Shrestha" />
-                        <FormField id="email" label="Email Address" type="email" name="email" value={formData.email} onChange={handleChange} required icon={<Mail size={20} />} placeholder="e.g., nischal@example.com" />
-                        <FormField id="password" label="Initial Password" type="password" name="password" value={formData.password} onChange={handleChange} required icon={<Lock size={20} />} placeholder="Min. 8 characters" />
-                        <FormField id="phoneNumber" label="Phone Number" type="tel" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} icon={<Phone size={20} />} placeholder="(Optional)" />
-                    </div>
+      {/* --- Main Content --- */}
+      <main className="py-10 px-4 sm:px-6">
+        <div className={`max-w-5xl mx-auto transition-all duration-700 ease-out ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white/50 p-8 sm:p-10 relative overflow-hidden"
+            >
+                {/* Decorative Top Border */}
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400"></div>
 
+                <form onSubmit={handleSubmit} className="space-y-10 relative z-10">
+                    
+                    {/* Section 1: Personal Info */}
                     <div>
-                        <label className="block text-md font-semibold text-slate-800 mb-3">Assign Role <span className="text-red-500">*</span></label>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <RoleCard label="Staff" icon={<UserIcon size={22} />} value="Staff" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
-                            <RoleCard label="Intern" icon={<UserIcon size={22} />} value="Intern" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
-                            <RoleCard label="Manager" icon={<Briefcase size={22} />} value="Manager" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
-                            <RoleCard label="Project Manager" icon={<Briefcase size={22} />} value="Project Manager" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
-                            <RoleCard label="Finance" icon={<Briefcase size={22} />} value="Finance" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
-                            <RoleCard label="HR Admin" icon={<Shield size={22} />} value="HR" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
+                        <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                            <span className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm">01</span>
+                            Personal Details
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                            <FormField id="name" label="Full Name" type="text" name="name" value={formData.name} onChange={handleChange} required icon={<UserIcon size={18} />} placeholder="e.g. Nischal Shrestha" />
+                            <FormField id="email" label="Email Address" type="email" name="email" value={formData.email} onChange={handleChange} required icon={<Mail size={18} />} placeholder="e.g. nischal@company.com" />
+                            <FormField id="phoneNumber" label="Phone Number" type="tel" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} icon={<Phone size={18} />} placeholder="+977 9800000000" />
+                            <FormField id="password" label="Temporary Password" type="text" name="password" value={formData.password} onChange={handleChange} required icon={<Lock size={18} />} placeholder="Strong password (min 8 chars)" />
                         </div>
                     </div>
 
-                    {message && (
-                        <div className="p-4 bg-green-50 text-green-800 rounded-lg border border-green-200 flex items-center gap-3 animate-fade-in-up">
-                            <CheckCircle className="h-5 w-5"/>
-                            <span className="font-medium">{message}</span>
+                    {/* Section 2: Role Assignment */}
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                            <span className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm">02</span>
+                            System Role & Access
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <RoleCard label="Staff" icon={<UserIcon size={20} />} value="Staff" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
+                            <RoleCard label="Intern" icon={<UserIcon size={20} />} value="Intern" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
+                            <RoleCard label="Manager" icon={<Briefcase size={20} />} value="Manager" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
+                            <RoleCard label="Project Manager" icon={<Briefcase size={20} />} value="Project Manager" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
+                            <RoleCard label="Finance" icon={<DollarSign size={20} />} value="Finance" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
+                            <RoleCard label="HR Admin" icon={<Shield size={20} />} value="HR" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
                         </div>
-                    )}
-                    {error && (
-                        <div className="p-4 bg-red-50 text-red-800 rounded-lg border border-red-200 flex items-center gap-3 animate-fade-in-up">
-                            <AlertTriangle className="h-5 w-5"/>
-                            <span className="font-medium">{error}</span>
-                        </div>
-                    )}
+                    </div>
 
-                    <div className="pt-5 flex justify-end">
-                        <button type="submit" disabled={isSubmitting} className="inline-flex justify-center py-3 px-8 border border-transparent shadow-lg shadow-green-500/20 text-sm font-bold rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all transform hover:scale-105">
-                            {isSubmitting ? <Loader className="animate-spin h-5 w-5" /> : 'Create User Account'}
+                    {/* Feedback Messages */}
+                    <AnimatePresence>
+                        {message && (
+                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 flex items-center gap-3">
+                                <div className="p-1 bg-emerald-100 rounded-full"><CheckCircle size={18} className="text-emerald-600"/></div>
+                                <span className="font-semibold">{message}</span>
+                            </motion.div>
+                        )}
+                        {error && (
+                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 bg-rose-50 text-rose-800 rounded-xl border border-rose-200 flex items-center gap-3">
+                                <div className="p-1 bg-rose-100 rounded-full"><AlertTriangle size={18} className="text-rose-600"/></div>
+                                <span className="font-semibold">{error}</span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Action Buttons */}
+                    <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row sm:justify-end gap-4">
+                        <Link href="/hr/dashboard" className="px-6 py-3.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 hover:border-slate-300 transition-all text-center">
+                            Cancel
+                        </Link>
+                        <button 
+                            type="submit" 
+                            disabled={isSubmitting} 
+                            className="inline-flex justify-center items-center gap-2 px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 hover:shadow-emerald-300 disabled:opacity-70 disabled:cursor-not-allowed transition-all transform active:scale-[0.98]"
+                        >
+                            {isSubmitting ? <Loader className="animate-spin h-5 w-5" /> : 'Create Account'}
                         </button>
                     </div>
                 </form>
-            </div>
+            </motion.div>
         </div>
-      </main> {/* <-- This was the missing closing tag */}
+      </main>
     </div>
   );
 }
 
+// --- Server Side Props (Authentication Check) ---
 export async function getServerSideProps(context) {
     await dbConnect();
     const { token } = context.req.cookies;
+    
     if (!token) return { redirect: { destination: '/login', permanent: false } };
+    
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.userId).select('-password');
+        
         if (!user || user.role !== 'HR') {
             return { redirect: { destination: '/dashboard', permanent: false } };
         }
+        
         return { props: { user: JSON.parse(JSON.stringify(user)) } };
     } catch (error) {
         return { redirect: { destination: '/login', permanent: false } };

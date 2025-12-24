@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 
     const validStatuses = ['In Progress', 'Completed'];
     if (!validStatuses.includes(newStatus)) {
-      return res.status(400).json({ message: 'Invalid status provided.' });
+      return res.status(400).json({ message: 'Cannot move — already in progress.' });
     }
 
     // 5. Find the task in the database
