@@ -918,8 +918,6 @@ const Sidebar = ({ isMobile }) => (
 
   return (
     <>
-      <Toaster position="top-right" toastOptions={{ style: { background: '#1e293b', color: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' } }} />
-
       {isLeaveModalOpen && currentLeaveItem && <ManageLeaveModal item={currentLeaveItem} comments={hrComments} setComments={setHrComments} error={error} onClose={()=>setIsLeaveModalOpen(false)} onSubmit={handleManageLeave} isSubmitting={isSubmittingLeaveAction} />}
       {isDeleteModalOpen && <DeleteModal onConfirm={handleDelete} onClose={()=>setIsDeleteModalOpen(false)} isDeleting={isDeleting} />}
       {isEditModalOpen && editingRecord && <AdjustCheckoutModal record={editingRecord} onClose={()=>setIsEditModalOpen(false)} onUpdate={handleUpdate} isSubmitting={isSubmittingEdit} />}
