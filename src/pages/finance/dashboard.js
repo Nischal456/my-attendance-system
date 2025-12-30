@@ -119,7 +119,7 @@ const DashboardEntryLoader = ({ userName }) => (
                     transition={{ delay: 0.5 }}
                     className="absolute -right-6 -top-6 bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border-2 border-white rotate-12"
                 >
-                    v2.0
+                    Version2.0
                 </motion.div>
             </motion.div>
 
@@ -144,7 +144,7 @@ const DashboardEntryLoader = ({ userName }) => (
                     className="flex items-center justify-center gap-3 text-xs md:text-sm font-bold text-slate-400 uppercase tracking-[0.4em]"
                 >
                     <div className="h-px w-8 bg-slate-300"></div>
-                    <span>Secure Dashboard</span>
+                    <span>Loding Your Financial Dashboard</span>
                     <div className="h-px w-8 bg-slate-300"></div>
                 </motion.div>
             </div>
