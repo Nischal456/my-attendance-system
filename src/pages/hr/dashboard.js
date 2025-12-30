@@ -7,7 +7,7 @@ import {
   Send, Trash2, AlertTriangle, LogOut, Check, X as XIcon, UserPlus, 
   Briefcase, Download, ChevronDown, Bell, Users, BarChart2, Clock, 
   Menu, ChevronLeft, ChevronRight, Edit, Home, PieChart, TrendingUp, 
-  Search, Calendar, Filter, RefreshCw, Activity, Layers
+  Search, Calendar, Filter, RefreshCw, Activity, Layers, Coffee
 } from 'react-feather';
 import toast, { Toaster } from 'react-hot-toast';
 import { 
@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-// Imports moved from getServerSideProps (Ensure these paths are correct for your project)
+// Imports moved from getServerSideProps
 import jwt from 'jsonwebtoken';
 import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
@@ -381,7 +381,7 @@ const AnalyticsView = () => {
 
   const chartOptions = useMemo(() => ({ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, font: {family: "'Inter', sans-serif", weight: '500'} } } }, layout: { padding: 10 } }), []);
 
-  if (isLoading) return <div className="space-y-6 animate-pulse"><div className="h-10 w-48 bg-slate-200 rounded-xl mb-8"></div><div className="grid grid-cols-4 gap-6">{[1,2,3,4].map(i=><div key={i} className="h-32 bg-slate-200 rounded-3xl"></div>)}</div><div className="h-96 bg-slate-200 rounded-3xl mt-8"></div></div>;
+  if (isLoading) return <div className="space-y-6 animate-pulse"><div className="h-10 w-48 bg-slate-200 rounded-xl mb-8"></div><div className="grid grid-cols-4 gap-6">{[1,2,3,4].map(i => <div key={i} className="h-32 bg-slate-200 rounded-3xl"></div>)}</div><div className="h-96 bg-slate-200 rounded-3xl mt-8"></div></div>;
   if (!data) return <div className="text-center p-10 text-slate-500">Failed to load data.</div>;
 
   return (
@@ -538,6 +538,8 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
                 <th className="px-6 py-5 font-bold tracking-wider">Date</th>
                 <th className="px-6 py-5 font-bold tracking-wider">Timings</th>
                 <th className="px-6 py-5 font-bold tracking-wider">Duration</th>
+                {/* NEW COLUMN: Break */}
+                <th className="px-6 py-5 font-bold tracking-wider">Break</th>
                 <th className="px-6 py-5 font-bold tracking-wider">Note</th>
                 <th className="px-6 py-5 font-bold text-right tracking-wider">Actions</th>
               </tr>
@@ -564,6 +566,8 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
                     </div>
                   </td>
                   <td className={`px-6 py-4 font-mono text-sm ${getDurationStyle(att)}`}>{formatDuration(att.duration)}</td>
+                  {/* NEW DATA: Break Taken */}
+                  <td className="px-6 py-4 font-mono text-sm text-slate-500">{formatDuration(att.totalBreakDuration)}</td>
                   <td className="px-6 py-4 max-w-xs truncate text-slate-400 italic" title={att.description}>{att.description || '—'}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
@@ -573,7 +577,7 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
                   </td>
                 </tr>
               ))}
-              {filteredAttendance.length === 0 && <tr><td colSpan="6" className="text-center py-20 text-slate-400 flex flex-col items-center justify-center"><Search size={40} className="mb-4 opacity-20"/><p>No records found matching filters.</p></td></tr>}
+              {filteredAttendance.length === 0 && <tr><td colSpan="7" className="text-center py-20 text-slate-400 flex flex-col items-center justify-center"><Search size={40} className="mb-4 opacity-20"/><p>No records found matching filters.</p></td></tr>}
             </tbody>
           </table>
         </div>
@@ -764,7 +768,15 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   }, []);
 
   // --- Handlers ---
-  const handleLogout = async () => { await fetch("/api/auth/logout", { method: "POST" }); router.push("/login"); };
+
+  const handleLogout = async () => {
+        await fetch('/api/auth/logout');
+
+        toast.success('Logged out successfully');
+        setTimeout(() => {
+            router.push('/login');
+        }, 800);
+    };
   const handleMonthChange = (val) => setSelectedMonth(d => { const n = new Date(d); n.setMonth(n.getMonth() + val); return n; });
   const handleNav = (view) => { setActiveView(view); setIsMobileMenuOpen(false); };
 
