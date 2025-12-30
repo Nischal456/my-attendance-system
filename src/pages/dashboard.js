@@ -116,18 +116,158 @@ const ButtonLoader = () => (
 );
 
 const DashboardEntryLoader = ({ userName }) => (
-    <motion.div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center font-sans" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5, ease: "easeInOut" }}>
-        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 20 }} className="relative mb-8">
-            <div className="absolute inset-0 bg-emerald-200 blur-2xl rounded-full opacity-40 animate-pulse"></div>
-            <Image src="/user.png" alt="Logo" width={100} height={100} className="" priority style={{ width: 'auto', height: 'auto' }} />
-        </motion.div>
-        <h2 className="text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">Welcome, {userName.split(' ')[0]}</h2>
-        <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
-            <span className="flex items-center gap-2"><span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>Preparing your dashboard...</span>
+    <motion.div 
+        className="fixed inset-0 z-[100] bg-slate-50/95 flex flex-col items-center justify-center font-sans overflow-hidden perspective-[1200px]"
+        initial={{ opacity: 1 }}
+        exit={{ opacity: 0, scale: 1.1, filter: "blur(25px)" }}
+        transition={{ duration: 0.6, ease: "easeInOut" }}
+    >
+        {/* 1. ULTRA Background - Deeper depth */}
+        <div className="absolute inset-0 bg-white z-0">
+             {/* Stronger central light source */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,#10b98120_0%,transparent_60%)]"></div>
+            {/* Sharper Grid */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_60%,transparent_100%)]"></div>
         </div>
-        <motion.div className="mt-8 h-1.5 w-48 bg-slate-100 rounded-full overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-            <motion.div className="h-full bg-emerald-500 rounded-full" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 1.2, ease: "easeInOut" }} />
-        </motion.div>
+
+        {/* 2. Main Content Wrapper */}
+        <div className="relative z-10 flex flex-col items-center justify-center">
+            
+            {/* 3. THE ULTRA TILTED GLASS CARD */}
+            <motion.div 
+                initial={{ scale: 0.6, rotateX: 20, rotateY: 20, opacity: 0, y: 150 }} 
+                animate={{ scale: 1, rotateX: 5, rotateY: -5, opacity: 1, y: 0 }} 
+                transition={{ 
+                    type: "spring", 
+                    stiffness: 250, // Much stiffer for "fastest" feel
+                    damping: 25,    // Snappy stop without too much wobble
+                    mass: 0.8
+                }} 
+                className="relative mb-14 md:mb-20 transform-gpu preserve-3d"
+            >
+                {/* Intense Ambient Glow Core */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-emerald-500/40 blur-[100px] rounded-full animate-pulse-slow"></div>
+
+                {/* The Hyper-Realistic Glass Container */}
+                <motion.div 
+                    animate={{ y: [0, -10, 0], rotateX: [5, 2, 5], rotateY: [-5, -2, -5] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                    // Complex borders and shadows for realism
+                    className="relative bg-white/40 backdrop-blur-[80px] p-8 md:p-12 rounded-[3.5rem] 
+                               border-t-[1.5px] border-l-[1.5px] border-white/90 
+                               border-b border-r border-white/20
+                               shadow-[0_30px_70px_-20px_rgba(16,185,129,0.4),inset_0_0_40px_rgba(255,255,255,0.3)] 
+                               flex items-center justify-center overflow-hidden"
+                >
+                    {/* Sharp Specular Reflection */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/70 via-transparent to-transparent opacity-80 pointer-events-none -rotate-12 scale-125"></div>
+                    
+                    {/* THE HOLOGRAPHIC USER TOKEN (Not zoomed) */}
+                    <div className="relative w-40 h-40 md:w-64 md:h-64 flex items-center justify-center transform-gpu translate-z-10">
+                         {/* Rotating Energy Ring */}
+                        <div className="absolute inset-0 rounded-full border-[3px] border-emerald-400/30 border-t-emerald-400/80 border-l-emerald-400/80 animate-spin-slow glow-emerald-md"></div>
+                        {/* Pulsing Inner Core */}
+                        <div className="absolute inset-4 rounded-full bg-emerald-500/10 animate-pulse"></div>
+                        {/* Holographic Base Projection */}
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2/3 h-4 bg-emerald-500/50 blur-md rounded-[100%]"></div>
+
+                        {/* The Image - Floating freely, object-contain to prevent zoom cropping */}
+                        <div className="relative w-full h-full filter drop-shadow-[0_15px_35px_rgba(16,185,129,0.35)] z-20">
+                            <Image 
+                                src="/user.png" 
+                                alt="User Profile" 
+                                fill
+                                className="object-contain p-2" 
+                                priority 
+                                sizes="(max-width: 768px) 160px, 256px"
+                            />
+                        </div>
+                    </div>
+                </motion.div>
+                
+                {/* Premium Badge */}
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0, rotate: 45 }}
+                    animate={{ opacity: 1, scale: 1, rotate: 12 }}
+                    transition={{ delay: 0.3, type: "spring" }}
+                    className="absolute -right-6 -top-6 bg-gradient-to-r from-slate-900 to-slate-800 text-emerald-100 text-xs font-extrabold tracking-wider px-4 py-1.5 rounded-full shadow-xl border-[1.5px] border-white transform translate-z-20"
+                >
+                    Version 2.0
+                </motion.div>
+            </motion.div>
+
+            {/* 4. Typography - Snappier entrance */}
+            <div className="text-center relative z-20 space-y-5">
+                <motion.h2 
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.6, ease: [0.22, 1, 0.36, 1] }} // Fast easing
+                    className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 tracking-tighter leading-none"
+                >
+                    Hello, <br className="md:hidden" />
+                    {/* The "Next Level" Text Gradient */}
+                    <span className="text-transparent bg-clip-text bg-[linear-gradient(to_right,theme(colors.emerald.600),theme(colors.teal.400),theme(colors.emerald.600),theme(colors.teal.400))] bg-[length:300%_auto] animate-[gradient_3s_linear_infinite] drop-shadow-sm">
+                        {userName.split(' ')[0]}
+                    </span>
+                </motion.h2>
+                
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="flex items-center justify-center gap-4 text-xs md:text-sm font-bold text-slate-400 uppercase tracking-[0.4em]"
+                >
+                    <div className="h-px w-12 bg-gradient-to-r from-transparent to-slate-300"></div>
+                    <span className="text-slate-500">Welcome to your personal Dashboard</span>
+                    <div className="h-px w-12 bg-gradient-to-l from-transparent to-slate-300"></div>
+                </motion.div>
+            </div>
+
+            {/* 5. Loader - Faster & Brighter */}
+            <div className="mt-16 relative flex flex-col items-center gap-3">
+                
+                {/* Status Text - Monospace & Technical */}
+                <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    transition={{ delay: 0.6 }}
+                    className="text-[10px] font-mono font-medium text-emerald-600/60 uppercase tracking-[0.3em]"
+                >
+                    Initializing Gecko Dashboard...
+                </motion.div>
+
+                {/* The Loader Track */}
+                <div className="relative w-64 h-[2px] bg-slate-200/30 rounded-full">
+                    
+                    {/* The Moving Progress Bar */}
+                    <motion.div 
+                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-transparent via-emerald-500 to-emerald-400" 
+                        initial={{ width: "0%" }} 
+                        animate={{ width: "100%" }} 
+                        transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }} 
+                    >
+                        {/* THE SPARK (The glow at the tip) */}
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2">
+                            {/* Hard Core */}
+                            <div className="w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,1)]"></div>
+                            {/* Soft Glow */}
+                            <div className="absolute inset-0 w-full h-full bg-emerald-400 blur-[6px] scale-[3]"></div>
+                            {/* Lens Flare Line */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-[1px] bg-white opacity-50"></div>
+                        </div>
+                    </motion.div>
+
+                </div>
+
+                {/* Reflection under the loader for depth */}
+                <motion.div 
+                    className="absolute -bottom-2 w-64 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent blur-sm"
+                    initial={{ scaleX: 0, opacity: 0 }}
+                    animate={{ scaleX: 1, opacity: 1 }}
+                    transition={{ duration: 1.4, delay: 0.1, ease: "circOut" }}
+                />
+            </div>
+        </div>
     </motion.div>
 );
 

@@ -3,10 +3,18 @@ import NepaliDate from 'nepali-date-converter';
 /**
  * Generates a professional, bank-grade CSV financial statement.
  * Handles column alignment perfectly to avoid data shifting.
+ * Transactions are sorted chronologically (Start of period -> End).
  */
 export const generateFinancialStatement = ({ transactions, summary, period, type, user }) => {
 
-    // --- 1. Formatting Helpers ---
+    // --- 1. Sorting Logic (Start from Beginning of Month/Year) ---
+    
+    // Sort transactions by date ascending (Oldest -> Newest)
+    const sortedTransactions = [...transactions].sort((a, b) => {
+        return new Date(a.date) - new Date(b.date);
+    });
+
+    // --- 2. Formatting Helpers ---
 
     // Format Currency (Standard 1,200.00 format without symbol to prevent Excel issues)
     const formatMoney = (amount) => {
@@ -14,8 +22,7 @@ export const generateFinancialStatement = ({ transactions, summary, period, type
         return new Intl.NumberFormat('en-IN', { 
             minimumFractionDigits: 2,
             maximumFractionDigits: 2 
-        }).format(amount).replace(/,/g, ''); // Remove commas for raw CSV number compatibility if needed, or keep for visual. 
-        // For CSV visual compatibility, we will keep commas but wrap in quotes below.
+        }).format(amount).replace(/,/g, ''); 
     };
 
     const formatMoneyVisual = (amount) => {
@@ -58,7 +65,7 @@ export const generateFinancialStatement = ({ transactions, summary, period, type
         return `"${escaped}"`;
     };
 
-    // --- 2. Header Section (Metadata) ---
+    // --- 3. Header Section (Metadata) ---
     
     const generatedOnBS = getNepaliDate(new Date());
     const generatedOnAD = getEnglishDate(new Date());
@@ -84,7 +91,7 @@ export const generateFinancialStatement = ({ transactions, summary, period, type
         ['TRANSACTION DETAILS']
     ];
 
-    // --- 3. Table Columns (Exact Match to your Request) ---
+    // --- 4. Table Columns (Exact Match to your Request) ---
 
     const tableHeaders = [
         'Nepali Date (BS)', 
@@ -97,9 +104,9 @@ export const generateFinancialStatement = ({ transactions, summary, period, type
         'Credit (In)'
     ];
 
-    // --- 4. Map Data to Rows (Fixing the "Same Box" issue) ---
+    // --- 5. Map Data to Rows (Using Sorted Transactions) ---
 
-    const dataRows = transactions.map(t => {
+    const dataRows = sortedTransactions.map(t => {
         // Logic: Income/Deposit/Sales goes to Credit Column. Expense/Withdrawal goes to Debit Column.
         // We use loose matching to catch "Deposit", "Income", "Sales" etc.
         const typeStr = t.type || "";
@@ -121,7 +128,7 @@ export const generateFinancialStatement = ({ transactions, summary, period, type
         ];
     });
 
-    // --- 5. Construct CSV & Download ---
+    // --- 6. Construct CSV & Download ---
 
     // Combine Header + Columns + Data
     const csvArray = [...headerRows, tableHeaders, ...dataRows];

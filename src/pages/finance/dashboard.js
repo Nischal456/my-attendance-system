@@ -7,10 +7,10 @@ import {
   DollarSign, Send, CreditCard, Bell, ArrowUpRight, ArrowDownLeft, 
   X as XIcon, CheckCircle, Download, Globe, Layers, 
   Trash2, Target, Search, Grid, Activity, 
-  Facebook, Instagram, Linkedin, Video
+  Facebook, Instagram, Linkedin, Video, AlertTriangle, AlertCircle 
 } from 'react-feather';
-import { FaRupeeSign } from "react-icons/fa";
-import toast from 'react-hot-toast'; 
+import { Sparkles } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast'; 
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
@@ -20,7 +20,7 @@ import { generateFinancialStatement } from '../../utils/financeGenerator';
 // --- Register ChartJS ---
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
 
-// --- Animation Variants ---
+// --- Animation Variants (GPU Optimized) ---
 const fadeInUp = {
   initial: { y: 20, opacity: 0 },
   animate: { y: 0, opacity: 1, transition: { duration: 0.4, ease: "easeOut" } }
@@ -35,7 +35,7 @@ const modalBackdrop = {
 const modalContent = {
   initial: { scale: 0.95, opacity: 0, y: 20 },
   animate: { scale: 1, opacity: 1, y: 0, transition: { type: "spring", stiffness: 350, damping: 25 } },
-  exit: { scale: 0.95, opacity: 0, y: 10, transition: { duration: 0.2 } }
+  exit: { scale: 0.95, opacity: 0, y: 10, transition: { duration: 0.15 } }
 };
 
 // --- Helper Functions ---
@@ -58,36 +58,130 @@ const getGreeting = () => {
 
 // --- Sub-Components ---
 
-// 1. Loader
+// 1. Loader (Premium Visuals)
 const DashboardEntryLoader = ({ userName }) => (
-    <motion.div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center font-sans" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}>
-        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 20 }} className="relative mb-8">
-            <div className="absolute inset-0 bg-emerald-300 blur-3xl rounded-full opacity-40 animate-pulse"></div>
-            <Image src="/finance.png" alt="Logo" width={90} height={90} className="relative z-10" priority />
-        </motion.div>
-        <h2 className="text-3xl font-extrabold text-slate-800 mb-2 tracking-tight">Welcome, {userName.split(' ')[0]}</h2>
-        <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
-            <span className="flex items-center gap-2">Initializing Secure Dashboard...</span>
+    <motion.div 
+        className="fixed inset-0 z-[100] bg-slate-50 flex flex-col items-center justify-center font-sans overflow-hidden perspective-[1000px]"
+        initial={{ opacity: 1 }}
+        exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
+        transition={{ duration: 0.8 }}
+    >
+        {/* 1. Ultra-Premium Background */}
+        <div className="absolute inset-0 bg-white">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#10b98115_0%,transparent_50%)]"></div>
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]"></div>
         </div>
-        <motion.div className="mt-8 h-1.5 w-48 bg-slate-100 rounded-full overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-            <motion.div className="h-full bg-emerald-500 rounded-full" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 1.5, ease: "easeInOut" }} />
-        </motion.div>
+
+        {/* 2. Main Content Wrapper */}
+        <div className="relative z-10 flex flex-col items-center justify-center">
+            
+            {/* 3. THE TILTED GLASS CARD (Hero Element) */}
+            <motion.div 
+                initial={{ scale: 0.4, rotate: -20, opacity: 0, y: 100 }} 
+                animate={{ scale: 1, rotate: -6, opacity: 1, y: 0 }} 
+                transition={{ 
+                    type: "spring", 
+                    stiffness: 100, 
+                    damping: 15, 
+                    mass: 1 
+                }} 
+                className="relative mb-12 md:mb-16"
+            >
+                {/* Intense Glow Behind */}
+                <div className="absolute inset-0 bg-emerald-500/30 blur-[80px] rounded-full transform rotate-6 animate-pulse-slow"></div>
+
+                {/* Glass Container - Tilted & Floating */}
+                <motion.div 
+                    animate={{ y: [0, -15, 0], rotate: [-6, -4, -6] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                    className="relative bg-white/40 backdrop-blur-[50px] p-8 md:p-14 rounded-[3rem] border border-white/80 shadow-[0_40px_80px_-20px_rgba(16,185,129,0.25)] ring-1 ring-white/60 transform-gpu"
+                >
+                    {/* Glossy Reflection Gradient */}
+                    <div className="absolute inset-0 rounded-[3rem] bg-gradient-to-br from-white/80 via-transparent to-white/20 opacity-70 pointer-events-none"></div>
+                    
+                    {/* The Logo Image - HUGE */}
+                    <div className="relative w-36 h-36 md:w-60 md:h-60 lg:w-72 lg:h-72 filter drop-shadow-2xl">
+                        <Image 
+                            src="/finance.png" 
+                            alt="Logo" 
+                            fill
+                            className="object-contain" 
+                            priority 
+                            sizes="(max-width: 768px) 144px, 288px"
+                        />
+                    </div>
+                </motion.div>
+                
+                {/* Decor elements around the card */}
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="absolute -right-6 -top-6 bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border-2 border-white rotate-12"
+                >
+                    v2.0
+                </motion.div>
+            </motion.div>
+
+            {/* 4. Typography - Balancing the Tilt */}
+            <div className="text-center relative z-20 space-y-4">
+                <motion.h2 
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.8, ease: "backOut" }}
+                    className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 tracking-tighter"
+                >
+                    Welcome <span className="text-slate-300"> </span> <br className="md:hidden" />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-400 to-emerald-600 bg-[length:200%_auto] animate-[gradient_4s_linear_infinite]">
+                        {userName.split(' ')[0]}
+                    </span>
+                </motion.h2>
+                
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="flex items-center justify-center gap-3 text-xs md:text-sm font-bold text-slate-400 uppercase tracking-[0.4em]"
+                >
+                    <div className="h-px w-8 bg-slate-300"></div>
+                    <span>Secure Dashboard</span>
+                    <div className="h-px w-8 bg-slate-300"></div>
+                </motion.div>
+            </div>
+
+            {/* 5. Loader - Modern Pill */}
+            <motion.div 
+                className="mt-12 md:mt-20 w-48 md:w-80 h-1.5 bg-slate-200/60 rounded-full overflow-hidden relative"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+            >
+                <motion.div 
+                    className="absolute inset-y-0 left-0 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]" 
+                    initial={{ width: "0%" }} 
+                    animate={{ width: "100%" }} 
+                    transition={{ duration: 1.5, ease: "easeInOut" }} 
+                />
+            </motion.div>
+        </div>
     </motion.div>
 );
 
-// 2. Stat Card
+// 2. Stat Card (Glassmorphism)
 const StatCard = memo(({ title, value, icon, color }) => (
-  <motion.div variants={fadeInUp} className="bg-white/80 backdrop-blur-md p-5 rounded-[1.5rem] shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100 flex items-start gap-4 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-100/50 hover:border-emerald-100 group cursor-default hover:-translate-y-1">
-    <div className={`w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl transition-all duration-300 ${color.bg} group-hover:scale-110 shadow-sm`}>{icon}</div>
+  <motion.div variants={fadeInUp} className="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex items-start gap-5 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-100/40 hover:-translate-y-1 group transform-gpu">
+    <div className={`w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 shadow-sm ${color.bg} text-white`}>
+        <div className={`${color.iconColor || 'text-current'}`}>{icon}</div>
+    </div>
     <div>
       <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mb-1">{title}</p>
-      <p className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${color.text}`}>{value}</p>
+      <p className={`text-2xl sm:text-3xl font-black tracking-tight ${color.text}`}>{value}</p>
     </div>
   </motion.div>
 ));
 StatCard.displayName = "StatCard";
 
-// 3. Profit Widget
+// 3. Profit Margin Widget (Doughnut Chart)
 const ProfitMarginWidget = ({ income, expense }) => {
     const profit = income - expense;
     const margin = income > 0 ? Math.round((profit / income) * 100) : 0;
@@ -95,15 +189,15 @@ const ProfitMarginWidget = ({ income, expense }) => {
     const data = { labels: ['Margin', 'Cost'], datasets: [{ data: [Math.max(0, margin), 100 - Math.max(0, margin)], backgroundColor: [color, '#f1f5f9'], borderWidth: 0, circumference: 230, rotation: 245, cutout: '85%' }] };
 
     return (
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col items-center justify-center h-full relative overflow-hidden group hover:shadow-lg transition-all duration-500 min-h-[200px]">
+        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col items-center justify-center h-full relative overflow-hidden group hover:shadow-lg transition-all duration-500 min-h-[220px]">
             <div className="w-full flex justify-between items-center mb-2 z-10 relative">
                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Activity size={14} className="text-emerald-500"/> Profit Margin</h3>
-                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${margin > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{margin > 0 ? 'Healthy' : 'Critical'}</span>
+                 <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wide border ${margin > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>{margin > 0 ? 'Healthy' : 'Critical'}</span>
             </div>
-            <div className="relative w-36 h-36 z-10 mt-2 flex justify-center items-center">
+            <div className="relative w-40 h-40 z-10 mt-2 flex justify-center items-center">
                 <Doughnut data={data} options={{ plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 2000, easing: 'easeOutQuart' }, maintainAspectRatio: false }} />
                 <div className="absolute inset-0 flex items-center justify-center flex-col">
-                    <span className="text-3xl font-black text-slate-800 tracking-tighter">{margin}%</span>
+                    <span className="text-4xl font-black text-slate-800 tracking-tighter">{margin}%</span>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mt-1">Efficiency</p>
                 </div>
             </div>
@@ -111,35 +205,35 @@ const ProfitMarginWidget = ({ income, expense }) => {
     );
 };
 
-// 4. Quick Actions
+// 4. Quick Actions Grid
 const ActionCard = ({ onAction }) => (
-    <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 h-full flex flex-col">
-        <h2 className="text-lg font-extrabold text-slate-800 mb-5 px-1 flex items-center gap-2"><Grid size={18} className="text-emerald-500"/> Actions</h2>
+    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 h-full flex flex-col">
+        <h2 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><Grid size={18} className="text-emerald-500"/> Quick Actions</h2>
         <div className="grid grid-cols-2 gap-4 h-full">
             {[ 
-                { label: 'Income', icon: <Plus size={24}/>, color: 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100', action: 'Income' },
-                { label: 'Expense', icon: <Minus size={24}/>, color: 'bg-rose-50 text-rose-700 border-rose-100 hover:bg-rose-100', action: 'Expense' },
-                { label: 'Deposit', icon: <ArrowUpRight size={24}/>, color: 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100', action: 'Deposit' },
-                { label: 'Withdraw', icon: <ArrowDownLeft size={24}/>, color: 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100', action: 'Withdrawal' }
+                { label: 'Income', icon: <Plus size={24}/>, color: 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-600 hover:text-white', action: 'Income' },
+                { label: 'Expense', icon: <Minus size={24}/>, color: 'bg-rose-50 text-rose-700 border-rose-100 hover:bg-rose-600 hover:text-white', action: 'Expense' },
+                { label: 'Deposit', icon: <ArrowUpRight size={24}/>, color: 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-600 hover:text-white', action: 'Deposit' },
+                { label: 'Withdraw', icon: <ArrowDownLeft size={24}/>, color: 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-500 hover:text-white', action: 'Withdrawal' }
             ].map((btn) => (
-                <button key={btn.label} onClick={() => onAction(btn.action)} className={`${btn.color} font-bold p-4 rounded-[1.5rem] border flex flex-col items-center justify-center gap-2 transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-md w-full h-full min-h-[100px] aspect-[4/3] group active:scale-95`}>
-                    <div className="p-2.5 bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform">{btn.icon}</div>
-                    <span className="text-xs font-bold uppercase tracking-wide">{btn.label}</span>
+                <button key={btn.label} onClick={() => onAction(btn.action)} className={`${btn.color} font-bold p-4 rounded-[1.5rem] border flex flex-col items-center justify-center gap-3 transition-all duration-200 hover:-translate-y-1 shadow-sm hover:shadow-lg w-full h-full min-h-[110px] aspect-[4/3] group active:scale-95`}>
+                    <div className="p-3 bg-white/80 backdrop-blur-sm rounded-full shadow-sm group-hover:bg-white/20 group-hover:text-current transition-colors">{btn.icon}</div>
+                    <span className="text-xs font-bold uppercase tracking-wider">{btn.label}</span>
                 </button>
             ))}
         </div>
     </div>
 );
 
-// 5. Notifications
+// 5. Notification Dropdown
 const NotificationDropdown = ({ isOpen, notifications, onClose, onMarkRead }) => (
     <AnimatePresence>
         {isOpen && (
             <>
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 z-40 bg-transparent" />
-                <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 mt-3 w-80 sm:w-96 bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white/50 z-50 origin-top-right overflow-hidden ring-1 ring-slate-900/5">
+                <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 mt-4 w-80 sm:w-96 bg-white/95 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-white/50 z-50 origin-top-right overflow-hidden ring-1 ring-slate-900/5 transform-gpu">
                     <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wider"><Bell size={14} className="text-emerald-500"/> Notification</h3>
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wider"><Bell size={14} className="text-emerald-500"/> Notifications</h3>
                         {notifications.some(n => !n.isRead) && (<button onClick={onMarkRead} className="text-[10px] font-bold text-emerald-600 bg-white border border-emerald-100 px-3 py-1.5 rounded-full hover:bg-emerald-50 transition-colors shadow-sm">MARK ALL READ</button>)}
                     </div>
                     <div className="max-h-[24rem] overflow-y-auto custom-scrollbar p-2 space-y-1">
@@ -167,28 +261,31 @@ const NotificationDropdown = ({ isOpen, notifications, onClose, onMarkRead }) =>
     </AnimatePresence>
 );
 
-// 6. Dollar Card
+// 6. Dollar Spend Card (Credit Card Style)
 const DollarCardWidget = ({ dollarData, dollarBalance, onAddClick, onLoadClick, onItemClick, onDelete }) => {
     const recentActivity = [...dollarData].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
             {/* Virtual Card */}
-            <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.4 }} className="relative h-80 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-emerald-900/20 bg-[#064e3b] group">
-                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-800 to-[#0f172a] opacity-100"></div>
-                 <div className="absolute top-[-50%] left-[-50%] w-[100%] h-[100%] bg-emerald-400/10 rounded-full blur-[100px] animate-pulse"></div>
-                 <div className="absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] bg-teal-500/10 rounded-full blur-[80px]"></div>
-                <div className="relative p-8 flex flex-col justify-between h-full text-white">
+            <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.3 }} className="relative h-80 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-emerald-900/20 bg-[#0f172a] group transform-gpu">
+                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 via-[#0f172a] to-slate-900 opacity-100"></div>
+                 {/* Decorative Blobs */}
+                 <div className="absolute top-[-50%] left-[-50%] w-[100%] h-[100%] bg-emerald-500/20 rounded-full blur-[80px] animate-pulse"></div>
+                 <div className="absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] bg-blue-500/20 rounded-full blur-[80px]"></div>
+                 {/* Card Content */}
+                <div className="relative p-8 flex flex-col justify-between h-full text-white z-10">
                     <div className="flex justify-between items-start">
-                        <div><p className="text-emerald-200/60 text-[10px] font-black tracking-[0.2em] uppercase mb-2">ADS DOLLAR FUND</p><h3 className="text-5xl font-black tracking-tighter text-white drop-shadow-sm">{formatUSD(dollarBalance)}</h3></div>
+                        <div><p className="text-emerald-200/80 text-[10px] font-black tracking-[0.2em] uppercase mb-2">ADS DOLLAR FUND</p><h3 className="text-5xl font-black tracking-tighter text-white drop-shadow-sm">{formatUSD(dollarBalance)}</h3></div>
                         <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner"><Globe size={24} className="text-emerald-200"/></div>
                     </div>
                     <div className="mt-auto">
                         <div className="flex gap-3 mb-8">
-                            <button onClick={onLoadClick} className="bg-white text-emerald-950 text-xs font-bold py-3.5 px-6 rounded-2xl flex items-center gap-2 transition-all hover:bg-emerald-50 shadow-lg hover:shadow-emerald-900/20 active:scale-95"><ArrowDownLeft size={16}/> Load</button>
-                            <button onClick={onAddClick} className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-3.5 px-6 rounded-2xl border border-white/10 flex items-center gap-2 transition-all backdrop-blur-sm active:scale-95"><Minus size={16}/> Spend</button>
+                            <button onClick={onLoadClick} className="bg-white text-slate-900 text-xs font-bold py-3 px-6 rounded-xl flex items-center gap-2 transition-all hover:bg-emerald-50 shadow-lg hover:shadow-emerald-900/20 active:scale-95"><ArrowDownLeft size={16}/> Load Fund</button>
+                            <button onClick={onAddClick} className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-3 px-6 rounded-xl border border-white/10 flex items-center gap-2 transition-all backdrop-blur-sm active:scale-95"><Minus size={16}/> Record Spend</button>
                         </div>
                         <div className="flex justify-between items-end opacity-90">
-                            <div><div className="flex items-center gap-3 mb-1"><div className="flex -space-x-2"><div className="w-8 h-8 rounded-full bg-rose-500/80 border-2 border-[#064e3b] backdrop-blur-md"></div><div className="w-8 h-8 rounded-full bg-amber-400/80 border-2 border-[#064e3b] backdrop-blur-md"></div></div><span className="text-sm text-emerald-100/60 font-mono tracking-widest">•••• 5869</span></div></div>
+                            <div><div className="flex items-center gap-3 mb-1"><div className="flex -space-x-2"><div className="w-8 h-8 rounded-full bg-rose-500/80 border-2 border-slate-900 backdrop-blur-md"></div><div className="w-8 h-8 rounded-full bg-amber-400/80 border-2 border-slate-900 backdrop-blur-md"></div></div><span className="text-sm text-emerald-100/60 font-mono tracking-widest">•••• 5869</span></div></div>
+                            <Image src="/geckoworks.png" alt="Logo" width={30} height={30} className="opacity-50 grayscale brightness-200" />
                         </div>
                     </div>
                 </div>
@@ -208,13 +305,13 @@ const DollarCardWidget = ({ dollarData, dollarBalance, onAddClick, onLoadClick, 
                  <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar">
                      {recentActivity.length > 0 ? recentActivity.map((d, i) => (
                          <motion.div 
-                            whileHover={{ x: 2, backgroundColor: "#f8fafc" }} 
+                            whileHover={{ x: 4, backgroundColor: "#f8fafc" }} 
                             key={d._id || i} 
                             className="flex justify-between items-center p-3 rounded-2xl cursor-pointer group transition-all border border-transparent hover:border-slate-100" 
                             onClick={() => onItemClick(d)}
                          >
                              <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${d.type === 'Load' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${d.type === 'Load' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>
                                      {d.type === 'Load' ? <ArrowDownLeft size={18}/> : <Target size={18}/>}
                                  </div>
                                  <div className="min-w-0 flex-1">
@@ -241,12 +338,12 @@ const NotificationCard = ({ allUsers, onSubmit, content, setContent, targetUser,
         <form onSubmit={onSubmit} className="space-y-4 px-1">
             <div><label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Recipient</label><select id="targetUser" value={targetUser} onChange={(e) => setTargetUser(e.target.value)} required className="w-full px-4 py-3.5 border-none bg-slate-50 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-bold text-slate-700 transition-all"><option value="" disabled>Select Employee</option>{allUsers.map((u) => (<option key={u._id} value={u._id}>{u.name} ({u.role})</option>))}</select></div>
             <div><label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Message</label><textarea id="notification-content" value={content} onChange={(e) => setContent(e.target.value)} rows="3" className="w-full px-4 py-3.5 border-none bg-slate-50 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-sm font-medium text-slate-700 placeholder:text-slate-400 transition-all" required placeholder="Type your update here..." /></div>
-            <div className="flex justify-end pt-2"><button type="submit" disabled={isSending} className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-8 py-3.5 rounded-2xl flex items-center gap-2 disabled:opacity-50 transition-all shadow-xl shadow-slate-200 active:scale-95 text-sm"><Send size={16}/>{isSending ? 'Sending...':'Send Blast'}</button></div>
+            <div className="flex justify-end pt-2"><button type="submit" disabled={isSending} className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-8 py-3.5 rounded-2xl flex items-center gap-2 disabled:opacity-50 transition-all shadow-xl shadow-slate-200 active:scale-95 text-sm transform-gpu"><Send size={16}/>{isSending ? 'Sending...':'Send Blast'}</button></div>
         </form>
     </div>
 );
 
-// 8. Transaction Row
+// 8. Transaction Row (Optimized)
 const TransactionRow = memo(({ transaction, remainingBalance, onRowClick, onDelete, index }) => {
     const isIncome = transaction.type === 'Income' || transaction.type === 'Deposit';
     return (
@@ -254,11 +351,11 @@ const TransactionRow = memo(({ transaction, remainingBalance, onRowClick, onDele
             variants={modalContent} 
             layout 
             onClick={onRowClick} 
-            className="bg-white p-4 sm:p-5 rounded-[1.5rem] shadow-sm border border-slate-100 hover:shadow-lg hover:border-emerald-100 transition-all duration-300 cursor-pointer group relative overflow-hidden pr-3 sm:pr-4"
+            className="bg-white p-4 sm:p-5 rounded-[1.5rem] shadow-sm border border-slate-100 hover:shadow-lg hover:border-emerald-100 transition-all duration-300 cursor-pointer group relative overflow-hidden pr-3 sm:pr-4 transform-gpu"
         >
             <div className="flex items-center justify-between relative z-10 w-full">
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1 mr-2">
-                    <div className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-2xl shadow-sm ${isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                    <div className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-2xl shadow-sm ${isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                         {isIncome ? <ArrowUpRight size={20} /> : <ArrowDownLeft size={20} />}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -277,12 +374,13 @@ const TransactionRow = memo(({ transaction, remainingBalance, onRowClick, onDele
 
                 <div className="text-right flex-shrink-0 transition-transform duration-300 group-hover:-translate-x-12">
                       <p className={`text-base sm:text-lg font-black ${isIncome ? 'text-emerald-600' : 'text-slate-800'}`}>{isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}</p>
+                      {/* ✅ CHANGED Ref ID to Bal: Remaining Balance */}
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">Bal: {formatCurrency(remainingBalance)}</p>
                 </div>
             </div>
 
-            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white via-white to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
-                <button onClick={(e) => { e.stopPropagation(); onDelete(transaction._id); }} className="p-2.5 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-full shadow-md transition-all transform scale-90 group-hover:scale-100 hover:rotate-90"><Trash2 size={18}/></button>
+            <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white via-white to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
+                <button onClick={(e) => { e.stopPropagation(); onDelete(transaction._id); }} className="p-3 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-full shadow-md transition-all transform scale-90 group-hover:scale-100 hover:rotate-90"><Trash2 size={18}/></button>
             </div>
         </motion.div>
     );
@@ -312,6 +410,20 @@ const TransactionModal = ({ type, onClose, onSuccess }) => {
                         <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Date</label><input type="date" name="date" value={formData.date} onChange={handleChange} required className="w-full bg-slate-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-slate-600"/></div>
                     </div>
                     <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Category</label><input type="text" name="category" value={formData.category} onChange={handleChange} required className="w-full bg-slate-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none font-medium"/></div>
+                    
+                    {/* ✅ ADDED: Description Box */}
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Description <span className="text-slate-300 font-normal normal-case">(Optional)</span></label>
+                        <textarea
+                            name="description"
+                            value={formData.description}
+                            onChange={handleChange}
+                            rows="3"
+                            className="w-full bg-slate-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-slate-600 resize-none"
+                            placeholder="Add notes..."
+                        />
+                    </div>
+
                     <div className="pt-4"><button type="submit" disabled={isSubmitting} className={`w-full py-4 text-white font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 transition-all shadow-xl active:scale-95 ${type.includes('Income') || type.includes('Deposit') ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-rose-600 hover:bg-rose-700 shadow-rose-200'}`}>{isSubmitting ? 'Saving...' : 'Confirm Transaction'}</button></div>
                 </form>
             </motion.div>
@@ -599,7 +711,7 @@ export default function FinanceDashboard({ user }) {
               <motion.div variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                 <StatCard title="Income (Selected Period)" value={formatCurrency(summary.totalIncome)} icon={<TrendingUp className="text-emerald-600"/>} color={{ bg: 'bg-emerald-50', text: 'text-emerald-900' }} />
                 <StatCard title="Expense (Selected Period)" value={formatCurrency(summary.totalExpenses)} icon={<TrendingDown className="text-rose-600"/>} color={{ bg: 'bg-rose-50', text: 'text-rose-900' }} />
-                <StatCard title="Net Profit" value={formatCurrency(summary.netProfit)} icon={<FaRupeeSign className="text-green-600"/>} color={{ bg: 'bg-green-50', text: 'text-green-900' }} />
+                <StatCard title="Net Profit" value={formatCurrency(summary.netProfit)} icon={<DollarSign className="text-indigo-600"/>} color={{ bg: 'bg-indigo-50', text: 'text-indigo-900' }} />
                 <StatCard title="Current Available Balance" value={formatCurrency(bankAccount.balance)} icon={<CreditCard className="text-blue-600"/>} color={{ bg: 'bg-blue-50', text: 'text-blue-900' }} />
               </motion.div>
               
