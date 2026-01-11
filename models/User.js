@@ -28,6 +28,10 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: 'https://res.cloudinary.com/demo/image/upload/v1620297675/samples/people/smiling-man.jpg',
   },
+  isActive: {
+    type: Boolean,
+    default: true, 
+  },
   readNotifications: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Notification'

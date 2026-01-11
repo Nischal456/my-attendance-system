@@ -7,18 +7,19 @@ import {
   Send, Trash2, AlertTriangle, LogOut, Check, X as XIcon, UserPlus, 
   Briefcase, Download, ChevronDown, Bell, Users, BarChart2, Clock, 
   Menu, ChevronLeft, ChevronRight, Edit, Home, PieChart, TrendingUp, 
-  Search, Calendar, Filter, RefreshCw, Activity, Layers, Coffee
+  Search, Calendar, Filter, RefreshCw, Activity, Layers, Coffee, Grid,
+  UserCheck, UserX, Mail, Phone, MapPin
 } from 'react-feather';
 import toast, { Toaster } from 'react-hot-toast';
 import { 
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, 
   Tooltip, Legend, ArcElement, PointElement, LineElement, Filler 
 } from 'chart.js';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-// Imports moved from getServerSideProps
+// Imports
 import jwt from 'jsonwebtoken';
 import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
@@ -48,9 +49,9 @@ const fadeInUp = {
 };
 
 const modalBackdrop = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1, transition: { duration: 0.3 } },
-  exit: { opacity: 0, transition: { duration: 0.2 } }
+  initial: { opacity: 0, backdropFilter: "blur(0px)" },
+  animate: { opacity: 1, backdropFilter: "blur(8px)", transition: { duration: 0.3 } },
+  exit: { opacity: 0, backdropFilter: "blur(0px)", transition: { duration: 0.2 } }
 };
 
 const modalContent = {
@@ -88,45 +89,162 @@ const getStatusBadge = (status) => {
 
 // 1. Premium Loader
 const DashboardEntryLoader = ({ userName }) => (
-    <motion.div 
-        className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center font-sans"
+    <motion.div
+        className="fixed inset-0 z-[100] bg-slate-50 flex flex-col items-center justify-center font-sans overflow-hidden perspective-[1000px]"
         initial={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.5, ease: "easeInOut" }}
+        exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
+        transition={{ duration: 0.6 }}
     >
-        <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 200, damping: 20 }}
-            className="relative mb-8"
-        >
-            <div className="absolute inset-0 bg-emerald-200 blur-2xl rounded-full opacity-40 animate-pulse"></div>
-            <Image src="/hr.png" alt="Logo" width={120} height={120} className="relative z-10" />
-        </motion.div>
-        
-        <h2 className="text-3xl font-extrabold text-slate-800 mb-2 tracking-tight">Welcome, {userName.split(' ')[0]}</h2>
-        <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
-            <span className="flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-                Initializing HR Command Center...
-            </span>
+        {/* 1. Ultra-Premium Background (Subtle Grid & Radial) */}
+        <div className="absolute inset-0 bg-white">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#10b98110_0%,transparent_50%)]"></div>
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]"></div>
         </div>
-        
-        <motion.div 
-            className="mt-8 h-1.5 w-48 bg-slate-100 rounded-full overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-        >
-            <motion.div 
-                className="h-full bg-emerald-500 rounded-full"
-                initial={{ width: "0%" }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 1.2, ease: "easeInOut" }}
-            />
+
+        {/* 2. Main Content Wrapper */}
+        <div className="relative z-10 flex flex-col items-center justify-center">
+
+            {/* 3. THE TILTED GLASS CARD (Hero Element) */}
+            <motion.div
+                initial={{ scale: 0.4, rotate: -20, opacity: 0, y: 100 }}
+                animate={{ scale: 1, rotate: -6, opacity: 1, y: 0 }}
+                transition={{
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 15,
+                    mass: 1
+                }}
+                className="relative mb-12 md:mb-16"
+            >
+                {/* Intense Glow Behind (HR Theme) */}
+                <div className="absolute inset-0 bg-emerald-500/30 blur-[80px] rounded-full transform rotate-6 animate-pulse-slow"></div>
+
+                {/* Glass Container - Tilted & Floating */}
+                <motion.div
+                    animate={{ y: [0, -15, 0], rotate: [-6, -4, -6] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                    className="relative bg-white/40 backdrop-blur-[50px] p-8 md:p-14 rounded-[3rem] border border-white/80 shadow-[0_40px_80px_-20px_rgba(16,185,129,0.25)] ring-1 ring-white/60 transform-gpu"
+                >
+                    {/* Glossy Reflection Gradient */}
+                    <div className="absolute inset-0 rounded-[3rem] bg-gradient-to-br from-white/80 via-transparent to-white/20 opacity-70 pointer-events-none"></div>
+
+                    {/* The HR Logo Image - HUGE & SHARP */}
+                    <div className="relative w-36 h-36 md:w-60 md:h-60 lg:w-72 lg:h-72 filter drop-shadow-2xl">
+                        <Image
+                            src="/hr.png"
+                            alt="HR Logo"
+                            fill
+                            className="object-contain"
+                            priority
+                            sizes="(max-width: 768px) 144px, 288px"
+                        />
+                    </div>
+                </motion.div>
+
+                {/* Badge Decor */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="absolute -right-6 -top-6 bg-slate-900 text-emerald-400 text-xs font-bold px-4 py-1.5 rounded-full shadow-lg border-2 border-white rotate-12 tracking-wide"
+                >
+                    Version 2.0 
+                </motion.div>
+            </motion.div>
+
+            {/* 4. Typography */}
+            <div className="text-center relative z-20 space-y-4">
+                <motion.h2
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.8, ease: "backOut" }}
+                    className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 tracking-tighter"
+                >
+                    Hello <span className="text-slate-300"> </span> <br className="md:hidden" />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-400 to-emerald-600 bg-[length:200%_auto] animate-[gradient_4s_linear_infinite]">
+                        {userName.split(' ')[0]}
+                    </span>
+                </motion.h2>
+
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="flex items-center justify-center gap-3 text-xs md:text-sm font-bold text-slate-400 uppercase tracking-[0.3em]"
+                >
+                    <div className="h-px w-6 bg-slate-300"></div>
+                    <span>Initializing HR Command Center</span>
+                    <div className="h-px w-6 bg-slate-300"></div>
+                </motion.div>
+            </div>
+
+            {/* 5. Loader - Modern Pill */}
+            <motion.div
+                className="mt-12 md:mt-20 w-48 md:w-80 h-1.5 bg-slate-200/60 rounded-full overflow-hidden relative"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+            >
+                <motion.div
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                    initial={{ width: "0%" }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 1.2, ease: "easeInOut" }}
+                />
+            </motion.div>
+        </div>
+    </motion.div>
+);
+
+// 2. Employee Detail Modal
+const EmployeeDetailModal = ({ user, onClose, onToggleStatus }) => (
+    <motion.div variants={modalBackdrop} initial="initial" animate="animate" exit="exit" className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex justify-center items-center p-4">
+        <motion.div variants={modalContent} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-white/40 relative">
+            <div className={`absolute top-0 left-0 w-full h-32 ${user.isActive !== false ? 'bg-gradient-to-br from-emerald-500 to-teal-700' : 'bg-gradient-to-br from-slate-500 to-slate-700'}`}></div>
+            <button onClick={onClose} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-md transition-all z-10"><XIcon size={20}/></button>
+            
+            <div className="pt-16 px-8 pb-8 text-center relative z-0">
+                <div className="relative w-28 h-28 mx-auto mb-4">
+                    <div className="absolute inset-0 bg-white rounded-full p-1 shadow-lg">
+                        <Image src={user.avatar || '/default-avatar.png'} layout="fill" objectFit="cover" className={`rounded-full ${user.isActive === false ? 'grayscale' : ''}`} alt={user.name} />
+                    </div>
+                    <div className={`absolute bottom-1 right-1 w-6 h-6 border-4 border-white rounded-full ${user.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                </div>
+                
+                <h2 className="text-2xl font-black text-slate-800">{user.name}</h2>
+                <div className="flex items-center justify-center gap-2 mt-1 mb-6">
+                    <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-200">{user.role}</span>
+                    <span className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-lg border ${user.isActive !== false ? 'bg-emerald-100 text-emerald-700 border-emerald-100' : 'bg-rose-100 text-rose-700 border-rose-100'}`}>
+                        {user.isActive !== false ? 'Active' : 'Alumni'}
+                    </span>
+                </div>
+
+                <div className="space-y-4 text-left">
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+                        <div className="bg-white p-2.5 rounded-xl shadow-sm text-blue-500"><Mail size={18}/></div>
+                        <div className="overflow-hidden"><p className="text-xs font-bold text-slate-400 uppercase">Email Address</p><p className="text-sm font-bold text-slate-700 truncate">{user.email}</p></div>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+                        <div className="bg-white p-2.5 rounded-xl shadow-sm text-purple-500"><Phone size={18}/></div>
+                        <div><p className="text-xs font-bold text-slate-400 uppercase">Phone</p><p className="text-sm font-bold text-slate-700">{user.phone || 'N/A'}</p></div>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+                        <div className="bg-white p-2.5 rounded-xl shadow-sm text-amber-500"><Calendar size={18}/></div>
+                        <div><p className="text-xs font-bold text-slate-400 uppercase">Joined On</p><p className="text-sm font-bold text-slate-700">{formatEnglishDate(user.createdAt)}</p></div>
+                    </div>
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-slate-100">
+                    <button 
+                        onClick={() => onToggleStatus(user._id, !user.isActive)}
+                        className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${user.isActive !== false ? 'bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200'}`}
+                    >
+                        {user.isActive !== false ? <UserX size={18}/> : <UserCheck size={18}/>}
+                        {user.isActive !== false ? 'Deactivate (Move to Alumni)' : 'Re-Activate Account'}
+                    </button>
+                    {user.isActive !== false && <p className="text-xs text-slate-400 mt-3">Deactivating will restrict access but preserve data.</p>}
+                </div>
+            </div>
         </motion.div>
     </motion.div>
 );
@@ -363,10 +481,170 @@ const AdjustCheckoutModal = ({ record, onClose, onUpdate, isSubmitting }) => {
 
 // --- View Components ---
 
-const AnalyticsView = () => {
+// 3. Staff View (With Filter Logic)
+const StaffView = ({ allUsers, onUpdateUser }) => {
+    const [search, setSearch] = useState('');
+    const [roleFilter, setRoleFilter] = useState('All');
+    const [statusFilter, setStatusFilter] = useState('Active'); // 'Active' or 'Alumni'
+    const [selectedUser, setSelectedUser] = useState(null);
+
+    const roles = ['All', 'Manager', 'Staff', 'Intern', 'HR', 'Finance'];
+
+    // Smart Filtering
+    const filteredUsers = useMemo(() => {
+        return allUsers.filter(u => {
+            const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) || u.role.toLowerCase().includes(search.toLowerCase());
+            const matchesRole = roleFilter === 'All' || u.role === roleFilter;
+            // Strict check: if isActive is undefined, treat as true (Active)
+            const isUserActive = u.isActive !== false; 
+            const matchesStatus = statusFilter === 'Active' ? isUserActive : !isUserActive;
+            
+            return matchesSearch && matchesRole && matchesStatus;
+        });
+    }, [allUsers, search, roleFilter, statusFilter]);
+
+    // Handle Status Toggle
+    const handleToggleStatus = async (userId, newStatus) => {
+        const toastId = toast.loading("Updating status...");
+        try {
+            const res = await fetch('/api/hr/toggle-status', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, isActive: newStatus })
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                toast.success(data.message, { id: toastId });
+                onUpdateUser(userId, { isActive: newStatus }); 
+                setSelectedUser(null); // Close modal
+            } else {
+                toast.error("Failed to update status", { id: toastId });
+            }
+        } catch (e) { 
+            toast.error("Server error", { id: toastId }); 
+        }
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
+            <AnimatePresence>
+                {selectedUser && <EmployeeDetailModal key="modal" user={selectedUser} onClose={()=>setSelectedUser(null)} onToggleStatus={handleToggleStatus} />}
+            </AnimatePresence>
+
+            <div className="flex flex-col xl:flex-row justify-between xl:items-center gap-6">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Team Management</h1>
+                    <p className="text-slate-500 mt-1 font-medium">Manage permissions and view employee statuses.</p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="relative group">
+                        <Search className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={18} />
+                        <input 
+                            type="text" 
+                            value={search} 
+                            onChange={(e) => setSearch(e.target.value)} 
+                            placeholder="Search staff..." 
+                            className="w-full sm:w-64 pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all font-medium text-slate-700" 
+                        />
+                    </div>
+                    
+                    <Link href="/hr/add-user" className="flex items-center justify-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95">
+                        <UserPlus size={18}/> <span>Add Member</span>
+                    </Link>
+                </div>
+            </div>
+
+            {/* Premium Filter Bar */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-2 rounded-[1.2rem] border border-slate-200 shadow-sm">
+                <div className="flex flex-wrap gap-1">
+                    {roles.map(role => (
+                        <button 
+                            key={role} 
+                            onClick={() => setRoleFilter(role)}
+                            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${roleFilter === role ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+                        >
+                            {role}
+                        </button>
+                    ))}
+                </div>
+                <div className="flex bg-slate-100 p-1.5 rounded-xl w-full md:w-auto">
+                    <button onClick={()=>setStatusFilter('Active')} className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${statusFilter==='Active' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Active Staff</button>
+                    <button onClick={()=>setStatusFilter('Alumni')} className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${statusFilter==='Alumni' ? 'bg-white text-rose-500 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Alumni / Inactive</button>
+                </div>
+            </div>
+
+            {/* Cards Grid */}
+            <LayoutGroup id="staff-grid">
+                <motion.div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <AnimatePresence mode="popLayout">
+                        {filteredUsers.map((user) => (
+                            <motion.div 
+                                layout
+                                initial={{ opacity: 0, scale: 0.8 }} 
+                                animate={{ opacity: 1, scale: 1 }} 
+                                exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
+                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                                key={user._id} 
+                                onClick={() => setSelectedUser(user)}
+                                className={`bg-white p-6 rounded-[2.5rem] shadow-sm border flex flex-col items-center text-center hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer relative overflow-hidden ${user.isActive !== false ? 'border-slate-100 hover:border-emerald-100 hover:shadow-emerald-100/40' : 'border-slate-100 opacity-80 hover:opacity-100 grayscale hover:grayscale-0'}`}
+                            >
+                                <div className={`absolute top-0 left-0 w-full h-24 ${user.isActive !== false ? 'bg-gradient-to-br from-emerald-50 to-teal-50' : 'bg-slate-100'}`}></div>
+
+                                <div className="w-24 h-24 rounded-full p-1.5 bg-white mb-4 shadow-lg relative z-10">
+                                    <div className="w-full h-full rounded-full overflow-hidden relative">
+                                        <Image src={user.avatar || '/default-avatar.png'} layout="fill" objectFit="cover" alt={user.name} className="transition-transform duration-500 group-hover:scale-110"/>
+                                    </div>
+                                    <div className={`absolute bottom-1 right-1 w-5 h-5 border-4 border-white rounded-full ${user.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                                </div>
+                                
+                                <div className="relative z-10 w-full">
+                                    <h3 className="text-lg font-extrabold text-slate-800 truncate tracking-tight">{user.name}</h3>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5">{user.role}</p>
+                                    
+                                    <div className="grid grid-cols-2 gap-2 text-xs font-medium text-slate-500 bg-slate-50 p-3 rounded-2xl border border-slate-100/50">
+                                        <div className="flex flex-col items-center">
+                                            <Briefcase size={14} className="mb-1.5 text-indigo-500"/>
+                                            <span className="font-semibold">Full-Time</span>
+                                        </div>
+                                        <div className="flex flex-col items-center border-l border-slate-200 pl-2">
+                                            <Activity size={14} className={`mb-1.5 ${user.isActive !== false ? 'text-emerald-500' : 'text-slate-400'}`}/>
+                                            <span className={`font-semibold ${user.isActive !== false ? 'text-emerald-600' : 'text-slate-500'}`}>{user.isActive !== false ? 'Active' : 'Ended'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-5 w-full">
+                                    <button className="w-full py-2.5 rounded-xl bg-slate-50 text-xs font-bold text-slate-500 group-hover:bg-slate-900 group-hover:text-white transition-colors flex items-center justify-center gap-2">
+                                        View Profile <ChevronRight size={12}/>
+                                    </button>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </motion.div>
+            </LayoutGroup>
+            
+            {filteredUsers.length === 0 && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-24 text-slate-400 flex flex-col items-center">
+                    <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-inner border border-slate-100"><Users size={40} className="opacity-30"/></div>
+                    <h3 className="text-lg font-bold text-slate-600">No employees found.</h3>
+                    <p className="text-sm font-medium opacity-70">Try adjusting your filters.</p>
+                </motion.div>
+            )}
+        </motion.div>
+    );
+};
+
+const AnalyticsView = ({ kpis, taskDistribution, leaveBreakdown, todayLocation }) => {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Note: We use the passed props if available, otherwise fetch. 
+  // However, since the main component fetches specific analytics on mount for 'analytics' view,
+  // we can use the fetch approach consistent with the previous logic.
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -538,7 +816,6 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
                 <th className="px-6 py-5 font-bold tracking-wider">Date</th>
                 <th className="px-6 py-5 font-bold tracking-wider">Timings</th>
                 <th className="px-6 py-5 font-bold tracking-wider">Duration</th>
-                {/* NEW COLUMN: Break */}
                 <th className="px-6 py-5 font-bold tracking-wider">Break</th>
                 <th className="px-6 py-5 font-bold tracking-wider">Note</th>
                 <th className="px-6 py-5 font-bold text-right tracking-wider">Actions</th>
@@ -566,7 +843,6 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
                     </div>
                   </td>
                   <td className={`px-6 py-4 font-mono text-sm ${getDurationStyle(att)}`}>{formatDuration(att.duration)}</td>
-                  {/* NEW DATA: Break Taken */}
                   <td className="px-6 py-4 font-mono text-sm text-slate-500">{formatDuration(att.totalBreakDuration)}</td>
                   <td className="px-6 py-4 max-w-xs truncate text-slate-400 italic" title={att.description}>{att.description || '—'}</td>
                   <td className="px-6 py-4 text-right">
@@ -711,6 +987,9 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   const [activeView, setActiveView] = useState('dashboard');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const userDropdownRef = useRef(null);
+  
+  // Users state for StaffView to handle updates locally
+  const [usersState, setUsersState] = useState(allUsers);
 
   // Splash Screen Logic
   useEffect(() => { const timer = setTimeout(() => setShowSplash(false), 2000); return () => clearTimeout(timer); }, []);
@@ -768,17 +1047,14 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   }, []);
 
   // --- Handlers ---
-
-  const handleLogout = async () => {
-        await fetch('/api/auth/logout');
-
-        toast.success('Logged out successfully');
-        setTimeout(() => {
-            router.push('/login');
-        }, 800);
-    };
+  const handleLogout = async () => { await fetch("/api/auth/logout", { method: "POST" }); router.push("/login"); };
   const handleMonthChange = (val) => setSelectedMonth(d => { const n = new Date(d); n.setMonth(n.getMonth() + val); return n; });
   const handleNav = (view) => { setActiveView(view); setIsMobileMenuOpen(false); };
+
+  // Helper to update user state locally
+  const handleUpdateUser = (userId, updates) => {
+      setUsersState(prev => prev.map(u => u._id === userId ? { ...u, ...updates } : u));
+  };
 
   // Leave Handlers
   const openLeaveModal = (req) => { setCurrentLeaveItem(req); setHrComments(req.hrComments||''); setIsLeaveModalOpen(true); };
@@ -844,6 +1120,8 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
         case 'attendance': return <AttendanceView attendanceData={attendanceRecords} allUsers={allUsers} openDeleteModal={(id)=>{setRecordToDelete(id);setIsDeleteModalOpen(true)}} openEditModal={(r)=>{setEditingRecord(r);setIsEditModalOpen(true)}} />;
         case 'leaves': return <LeaveManagementView pending={leaveRequests} approved={approvedLeaves} history={concludedLeaves} onManage={openLeaveModal} />;
         case 'notifications': return <NotificationSender allUsers={allUsers} targetType={targetType} setTargetType={setTargetType} targetUser={targetUser} setTargetUser={setTargetUser} notificationContent={notificationContent} setNotificationContent={setNotificationContent} handleSendNotification={handleSendNotification} isSending={isSending} />;
+        // UPDATED: Using new StaffView with state management
+        case 'staff': return <StaffView allUsers={usersState} onUpdateUser={handleUpdateUser} />;
         default: return null;
     }
   };
@@ -883,6 +1161,12 @@ const Sidebar = ({ isMobile }) => (
         icon={<BarChart2 size={20} />}
         isActive={activeView === "dashboard"}
         onClick={() => handleNav("dashboard")}
+      />
+      <NavButton
+        label="Employees"
+        icon={<Users size={20} />}
+        isActive={activeView === "staff"}
+        onClick={() => handleNav("staff")}
       />
       <NavButton
         label="Analytics"
@@ -1029,11 +1313,12 @@ export async function getServerSideProps(context) {
       return { redirect: { destination: "/dashboard", permanent: false } };
     }
     
-    // UPDATED: Removed limits to show ALL records and added 'avatar' to population
+    // UPDATED: Fetches extra fields (email, phone, createdAt, isActive) for the detailed profile modal
     const [allAttendance, allLeaveRequests, allUsers] = await Promise.all([
         Attendance.find({}).populate("user", "name role avatar").sort({ checkInTime: -1 }).lean(), 
-        LeaveRequest.find({}).populate('user', 'name role avatar').sort({ createdAt: -1 }).lean(), // Added 'avatar' here
-        User.find({ role: { $ne: 'HR' } }).select('name role avatar').sort({ name: 1 }).lean()
+        LeaveRequest.find({}).populate('user', 'name role avatar').sort({ createdAt: -1 }).lean(), 
+        // Modified query to include necessary details for Employee Detail Modal
+        User.find({ role: { $ne: 'HR' } }).select('name role avatar email phone createdAt isActive').sort({ name: 1 }).lean()
     ]);
     
     const now = new Date();

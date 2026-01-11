@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -1007,74 +1007,219 @@ const DailyStandupReport = () => {
 // --- UPDATED CHAT COMPONENTS ---
 
 const DeleteChatModal = ({ onConfirm, onClose, isDeleting }) => (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[101] flex justify-center items-center p-4">
-        <motion.div initial={{ y: 20, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm text-center">
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-rose-50 mb-6">
-                <AlertTriangle className="h-8 w-8 text-rose-500" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Conversation?</h3>
-            <p className="text-sm text-slate-500 mb-8 leading-relaxed">This will permanently remove all messages for both participants. This action cannot be undone.</p>
-            <div className="grid grid-cols-2 gap-3">
-                <button onClick={onClose} disabled={isDeleting} className="w-full px-5 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition">Cancel</button>
-                <button onClick={onConfirm} disabled={isDeleting} className="w-full px-5 py-3 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 shadow-lg shadow-rose-200 transition">{isDeleting ? 'Deleting...' : 'Delete'}</button>
-            </div>
-        </motion.div>
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-[101] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+  >
+    <motion.div
+      initial={{ scale: 0.95, y: 20, opacity: 0 }}
+      animate={{ scale: 1, y: 0, opacity: 1 }}
+      exit={{ scale: 0.95, y: 20, opacity: 0 }}
+      className="bg-white w-full max-w-sm rounded-3xl p-8 text-center shadow-2xl"
+    >
+      <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-6">
+        <AlertTriangle className="text-rose-500" />
+      </div>
+      <h3 className="text-xl font-bold mb-2">Delete Conversation?</h3>
+      <p className="text-sm text-slate-500 mb-8">
+        This will permanently remove all messages. This action cannot be undone.
+      </p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={onClose}
+          disabled={isDeleting}
+          className="py-3 rounded-xl border font-bold hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={isDeleting}
+          className="py-3 rounded-xl bg-rose-500 text-white font-bold hover:bg-rose-600"
+        >
+          {isDeleting ? 'Deleting...' : 'Delete'}
+        </button>
+      </div>
     </motion.div>
+  </motion.div>
 );
 
-const ChatSidebar = ({ conversations, users, onSelect, selectedConvId, currentUser, onDelete }) => {
+
+const ChatSidebar = ({
+    conversations,
+    users,
+    onSelect,
+    selectedConvId,
+    currentUser,
+    onDelete
+}) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const sortedConversations = useMemo(() => {
-        return [...conversations].sort((a, b) => (b.unreadCount || 0) - (a.unreadCount || 0) || new Date(b.lastMessage?.createdAt || 0) - new Date(a.lastMessage?.createdAt || 0));
+        return [...conversations].sort(
+            (a, b) =>
+                (b.unreadCount || 0) - (a.unreadCount || 0) ||
+                new Date(b.lastMessage?.createdAt || 0) -
+                    new Date(a.lastMessage?.createdAt || 0)
+        );
     }, [conversations]);
 
     const filteredUsers = useMemo(() => {
         if (!searchTerm) return [];
-        return users.filter(u => u._id !== currentUser._id && u.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        return users.filter(
+            u =>
+                u._id !== currentUser._id &&
+                u.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
     }, [users, searchTerm, currentUser._id]);
 
     return (
         <div className="w-full h-full flex flex-col bg-white border-r border-slate-100">
+            {/* Search */}
             <div className="p-6 pb-2">
                 <div className="relative group">
-                    <Search size={18} className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-                    <input type="text" placeholder="Search team..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-emerald-100 transition-all placeholder-slate-400" />
+                    <Search
+                        size={18}
+                        className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors"
+                    />
+                    <input
+                        type="text"
+                        placeholder="Search team..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-emerald-100 transition-all placeholder-slate-400"
+                    />
                 </div>
             </div>
+
+            {/* List */}
             <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar space-y-1">
                 {searchTerm ? (
                     <>
-                        <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Results</h3>
-                        {filteredUsers.length > 0 ? filteredUsers.map(user => (
-                            <div key={user._id} onClick={() => onSelect(user)} className="p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 rounded-2xl transition-all">
-                                <Image src={user.avatar} width={44} height={44} className="rounded-xl object-cover" alt={user.name} />
-                                <p className="font-bold text-slate-700 text-sm">{user.name}</p>
-                            </div>
-                        )) : <p className="p-4 text-center text-sm text-slate-400 italic">No users found.</p>}
+                        <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+                            Results
+                        </h3>
+
+                        {filteredUsers.length > 0 ? (
+                            filteredUsers.map(user => (
+                                <div
+                                    key={user._id}
+                                    onClick={() => onSelect(user)}
+                                    className="p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 rounded-2xl transition-all"
+                                >
+                                    {/* Avatar */}
+                                    <div className="relative w-11 h-11 rounded-full overflow-hidden flex-shrink-0">
+                                        <Image
+                                            src={user.avatar}
+                                            alt={user.name}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </div>
+
+                                    <p className="font-bold text-slate-700 text-sm">
+                                        {user.name}
+                                    </p>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="p-4 text-center text-sm text-slate-400 italic">
+                                No users found.
+                            </p>
+                        )}
                     </>
                 ) : (
                     <>
-                        <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Recent Chats</h3>
+                        <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+                            Recent Chats
+                        </h3>
+
                         {sortedConversations.map(conv => {
-                            const otherUser = conv.participants.find(p => p._id !== currentUser._id);
+                            const otherUser = conv.participants.find(
+                                p => p._id !== currentUser._id
+                            );
                             if (!otherUser) return null;
+
                             const isUnread = conv.unreadCount > 0;
                             const isSelected = selectedConvId === conv._id;
+
                             return (
-                                <div key={conv._id} onClick={() => onSelect(otherUser, conv)} className={`group relative p-3 flex items-center gap-4 cursor-pointer rounded-2xl transition-all duration-200 ${isSelected ? 'bg-emerald-50/80 shadow-sm' : 'hover:bg-slate-50'}`}>
-                                    <div className="relative flex-shrink-0">
-                                        <Image src={otherUser.avatar} width={48} height={48} className={`rounded-2xl object-cover transition-all ${isUnread ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`} alt={otherUser.name} />
-                                        {isUnread && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">{conv.unreadCount}</span>}
+                                <div
+                                    key={conv._id}
+                                    onClick={() => onSelect(otherUser, conv)}
+                                    className={`group relative p-3 flex items-center gap-4 cursor-pointer rounded-2xl transition-all duration-200 ${
+                                        isSelected
+                                            ? 'bg-emerald-50/80 shadow-sm'
+                                            : 'hover:bg-slate-50'
+                                    }`}
+                                >
+                                    {/* Avatar */}
+                                    <div className="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+                                        <Image
+                                            src={otherUser.avatar}
+                                            alt={otherUser.name}
+                                            fill
+                                            className={`object-cover transition-all ${
+                                                isUnread
+                                                    ? 'ring-2 ring-emerald-400 ring-offset-2'
+                                                    : ''
+                                            }`}
+                                        />
+
+                                        {isUnread && (
+                                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">
+                                                {conv.unreadCount}
+                                            </span>
+                                        )}
                                     </div>
+
+                                    {/* Content */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-baseline mb-0.5">
-                                            <p className={`font-bold truncate text-sm ${isUnread ? 'text-slate-900' : 'text-slate-700'}`}>{otherUser.name}</p>
-                                            <span className="text-[10px] text-slate-400 font-medium">{conv.lastMessage && formatDistanceToNow(new Date(conv.lastMessage.createdAt), { addSuffix: false })}</span>
+                                            <p
+                                                className={`font-bold truncate text-sm ${
+                                                    isUnread
+                                                        ? 'text-slate-900'
+                                                        : 'text-slate-700'
+                                                }`}
+                                            >
+                                                {otherUser.name}
+                                            </p>
+
+                                            <span className="text-[10px] text-slate-400 font-medium">
+                                                {conv.lastMessage &&
+                                                    formatDistanceToNow(
+                                                        new Date(
+                                                            conv.lastMessage.createdAt
+                                                        ),
+                                                        { addSuffix: false }
+                                                    )}
+                                            </span>
                                         </div>
-                                        <p className={`text-xs truncate ${isUnread ? 'text-slate-800 font-semibold' : 'text-slate-500'}`}>{conv.lastMessage?.message || 'No messages yet'}</p>
+
+                                        <p
+                                            className={`text-xs truncate ${
+                                                isUnread
+                                                    ? 'text-slate-800 font-semibold'
+                                                    : 'text-slate-500'
+                                            }`}
+                                        >
+                                            {conv.lastMessage?.message ||
+                                                'No messages yet'}
+                                        </p>
                                     </div>
-                                    <button onClick={(e) => { e.stopPropagation(); onDelete(conv._id); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100">
+
+                                    {/* Delete */}
+                                    <button
+                                        onClick={e => {
+                                            e.stopPropagation();
+                                            onDelete(conv._id);
+                                        }}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100"
+                                    >
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
@@ -1087,178 +1232,235 @@ const ChatSidebar = ({ conversations, users, onSelect, selectedConvId, currentUs
     );
 };
 
+
 const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBack }) => {
-    const isMobile = useMediaQuery('(max-width: 767px)');
-    const [messages, setMessages] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const messagesEndRef = useRef(null);
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
 
-    useEffect(() => {
-        let isMounted = true;
-        const fetchMessages = async () => {
-            if (conversation) {
-                setIsLoading(true);
-                try {
-                    const res = await fetch(`/api/chat/messages?conversationId=${conversation._id}`);
-                    const data = await res.json();
-                    if (data.success && isMounted) setMessages((data.messages || []).map(m => ({ ...m, status: 'sent' })));
-                } catch (err) {
-                    toast.error("Failed to load messages.");
-                } finally {
-                    if (isMounted) setIsLoading(false);
-                }
-            } else {
-                setMessages([]);
-            }
-        };
-        fetchMessages();
+  /* ---------------- FETCH MESSAGES ---------------- */
+  useEffect(() => {
+    let mounted = true;
 
-        let pusher;
-        let channel;
+    const loadMessages = async () => {
+      if (!conversation) {
+        setMessages([]);
+        return;
+      }
 
-        if (conversation) {
-            pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
-                cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
-            });
-            channel = pusher.subscribe(`chat-${conversation._id}`);
-            channel.bind('new-message', (data) => {
-                if (data.senderId._id !== currentUser._id) {
-                    setMessages(prev => [...prev, { ...data, status: 'sent' }]);
-                }
-            });
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/chat/messages?conversationId=${conversation._id}`);
+        const data = await res.json();
+        if (mounted && data.success) {
+          setMessages(data.messages.map(m => ({ ...m, status: 'sent' })));
         }
-
-        return () => {
-            isMounted = false;
-            if (channel && conversation) {
-                pusher.unsubscribe(`chat-${conversation._id}`);
-            }
-            if (pusher) {
-                pusher.disconnect();
-            }
-        };
-    }, [conversation, currentUser._id]);
-
-    useEffect(() => {
-        const markAsRead = async () => {
-            if (conversation && conversation.unreadCount > 0) {
-                await fetch('/api/chat/mark-as-read', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ conversationId: conversation._id })
-                });
-                onMessageSent();
-            }
-        };
-        markAsRead();
-    }, [conversation, onMessageSent]);
-
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        const messageText = newMessage.trim();
-        if (!messageText) return;
-
-        const tempId = `temp_${Date.now()}`;
-        const optimisticMessage = {
-            _id: tempId,
-            senderId: { _id: currentUser._id, name: currentUser.name, avatar: currentUser.avatar },
-            message: messageText,
-            createdAt: new Date().toISOString(),
-            status: 'sending'
-        };
-
-        setMessages(prev => [...prev, optimisticMessage]);
-        setNewMessage('');
-
-        try {
-            const res = await fetch('/api/chat/messages', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ receiverId: selectedUser._id, message: messageText })
-            });
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.message);
-
-            setMessages(prev => prev.map(msg => msg._id === tempId ? { ...result.data, status: 'sent' } : msg));
-            onMessageSent();
-        } catch (err) {
-            toast.error("Failed to send message.");
-            setMessages(prev => prev.map(msg => msg._id === tempId ? { ...msg, status: 'failed' } : msg));
-        }
+      } catch {
+        toast.error('Failed to load messages');
+      } finally {
+        mounted && setIsLoading(false);
+      }
     };
 
-    if (!selectedUser) {
-        return <div className="hidden md:flex flex-1 items-center justify-center bg-white"><div className="text-center"><div className="bg-slate-50 inline-block p-6 rounded-full mb-4"><MessageSquare size={40} className="text-slate-300" /></div><p className="text-slate-500 font-medium">Select a conversation to start chatting</p></div></div>;
+    loadMessages();
+
+    let pusher, channel;
+    if (conversation) {
+      pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+      });
+
+      channel = pusher.subscribe(`chat-${conversation._id}`);
+      channel.bind('new-message', data => {
+        if (data.senderId._id !== currentUser._id) {
+          setMessages(prev => [...prev, { ...data, status: 'sent' }]);
+        }
+      });
     }
 
+    return () => {
+      mounted = false;
+      if (pusher && conversation) {
+        pusher.unsubscribe(`chat-${conversation._id}`);
+        pusher.disconnect();
+      }
+    };
+  }, [conversation, currentUser._id]);
+
+  /* ---------------- MARK READ ---------------- */
+  useEffect(() => {
+    if (!conversation?.unreadCount) return;
+    fetch('/api/chat/mark-as-read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversationId: conversation._id }),
+    }).then(onMessageSent);
+  }, [conversation, onMessageSent]);
+
+  /* ---------------- AUTO SCROLL (FAST) ---------------- */
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    });
+  }, [messages.length]);
+
+  /* ---------------- SEND MESSAGE ---------------- */
+  const handleSendMessage = useCallback(async e => {
+    e.preventDefault();
+    const text = newMessage.trim();
+    if (!text) return;
+
+    const tempId = `temp_${Date.now()}`;
+    setMessages(prev => [
+      ...prev,
+      {
+        _id: tempId,
+        senderId: currentUser,
+        message: text,
+        createdAt: new Date().toISOString(),
+        status: 'sending',
+      },
+    ]);
+
+    setNewMessage('');
+
+    try {
+      const res = await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiverId: selectedUser._id, message: text }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error();
+
+      setMessages(prev =>
+        prev.map(m => (m._id === tempId ? { ...result.data, status: 'sent' } : m))
+      );
+      onMessageSent();
+    } catch {
+      setMessages(prev =>
+        prev.map(m => (m._id === tempId ? { ...m, status: 'failed' } : m))
+      );
+    }
+  }, [newMessage, currentUser, selectedUser, onMessageSent]);
+
+  /* ---------------- EMPTY STATE ---------------- */
+  if (!selectedUser) {
     return (
-        <div className="flex-1 flex flex-col h-full bg-white relative">
-            {/* Header */}
-            <header className="p-4 px-6 border-b border-slate-100 flex items-center gap-4 bg-white/80 backdrop-blur-md sticky top-0 z-10">
-                {isMobile && (
-                    <button onClick={onBack} className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-full">
-                        <ArrowLeft size={20} />
-                    </button>
-                )}
-                <div className="relative">
-                    <Image src={selectedUser.avatar} width={44} height={44} className="rounded-xl object-cover shadow-sm" alt={selectedUser.name} />
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                </div>
-                <div>
-                    <h3 className="font-bold text-slate-800 text-base">{selectedUser.name}</h3>
-                    <p className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-full inline-block">{selectedUser.role}</p>
-                </div>
-            </header>
-
-            {/* Messages Area */}
-            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/30">
-                {messages.map((msg, i) => {
-                    const isMe = msg.senderId._id === currentUser._id;
-                    const isSequence = i > 0 && messages[i - 1].senderId._id === msg.senderId._id;
-                    return (
-                        <motion.div
-                            key={msg._id}
-                            layout
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            className={`flex items-end gap-3 max-w-[85%] ${isMe ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
-                        >
-                            {!isMe && !isSequence && <Image src={msg.senderId.avatar} width={32} height={32} className="rounded-full object-cover shadow-sm mb-1" alt={msg.senderId.name} />}
-                            {!isMe && isSequence && <div className="w-8" />}
-
-                            <div className={`relative px-5 py-3 shadow-sm text-sm leading-relaxed ${isMe ? 'bg-emerald-600 text-white rounded-[1.2rem] rounded-br-sm' : 'bg-white text-slate-700 rounded-[1.2rem] rounded-bl-sm border border-slate-100'}`}>
-                                <p>{msg.message}</p>
-                                <span className={`text-[10px] block mt-1 opacity-70 ${isMe ? 'text-emerald-100 text-right' : 'text-slate-400'}`}>
-                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
-
-                            {isMe && (
-                                <div className="flex-shrink-0 mb-3 text-slate-400">
-                                    {msg.status === 'sending' && <Clock size={12} className="animate-spin" />}
-                                    {msg.status === 'failed' && <AlertCircle size={12} className="text-rose-500" />}
-                                </div>
-                            )}
-                        </motion.div>
-                    );
-                })}
-                <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input Area */}
-            <footer className="p-4 px-6 bg-white border-t border-slate-100">
-                <form onSubmit={handleSendMessage} className="flex items-end gap-3 bg-slate-50 p-2 rounded-[1.5rem] border border-slate-200 focus-within:ring-2 focus-within:ring-emerald-100 focus-within:border-emerald-300 transition-all">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type your message..." className="flex-1 p-3 bg-transparent border-none focus:ring-0 text-sm text-slate-700 placeholder-slate-400 min-h-[44px]" />
-                    <button type="submit" disabled={!newMessage.trim()} className="bg-emerald-600 text-white p-3 rounded-full hover:bg-emerald-700 disabled:opacity-50 disabled:hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200 active:scale-90 mb-0.5 mr-0.5"><Send size={18} className="ml-0.5" /></button>
-                </form>
-            </footer>
+      <div className="hidden md:flex flex-1 items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <MessageSquare size={36} className="text-slate-300" />
+          </div>
+          <p className="text-slate-500 font-semibold">Select a user to start chatting</p>
+          <p className="text-xs text-slate-400 mt-1">Ultra-fast • Secure • Premium</p>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="flex flex-col flex-1 bg-white">
+
+      {/* HEADER */}
+      <header className="flex items-center gap-4 p-4 border-b bg-white/90 backdrop-blur sticky top-0 z-10">
+        {isMobile && (
+          <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100">
+            <ArrowLeft size={18} />
+          </button>
+        )}
+
+        <div className="relative w-11 h-11">
+          <Image
+            src={selectedUser.avatar}
+            fill
+            className="rounded-full object-cover ring-2 ring-emerald-500"
+            alt={selectedUser.name}
+          />
+        </div>
+
+        <div>
+          <h3 className="font-bold text-slate-800">{selectedUser.name}</h3>
+          <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+            {selectedUser.role}
+          </span>
+        </div>
+      </header>
+
+      {/* MESSAGES */}
+      <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50">
+        {messages.length === 0 && !isLoading && (
+          <div className="text-center mt-24">
+            <p className="text-slate-400 font-medium">No messages yet</p>
+            <p className="text-xs text-slate-300">Say hello 👋</p>
+          </div>
+        )}
+
+        {messages.map((msg, i) => {
+          const isMe = msg.senderId._id === currentUser._id;
+          const prev = messages[i - 1];
+          const showAvatar = !isMe && (!prev || prev.senderId._id !== msg.senderId._id);
+
+          return (
+            <div
+              key={msg._id}
+              className={`flex items-end gap-3 ${isMe ? 'justify-end' : 'justify-start'}`}
+            >
+              {!isMe && (
+                <div className="w-8 h-8">
+                  {showAvatar && (
+                    <Image
+                      src={msg.senderId.avatar}
+                      width={32}
+                      height={32}
+                      className="rounded-full object-cover"
+                      alt=""
+                    />
+                  )}
+                </div>
+              )}
+
+              <div
+                className={`px-4 py-2 text-sm max-w-[75%] shadow-sm ${
+                  isMe
+                    ? 'bg-emerald-600 text-white rounded-2xl rounded-br-sm'
+                    : 'bg-white border rounded-2xl rounded-bl-sm'
+                }`}
+              >
+                {msg.message}
+                <div className="text-[10px] opacity-60 mt-1 text-right">
+                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* INPUT */}
+      <footer className="p-4 border-t bg-white">
+        <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
+          <input
+            value={newMessage}
+            onChange={e => setNewMessage(e.target.value)}
+            placeholder="Type a message…"
+            className="flex-1 px-4 py-3 rounded-full bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+          />
+          <button
+            disabled={!newMessage.trim()}
+            className="p-3 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition"
+          >
+            <Send size={18} />
+          </button>
+        </form>
+      </footer>
+    </div>
+  );
 };
 
 const ChatView = ({ user, onBack }) => {
@@ -1774,69 +1976,124 @@ export default function Dashboard({ user }) {
                                     </div>
 
                                     {/* Profile Dropdown */}
-                                    <div ref={userDropdownRef} className="relative pl-4 border-l border-slate-200/60 ml-2">
-                                        <button
-                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                            className="group flex items-center gap-3 pl-1 pr-1.5 py-1 rounded-full transition-all duration-300 hover:bg-slate-50 focus:outline-none"
-                                        >
-                                            <div className="relative">
-                                                <div className="absolute -inset-0.5 bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-[2px]"></div>
-                                                <Image
-                                                    src={profileUser.avatar}
-                                                    alt={profileUser.name}
-                                                    width={42}
-                                                    height={42}
-                                                    className="rounded-full object-cover border-2 border-white relative z-10 shadow-sm"
-                                                    style={{ width: 'auto', height: 'auto' }}
-                                                />
-                                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full z-20"></div>
-                                            </div>
+                                    <div ref={userDropdownRef} className="relative pl-2 ml-2">
+    {/* TRIGGER BUTTON - Clean, Pill Shape, No Borders */}
+    <motion.button
+        whileHover={{ scale: 1.02, backgroundColor: "rgba(241, 245, 249, 0.6)" }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        className={`group flex items-center gap-3 pr-3 pl-1.5 py-1.5 rounded-full transition-all duration-300 focus:outline-none ${isDropdownOpen ? 'bg-slate-100 shadow-inner' : 'hover:bg-slate-50'}`}
+    >
+        {/* Avatar Wrapper - Enforces Perfect Circle */}
+        <div className="relative">
+            {/* Animated Glow Ring on Hover */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]" />
+            
+            <div className="relative h-[44px] w-[44px] rounded-full ring-[3px] ring-white shadow-md overflow-hidden z-10">
+                <Image
+                    src={profileUser.avatar}
+                    alt={profileUser.name}
+                    fill
+                    className="object-cover"
+                    priority
+                />
+            </div>
+            
+            {/* Status Dot */}
+            <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full z-20 shadow-sm" />
+        </div>
 
-                                            <div className="hidden md:flex flex-col items-start text-left">
-                                                <span className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">
-                                                    {profileUser.name.split(' ')[0]}
-                                                </span>
-                                                <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md mt-0.5 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
-                                                    {profileUser.role}
-                                                </span>
-                                            </div>
+        {/* User Info */}
+        <div className="hidden md:flex flex-col items-start text-left mr-1">
+            <span className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 transition-colors leading-tight">
+                {profileUser.name.split(' ')[0]}
+            </span>
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider group-hover:text-emerald-600 transition-colors">
+                {profileUser.role}
+            </span>
+        </div>
 
-                                            <div className="hidden md:flex items-center justify-center w-6 h-6 rounded-full bg-slate-50 group-hover:bg-emerald-50 transition-colors">
-                                                <ChevronDown size={14} className={`text-slate-400 group-hover:text-emerald-500 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                                            </div>
-                                        </button>
+        {/* Smooth Chevron */}
+        <motion.div 
+            animate={{ rotate: isDropdownOpen ? 180 : 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} // Custom Bezier for smoothness
+            className="hidden md:flex items-center justify-center text-slate-400 group-hover:text-emerald-600"
+        >
+            <ChevronDown size={16} strokeWidth={2.5} />
+        </motion.div>
+    </motion.button>
 
-                                        <AnimatePresence>
-                                            {isDropdownOpen && (
-                                                <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className={`absolute top-full right-0 mt-4 w-72 rounded-3xl shadow-2xl bg-white/95 backdrop-blur-xl border border-white/50 z-50 origin-top-right overflow-hidden max-w-[calc(100vw-2rem)]`}>
-                                                    <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-                                                        <div className="flex items-center space-x-4">
-                                                            <Image src={profileUser.avatar} alt={profileUser.name} width={56} height={56} className="rounded-2xl object-cover aspect-square shadow-sm" style={{ width: 'auto', height: 'auto' }} />
-                                                            <div>
-                                                                <p className="font-bold text-slate-800 text-lg truncate">{profileUser.name}</p>
-                                                                <p className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg inline-block mt-1 border border-emerald-100">{profileUser.role}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="p-3">
-                                                        <Link href="/performance" className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-3 transition-colors rounded-2xl">
-                                                            <TrendingUp className="h-5 w-5" />
-                                                            <span>My Performance</span>
-                                                        </Link>
-                                                        <Link href="/leaves" className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-3 transition-colors rounded-2xl">
-                                                            <FileText className="h-5 w-5" />
-                                                            <span>My Leave Requests</span>
-                                                        </Link>
-                                                        <div className="h-px bg-slate-100 my-2"></div>
-                                                        <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm font-bold text-rose-500 hover:bg-rose-50 flex items-center gap-3 transition-colors rounded-2xl">
-                                                            <LogOut className="h-5 w-5" />
-                                                            <span>Sign Out</span>
-                                                        </button>
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
+    {/* DROPDOWN MENU */}
+    <AnimatePresence>
+        {isDropdownOpen && (
+            <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.98, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: 8, scale: 0.98, filter: "blur(4px)" }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute top-full right-0 mt-3 w-72 rounded-[28px] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1),0_10px_30px_-10px_rgba(0,0,0,0.05)] bg-white/90 backdrop-blur-2xl border border-white/60 z-50 origin-top-right overflow-hidden ring-1 ring-slate-900/5"
+            >
+                {/* Header with Subtle Gradient */}
+                <div className="p-5 relative overflow-hidden bg-gradient-to-b from-white to-slate-50/50">
+                    <div className="relative z-10 flex items-center gap-4">
+                        <div className="relative h-12 w-12 rounded-full ring-4 ring-white shadow-sm overflow-hidden shrink-0">
+                            <Image src={profileUser.avatar} alt={profileUser.name} fill className="object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-slate-900 truncate text-base">{profileUser.name}</h4>
+                            <p className="text-xs font-medium text-slate-500 truncate flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Online
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Menu List */}
+                <div className="p-2 space-y-1 bg-white/50">
+                    <Link href="/performance">
+                        <motion.div 
+                            whileHover={{ x: 4, backgroundColor: "rgba(255, 255, 255, 1)" }}
+                            className="group flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
+                        >
+                            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 text-slate-500 group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300">
+                                <TrendingUp size={18} strokeWidth={2.5} />
+                            </div>
+                            <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-900">Performance</span>
+                        </motion.div>
+                    </Link>
+
+                    <Link href="/leaves">
+                        <motion.div 
+                             whileHover={{ x: 4, backgroundColor: "rgba(255, 255, 255, 1)" }}
+                             className="group flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
+                        >
+                            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 text-slate-500 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+                                <FileText size={18} strokeWidth={2.5} />
+                            </div>
+                            <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-900">Leave Requests</span>
+                        </motion.div>
+                    </Link>
+                    
+                    {/* Soft Separator */}
+                    <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-2 mx-6" />
+                    
+                    <button onClick={handleLogout} className="w-full">
+                        <motion.div 
+                             whileHover={{ x: 4, backgroundColor: "rgba(255, 241, 242, 1)" }}
+                             className="group flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all"
+                        >
+                            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-rose-50 text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
+                                <LogOut size={18} strokeWidth={2.5} />
+                            </div>
+                            <span className="text-sm font-bold text-rose-500 group-hover:text-rose-600">Sign Out</span>
+                        </motion.div>
+                    </button>
+                </div>
+            </motion.div>
+        )}
+    </AnimatePresence>
+</div>
                                 </div>
                             </div>
                         </div>
