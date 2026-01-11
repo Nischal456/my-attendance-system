@@ -1058,15 +1058,21 @@ const ChatSidebar = ({
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
+    /* ---------------- SORT CONVERSATIONS ---------------- */
     const sortedConversations = useMemo(() => {
-        return [...conversations].sort(
-            (a, b) =>
-                (b.unreadCount || 0) - (a.unreadCount || 0) ||
-                new Date(b.lastMessage?.createdAt || 0) -
-                    new Date(a.lastMessage?.createdAt || 0)
-        );
+        return [...conversations].sort((a, b) => {
+            // Priority 1: Unread count
+            const unreadDiff = (b.unreadCount || 0) - (a.unreadCount || 0);
+            if (unreadDiff !== 0) return unreadDiff;
+
+            // Priority 2: Last message date
+            const dateA = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt) : new Date(0);
+            const dateB = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt) : new Date(0);
+            return dateB - dateA;
+        });
     }, [conversations]);
 
+    /* ---------------- FILTER USERS (SEARCH) ---------------- */
     const filteredUsers = useMemo(() => {
         if (!searchTerm) return [];
         return users.filter(
@@ -1078,8 +1084,9 @@ const ChatSidebar = ({
 
     return (
         <div className="w-full h-full flex flex-col bg-white border-r border-slate-100">
-            {/* Search */}
-            <div className="p-6 pb-2">
+            
+            {/* ---------------- SEARCH HEADER ---------------- */}
+            <div className="p-6 pb-2 flex-shrink-0">
                 <div className="relative group">
                     <Search
                         size={18}
@@ -1090,141 +1097,168 @@ const ChatSidebar = ({
                         placeholder="Search team..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-emerald-100 transition-all placeholder-slate-400"
+                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-emerald-100 transition-all placeholder-slate-400 outline-none"
                     />
                 </div>
             </div>
 
-            {/* List */}
+            {/* ---------------- SCROLLABLE LIST ---------------- */}
             <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar space-y-1">
+                
+                {/* === SEARCH RESULTS MODE === */}
                 {searchTerm ? (
                     <>
-                        <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">
-                            Results
+                        <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
+                            Found {filteredUsers.length} Results
                         </h3>
 
                         {filteredUsers.length > 0 ? (
                             filteredUsers.map(user => (
                                 <div
                                     key={user._id}
-                                    onClick={() => onSelect(user)}
-                                    className="p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 rounded-2xl transition-all"
+                                    onClick={() => {
+                                        onSelect(user);
+                                        setSearchTerm(''); // Clear search on select for better UX
+                                    }}
+                                    className="p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 rounded-2xl transition-all group animate-in fade-in slide-in-from-left-4 duration-300"
                                 >
                                     {/* Avatar */}
-                                    <div className="relative w-11 h-11 rounded-full overflow-hidden flex-shrink-0">
+                                    <div className="relative w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border border-slate-100">
                                         <Image
                                             src={user.avatar}
                                             alt={user.name}
                                             fill
-                                            className="object-cover"
+                                            className="object-cover group-hover:scale-110 transition-transform duration-500"
                                         />
                                     </div>
 
-                                    <p className="font-bold text-slate-700 text-sm">
-                                        {user.name}
-                                    </p>
+                                    <div>
+                                        <p className="font-bold text-slate-700 text-sm group-hover:text-emerald-700 transition-colors">
+                                            {user.name}
+                                        </p>
+                                        <p className="text-[11px] text-slate-400 font-medium">
+                                            {user.role || 'Team Member'}
+                                        </p>
+                                    </div>
                                 </div>
                             ))
                         ) : (
-                            <p className="p-4 text-center text-sm text-slate-400 italic">
-                                No users found.
-                            </p>
+                            <div className="flex flex-col items-center justify-center py-10 opacity-60">
+                                <Search size={40} className="text-slate-300 mb-2" />
+                                <p className="text-sm text-slate-400 font-medium">No users found.</p>
+                            </div>
                         )}
                     </>
                 ) : (
+                    /* === RECENT CHATS MODE === */
                     <>
                         <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">
                             Recent Chats
                         </h3>
 
-                        {sortedConversations.map(conv => {
-                            const otherUser = conv.participants.find(
-                                p => p._id !== currentUser._id
-                            );
-                            if (!otherUser) return null;
+                        {sortedConversations.length === 0 ? (
+                            // Empty State for No Conversations
+                            <div className="flex flex-col items-center justify-center text-center mt-10 p-6">
+                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                                    <MessageSquarePlus size={24} className="text-slate-300" />
+                                </div>
+                                <h4 className="text-slate-600 font-bold text-sm">No chats yet</h4>
+                                <p className="text-xs text-slate-400 mt-1 max-w-[150px]">
+                                    Search for a colleague above to start a conversation.
+                                </p>
+                            </div>
+                        ) : (
+                            // Conversation List
+                            sortedConversations.map(conv => {
+                                const otherUser = conv.participants.find(
+                                    p => p._id !== currentUser._id
+                                );
+                                
+                                // Skip if user data is missing (integrity check)
+                                if (!otherUser) return null;
 
-                            const isUnread = conv.unreadCount > 0;
-                            const isSelected = selectedConvId === conv._id;
+                                const isUnread = conv.unreadCount > 0;
+                                const isSelected = selectedConvId === conv._id;
 
-                            return (
-                                <div
-                                    key={conv._id}
-                                    onClick={() => onSelect(otherUser, conv)}
-                                    className={`group relative p-3 flex items-center gap-4 cursor-pointer rounded-2xl transition-all duration-200 ${
-                                        isSelected
-                                            ? 'bg-emerald-50/80 shadow-sm'
-                                            : 'hover:bg-slate-50'
-                                    }`}
-                                >
-                                    {/* Avatar */}
-                                    <div className="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
-                                        <Image
-                                            src={otherUser.avatar}
-                                            alt={otherUser.name}
-                                            fill
-                                            className={`object-cover transition-all ${
-                                                isUnread
-                                                    ? 'ring-2 ring-emerald-400 ring-offset-2'
-                                                    : ''
-                                            }`}
-                                        />
+                                return (
+                                    <div
+                                        key={conv._id}
+                                        onClick={() => onSelect(otherUser, conv)}
+                                        className={`group relative p-3 flex items-center gap-4 cursor-pointer rounded-2xl transition-all duration-200 border border-transparent ${
+                                            isSelected
+                                                ? 'bg-emerald-50/80 shadow-sm border-emerald-100/50'
+                                                : 'hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        {/* Avatar Wrapper */}
+                                        <div className="relative w-12 h-12 flex-shrink-0">
+                                            <div className={`relative w-full h-full rounded-full overflow-hidden ${isUnread ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}>
+                                                <Image
+                                                    src={otherUser.avatar}
+                                                    alt={otherUser.name}
+                                                    fill
+                                                    className="object-cover"
+                                                />
+                                            </div>
 
-                                        {isUnread && (
-                                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">
-                                                {conv.unreadCount}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Content */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-baseline mb-0.5">
-                                            <p
-                                                className={`font-bold truncate text-sm ${
-                                                    isUnread
-                                                        ? 'text-slate-900'
-                                                        : 'text-slate-700'
-                                                }`}
-                                            >
-                                                {otherUser.name}
-                                            </p>
-
-                                            <span className="text-[10px] text-slate-400 font-medium">
-                                                {conv.lastMessage &&
-                                                    formatDistanceToNow(
-                                                        new Date(
-                                                            conv.lastMessage.createdAt
-                                                        ),
-                                                        { addSuffix: false }
-                                                    )}
-                                            </span>
+                                            {/* Online Status / Unread Badge */}
+                                            {isUnread && (
+                                                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white z-10">
+                                                    {conv.unreadCount}
+                                                </span>
+                                            )}
                                         </div>
 
-                                        <p
-                                            className={`text-xs truncate ${
-                                                isUnread
-                                                    ? 'text-slate-800 font-semibold'
-                                                    : 'text-slate-500'
-                                            }`}
-                                        >
-                                            {conv.lastMessage?.message ||
-                                                'No messages yet'}
-                                        </p>
-                                    </div>
+                                        {/* Text Content */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-baseline mb-0.5">
+                                                <p
+                                                    className={`truncate text-sm transition-colors ${
+                                                        isUnread
+                                                            ? 'font-extrabold text-slate-900'
+                                                            : 'font-bold text-slate-700'
+                                                    }`}
+                                                >
+                                                    {otherUser.name}
+                                                </p>
 
-                                    {/* Delete */}
-                                    <button
-                                        onClick={e => {
-                                            e.stopPropagation();
-                                            onDelete(conv._id);
-                                        }}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            );
-                        })}
+                                                <span className={`text-[10px] font-medium whitespace-nowrap ml-2 ${isUnread ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                    {conv.lastMessage?.createdAt &&
+                                                        formatDistanceToNow(
+                                                            new Date(conv.lastMessage.createdAt),
+                                                            { addSuffix: false }
+                                                        ).replace('about ', '') // Clean up text for tighter UI
+                                                    }
+                                                </span>
+                                            </div>
+
+                                            <p
+                                                className={`text-xs truncate transition-colors ${
+                                                    isUnread
+                                                        ? 'text-slate-800 font-semibold'
+                                                        : 'text-slate-500 group-hover:text-slate-600'
+                                                }`}
+                                            >
+                                                {conv.lastMessage?.senderId === currentUser._id && 'You: '}
+                                                {conv.lastMessage?.message || 'Start the conversation...'}
+                                            </p>
+                                        </div>
+
+                                        {/* Delete Button (Visible on Group Hover) */}
+                                        <button
+                                            onClick={e => {
+                                                e.stopPropagation();
+                                                onDelete(conv._id);
+                                            }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100 z-20"
+                                            title="Delete Conversation"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                );
+                            })
+                        )}
                     </>
                 )}
             </div>
@@ -1245,6 +1279,7 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
     let mounted = true;
 
     const loadMessages = async () => {
+      // Clear messages immediately if switching users to prevent showing old data
       if (!conversation) {
         setMessages([]);
         return;
@@ -1254,13 +1289,17 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
       try {
         const res = await fetch(`/api/chat/messages?conversationId=${conversation._id}`);
         const data = await res.json();
+        
+        // Add a tiny delay to ensure the premium skeleton animation is seen (prevents flicker)
         if (mounted && data.success) {
-          setMessages(data.messages.map(m => ({ ...m, status: 'sent' })));
+           setTimeout(() => {
+             setMessages(data.messages.map(m => ({ ...m, status: 'sent' })));
+             setIsLoading(false);
+           }, 400); 
         }
       } catch {
         toast.error('Failed to load messages');
-      } finally {
-        mounted && setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
 
@@ -1301,10 +1340,12 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
 
   /* ---------------- AUTO SCROLL (FAST) ---------------- */
   useEffect(() => {
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    });
-  }, [messages.length]);
+    if (!isLoading) {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+  }, [messages.length, isLoading]);
 
   /* ---------------- SEND MESSAGE ---------------- */
   const handleSendMessage = useCallback(async e => {
@@ -1363,10 +1404,10 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
   }
 
   return (
-    <div className="flex flex-col flex-1 bg-white">
+    <div className="flex flex-col flex-1 bg-white h-full relative">
 
       {/* HEADER */}
-      <header className="flex items-center gap-4 p-4 border-b bg-white/90 backdrop-blur sticky top-0 z-10">
+      <header className="flex items-center gap-4 p-4 border-b bg-white/90 backdrop-blur sticky top-0 z-10 flex-shrink-0">
         {isMobile && (
           <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100">
             <ArrowLeft size={18} />
@@ -1390,16 +1431,45 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
         </div>
       </header>
 
-      {/* MESSAGES */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50">
-        {messages.length === 0 && !isLoading && (
+      {/* MESSAGES AREA */}
+      <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50 relative">
+        
+        {/* PREMIUM SKELETON LOADER */}
+        {isLoading && (
+          <div className="space-y-6 w-full animate-pulse mt-4">
+             {/* Received Skeleton */}
+             <div className="flex items-end gap-3 justify-start">
+               <div className="w-8 h-8 bg-slate-200 rounded-full shrink-0"></div>
+               <div className="h-10 w-32 bg-slate-200 rounded-2xl rounded-bl-sm"></div>
+             </div>
+             
+             {/* Sent Skeleton */}
+             <div className="flex items-end gap-3 justify-end">
+               <div className="h-14 w-48 bg-emerald-100/50 rounded-2xl rounded-br-sm"></div>
+             </div>
+
+             {/* Received Skeleton */}
+             <div className="flex items-end gap-3 justify-start">
+               <div className="w-8 h-8 bg-slate-200 rounded-full shrink-0"></div>
+               <div className="h-20 w-56 bg-slate-200 rounded-2xl rounded-bl-sm"></div>
+             </div>
+
+              {/* Sent Skeleton */}
+              <div className="flex items-end gap-3 justify-end">
+               <div className="h-10 w-24 bg-emerald-100/50 rounded-2xl rounded-br-sm"></div>
+             </div>
+          </div>
+        )}
+
+        {/* ACTUAL MESSAGES */}
+        {!isLoading && messages.length === 0 && (
           <div className="text-center mt-24">
             <p className="text-slate-400 font-medium">No messages yet</p>
             <p className="text-xs text-slate-300">Say hello 👋</p>
           </div>
         )}
 
-        {messages.map((msg, i) => {
+        {!isLoading && messages.map((msg, i) => {
           const isMe = msg.senderId._id === currentUser._id;
           const prev = messages[i - 1];
           const showAvatar = !isMe && (!prev || prev.senderId._id !== msg.senderId._id);
@@ -1410,7 +1480,7 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
               className={`flex items-end gap-3 ${isMe ? 'justify-end' : 'justify-start'}`}
             >
               {!isMe && (
-                <div className="w-8 h-8">
+                <div className="w-8 h-8 shrink-0">
                   {showAvatar && (
                     <Image
                       src={msg.senderId.avatar}
@@ -1431,7 +1501,7 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
                 }`}
               >
                 {msg.message}
-                <div className="text-[10px] opacity-60 mt-1 text-right">
+                <div className={`text-[10px] mt-1 text-right ${isMe ? 'text-emerald-100' : 'text-slate-400'}`}>
                   {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
@@ -1443,17 +1513,17 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
       </div>
 
       {/* INPUT */}
-      <footer className="p-4 border-t bg-white">
+      <footer className="p-4 border-t bg-white flex-shrink-0">
         <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
           <input
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
             placeholder="Type a message…"
-            className="flex-1 px-4 py-3 rounded-full bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            className="flex-1 px-4 py-3 rounded-full bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 transition-all"
           />
           <button
             disabled={!newMessage.trim()}
-            className="p-3 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition"
+            className="p-3 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50 disabled:scale-100"
           >
             <Send size={18} />
           </button>
@@ -1474,7 +1544,10 @@ const ChatView = ({ user, onBack }) => {
     const isMobile = useMediaQuery('(max-width: 767px)');
     const [activeChatUser, setActiveChatUser] = useState(null);
 
-    const fetchChatData = useCallback(async () => {
+    // FIXED: Added isSilent parameter to prevent full-screen loader on updates
+    const fetchChatData = useCallback(async (isSilent = false) => {
+        if (!isSilent) setIsLoading(true); // Only show loader on initial fetch
+        
         try {
             const res = await fetch('/api/chat/messages');
             const data = await res.json();
@@ -1485,16 +1558,21 @@ const ChatView = ({ user, onBack }) => {
         } catch (error) {
             toast.error("Failed to load chat data.");
         } finally {
-            setIsLoading(false);
+            // Only toggle loading state if we started it
+            if (!isSilent) {
+                setTimeout(() => setIsLoading(false), 500);
+            }
         }
     }, []);
 
+    // Initial load - Show Loader
     useEffect(() => {
-        fetchChatData();
+        fetchChatData(false);
     }, [fetchChatData]);
 
     const handleSelectConversation = (user, conversation = null) => {
         setSelectedUser(user);
+        // Update to find from current conversations state to ensure data is fresh
         const existingConv = conversation || conversations.find(c => c.participants.some(p => p._id === user._id));
         setSelectedConversation(existingConv);
         if (isMobile) {
@@ -1554,6 +1632,7 @@ const ChatView = ({ user, onBack }) => {
                 )}
             </AnimatePresence>
             <div className="fixed inset-0 z-50 bg-white flex flex-col md:relative md:inset-auto md:h-[calc(100vh-8rem)] md:rounded-[2rem] md:shadow-xl md:border md:border-slate-100 overflow-hidden">
+                {/* Mobile Header */}
                 <header className="p-4 border-b flex-shrink-0 flex items-center justify-between bg-white md:hidden">
                     <button onClick={onBack} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold">
                         <ArrowLeft size={20} />
@@ -1563,35 +1642,93 @@ const ChatView = ({ user, onBack }) => {
                         <Image src={user.avatar} width={36} height={36} className="rounded-full object-cover" alt="User Avatar" />
                     </div>
                 </header>
+                
+                {/* Desktop Header */}
                 <header className="p-5 px-6 border-b border-slate-100 flex-shrink-0 hidden md:flex items-center justify-between bg-white">
-                    <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3"><MessageSquare className="text-emerald-500" fill="currentColor" /> Messages</h2>
+                    <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
+                        <MessageSquare className="text-emerald-500" fill="currentColor" /> Messages
+                    </h2>
                     <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 font-bold text-sm bg-slate-50 hover:bg-emerald-50 px-4 py-2 rounded-xl transition-all">
                         <ArrowLeft size={16} />
                         Back to Dashboard
                     </button>
                 </header>
+
                 <div className="flex flex-1 overflow-hidden relative">
-                    <div className={`w-full md:w-96 h-full flex-col bg-white ${isMobile && activeChatUser ? 'hidden' : 'flex'}`}>
-                        <ChatSidebar conversations={conversations} users={allUsers} onSelect={handleSelectConversation} selectedConvId={selectedConversation?._id} currentUser={user} onDelete={setDeletingConvId} />
-                    </div>
+                    {isLoading ? (
+                        /* PREMIUM LOADING STATE - Only visible on initial mount */
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-white z-40">
+                            <div className="relative mb-6">
+                                <div className="absolute inset-0 bg-emerald-100 rounded-full animate-ping opacity-75"></div>
+                                <div className="relative bg-white p-6 rounded-full shadow-lg border border-emerald-50">
+                                    <MessageSquare size={32} className="text-emerald-500 animate-pulse" />
+                                </div>
+                            </div>
+                            <h3 className="text-slate-800 font-bold text-lg mb-1">Loading Chats</h3>
+                            <p className="text-slate-400 text-sm font-medium animate-pulse">Syncing your secure messages...</p>
+                        </div>
+                    ) : (
+                        /* ACTUAL CONTENT */
+                        <>
+                            <div className={`w-full md:w-96 h-full flex-col bg-white ${isMobile && activeChatUser ? 'hidden' : 'flex'}`}>
+                                <ChatSidebar 
+                                    conversations={conversations} 
+                                    users={allUsers} 
+                                    onSelect={handleSelectConversation} 
+                                    selectedConvId={selectedConversation?._id} 
+                                    currentUser={user} 
+                                    onDelete={setDeletingConvId} 
+                                />
+                            </div>
 
-                    <div className="flex-1 hidden md:flex border-l border-slate-100">
-                        {selectedUser ? <ChatBox selectedUser={selectedUser} conversation={selectedConversation} currentUser={user} onMessageSent={fetchChatData} onBack={() => { }} /> : <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50"><div className="bg-white p-8 rounded-full shadow-sm mb-4"><MessageSquare size={48} className="text-slate-200" /></div><p className="text-slate-400 font-semibold">Select a team member to start chatting</p></div>}
-                    </div>
+                            <div className="flex-1 hidden md:flex border-l border-slate-100">
+                                {selectedUser ? (
+                                    <ChatBox 
+                                        selectedUser={selectedUser} 
+                                        conversation={selectedConversation} 
+                                        currentUser={user} 
+                                        // FIXED: Pass true for silent update
+                                        onMessageSent={() => fetchChatData(true)} 
+                                        onBack={() => { }} 
+                                    />
+                                ) : (
+                                    <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50">
+                                        <div className="bg-white p-8 rounded-full shadow-sm mb-4">
+                                            <MessageSquare size={48} className="text-slate-200" />
+                                        </div>
+                                        <p className="text-slate-400 font-semibold">Select a team member to start chatting</p>
+                                    </div>
+                                )}
+                            </div>
 
-                    <AnimatePresence>
-                        {isMobile && activeChatUser && (
-                            <motion.div key="chatbox" className="absolute inset-0 z-20 bg-white" variants={slideAnimation} initial="initial" animate="animate" exit="exit">
-                                <ChatBox selectedUser={selectedUser} conversation={selectedConversation} currentUser={user} onMessageSent={fetchChatData} onBack={handleBackToSidebar} />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                            <AnimatePresence>
+                                {isMobile && activeChatUser && (
+                                    <motion.div 
+                                        key="chatbox" 
+                                        className="absolute inset-0 z-20 bg-white" 
+                                        variants={slideAnimation} 
+                                        initial="initial" 
+                                        animate="animate" 
+                                        exit="exit"
+                                    >
+                                        <ChatBox 
+                                            selectedUser={selectedUser} 
+                                            conversation={selectedConversation} 
+                                            currentUser={user} 
+                                            // FIXED: Pass true for silent update
+                                            onMessageSent={() => fetchChatData(true)} 
+                                            onBack={handleBackToSidebar} 
+                                        />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </>
+                    )}
                 </div>
             </div>
         </>
     );
 };
-
 const DashboardSkeleton = () => (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-pulse p-4">
         <div className="xl:col-span-4 space-y-8">
