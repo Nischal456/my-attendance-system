@@ -224,10 +224,7 @@ const EmployeeDetailModal = ({ user, onClose, onToggleStatus }) => (
                         <div className="bg-white p-2.5 rounded-xl shadow-sm text-blue-500"><Mail size={18}/></div>
                         <div className="overflow-hidden"><p className="text-xs font-bold text-slate-400 uppercase">Email Address</p><p className="text-sm font-bold text-slate-700 truncate">{user.email}</p></div>
                     </div>
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
-                        <div className="bg-white p-2.5 rounded-xl shadow-sm text-purple-500"><Phone size={18}/></div>
-                        <div><p className="text-xs font-bold text-slate-400 uppercase">Phone</p><p className="text-sm font-bold text-slate-700">{user.phone || 'N/A'}</p></div>
-                    </div>
+                    
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
                         <div className="bg-white p-2.5 rounded-xl shadow-sm text-amber-500"><Calendar size={18}/></div>
                         <div><p className="text-xs font-bold text-slate-400 uppercase">Joined On</p><p className="text-sm font-bold text-slate-700">{formatEnglishDate(user.createdAt)}</p></div>
