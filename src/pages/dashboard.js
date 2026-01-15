@@ -5,8 +5,18 @@ import Image from 'next/image';
 import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, DollarSign, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home, Send, Search, ArrowLeft, AlertTriangle, AlertCircle } from 'react-feather';
 import { ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast'; // Uses global _app.js Toaster
-import { Bar } from 'react-chartjs-2';
-import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import dynamic from 'next/dynamic';
+const Bar = dynamic(() => import('react-chartjs-2').then((mod) => mod.Bar), { ssr: false });
+const Chart = dynamic(() => import('chart.js').then((mod) => mod.Chart), { ssr: false });
+import { 
+  Chart as ChartJS, 
+  CategoryScale, 
+  LinearScale, 
+  BarElement, 
+  Title, 
+  Tooltip, 
+  Legend 
+} from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DndContext, closestCorners, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -15,7 +25,7 @@ import Pusher from 'pusher-js';
 import { formatDistanceToNow } from 'date-fns';
 
 // --- Configuration ---
-Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 // --- Helpers ---
 const useMediaQuery = (query) => {
@@ -1871,10 +1881,13 @@ export default function Dashboard({ user }) {
             const res = await fetch('/api/dashboard/data');
             if (!res.ok) throw new Error('Failed to fetch dashboard data');
             const data = await res.json();
+            
+            // Batch updates to reduce re-renders
             setAttendance(data.initialAttendance || []);
             setTasks(data.initialTasks || []);
             setNotes(data.initialNotes || []);
             setNotifications(data.initialNotifications || []);
+            
             if (data.activeCheckIn) {
                 setActiveAttendance(data.activeCheckIn);
                 setCheckInTime(data.activeCheckIn.checkInTime);
@@ -1889,15 +1902,20 @@ export default function Dashboard({ user }) {
                 setActiveBreakStartTime(null);
             }
         } catch (err) {
-            setError(err.message);
-            toast.error(err.message);
+            console.error("Dashboard fetch error:", err);
+            toast.error("Failed to load dashboard data");
         } finally {
             setIsDataLoading(false);
         }
     }, []);
-
+    
     useEffect(() => {
+        // Run fetch immediately
         fetchDashboardData();
+        
+        // Timer for splash screen - Reduced to 1.2s for faster perceived load
+        const timer = setTimeout(() => setShowSplash(false), 1200);
+        return () => clearTimeout(timer);
     }, [fetchDashboardData]);
 
     const unreadNotifications = useMemo(() => notifications.filter(n => !n.isRead), [notifications]);
