@@ -3,19 +3,20 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
 import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, DollarSign, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home, Send, Search, ArrowLeft, AlertTriangle, AlertCircle } from 'react-feather';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, MessageSquarePlus } from 'lucide-react';
 import toast from 'react-hot-toast'; // Uses global _app.js Toaster
 import dynamic from 'next/dynamic';
 const Bar = dynamic(() => import('react-chartjs-2').then((mod) => mod.Bar), { ssr: false });
 const Chart = dynamic(() => import('chart.js').then((mod) => mod.Chart), { ssr: false });
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  BarElement, 
-  Title, 
-  Tooltip, 
-  Legend 
+import { Layout, Grid } from 'react-feather';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
 } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DndContext, closestCorners, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
@@ -126,7 +127,7 @@ const ButtonLoader = () => (
 );
 
 const DashboardEntryLoader = ({ userName }) => (
-    <motion.div 
+    <motion.div
         className="fixed inset-0 z-[100] bg-slate-50/95 flex flex-col items-center justify-center font-sans overflow-hidden perspective-[1200px]"
         initial={{ opacity: 1 }}
         exit={{ opacity: 0, scale: 1.1, filter: "blur(25px)" }}
@@ -134,7 +135,7 @@ const DashboardEntryLoader = ({ userName }) => (
     >
         {/* 1. ULTRA Background - Deeper depth */}
         <div className="absolute inset-0 bg-white z-0">
-             {/* Stronger central light source */}
+            {/* Stronger central light source */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,#10b98120_0%,transparent_60%)]"></div>
             {/* Sharper Grid */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_60%,transparent_100%)]"></div>
@@ -142,24 +143,24 @@ const DashboardEntryLoader = ({ userName }) => (
 
         {/* 2. Main Content Wrapper */}
         <div className="relative z-10 flex flex-col items-center justify-center">
-            
+
             {/* 3. THE ULTRA TILTED GLASS CARD */}
-            <motion.div 
-                initial={{ scale: 0.6, rotateX: 20, rotateY: 20, opacity: 0, y: 150 }} 
-                animate={{ scale: 1, rotateX: 5, rotateY: -5, opacity: 1, y: 0 }} 
-                transition={{ 
-                    type: "spring", 
+            <motion.div
+                initial={{ scale: 0.6, rotateX: 20, rotateY: 20, opacity: 0, y: 150 }}
+                animate={{ scale: 1, rotateX: 5, rotateY: -5, opacity: 1, y: 0 }}
+                transition={{
+                    type: "spring",
                     stiffness: 250, // Much stiffer for "fastest" feel
                     damping: 25,    // Snappy stop without too much wobble
                     mass: 0.8
-                }} 
+                }}
                 className="relative mb-14 md:mb-20 transform-gpu preserve-3d"
             >
                 {/* Intense Ambient Glow Core */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-emerald-500/40 blur-[100px] rounded-full animate-pulse-slow"></div>
 
                 {/* The Hyper-Realistic Glass Container */}
-                <motion.div 
+                <motion.div
                     animate={{ y: [0, -10, 0], rotateX: [5, 2, 5], rotateY: [-5, -2, -5] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                     // Complex borders and shadows for realism
@@ -171,10 +172,10 @@ const DashboardEntryLoader = ({ userName }) => (
                 >
                     {/* Sharp Specular Reflection */}
                     <div className="absolute inset-0 bg-gradient-to-br from-white/70 via-transparent to-transparent opacity-80 pointer-events-none -rotate-12 scale-125"></div>
-                    
+
                     {/* THE HOLOGRAPHIC USER TOKEN (Not zoomed) */}
                     <div className="relative w-40 h-40 md:w-64 md:h-64 flex items-center justify-center transform-gpu translate-z-10">
-                         {/* Rotating Energy Ring */}
+                        {/* Rotating Energy Ring */}
                         <div className="absolute inset-0 rounded-full border-[3px] border-emerald-400/30 border-t-emerald-400/80 border-l-emerald-400/80 animate-spin-slow glow-emerald-md"></div>
                         {/* Pulsing Inner Core */}
                         <div className="absolute inset-4 rounded-full bg-emerald-500/10 animate-pulse"></div>
@@ -183,20 +184,20 @@ const DashboardEntryLoader = ({ userName }) => (
 
                         {/* The Image - Floating freely, object-contain to prevent zoom cropping */}
                         <div className="relative w-full h-full filter drop-shadow-[0_15px_35px_rgba(16,185,129,0.35)] z-20">
-                            <Image 
-                                src="/user.png" 
-                                alt="User Profile" 
+                            <Image
+                                src="/user.png"
+                                alt="User Profile"
                                 fill
-                                className="object-contain p-2" 
-                                priority 
+                                className="object-contain p-2"
+                                priority
                                 sizes="(max-width: 768px) 160px, 256px"
                             />
                         </div>
                     </div>
                 </motion.div>
-                
+
                 {/* Premium Badge */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, scale: 0, rotate: 45 }}
                     animate={{ opacity: 1, scale: 1, rotate: 12 }}
                     transition={{ delay: 0.3, type: "spring" }}
@@ -208,7 +209,7 @@ const DashboardEntryLoader = ({ userName }) => (
 
             {/* 4. Typography - Snappier entrance */}
             <div className="text-center relative z-20 space-y-5">
-                <motion.h2 
+                <motion.h2
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2, duration: 0.6, ease: [0.22, 1, 0.36, 1] }} // Fast easing
@@ -220,8 +221,8 @@ const DashboardEntryLoader = ({ userName }) => (
                         {userName.split(' ')[0]}
                     </span>
                 </motion.h2>
-                
-                <motion.div 
+
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.4 }}
@@ -235,11 +236,11 @@ const DashboardEntryLoader = ({ userName }) => (
 
             {/* 5. Loader - Faster & Brighter */}
             <div className="mt-16 relative flex flex-col items-center gap-3">
-                
+
                 {/* Status Text - Monospace & Technical */}
-                <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     transition={{ delay: 0.6 }}
                     className="text-[10px] font-mono font-medium text-emerald-600/60 uppercase tracking-[0.3em]"
                 >
@@ -248,13 +249,13 @@ const DashboardEntryLoader = ({ userName }) => (
 
                 {/* The Loader Track */}
                 <div className="relative w-64 h-[2px] bg-slate-200/30 rounded-full">
-                    
+
                     {/* The Moving Progress Bar */}
-                    <motion.div 
-                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-transparent via-emerald-500 to-emerald-400" 
-                        initial={{ width: "0%" }} 
-                        animate={{ width: "100%" }} 
-                        transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }} 
+                    <motion.div
+                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-transparent via-emerald-500 to-emerald-400"
+                        initial={{ width: "0%" }}
+                        animate={{ width: "100%" }}
+                        transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
                     >
                         {/* THE SPARK (The glow at the tip) */}
                         <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2">
@@ -270,7 +271,7 @@ const DashboardEntryLoader = ({ userName }) => (
                 </div>
 
                 {/* Reflection under the loader for depth */}
-                <motion.div 
+                <motion.div
                     className="absolute -bottom-2 w-64 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent blur-sm"
                     initial={{ scaleX: 0, opacity: 0 }}
                     animate={{ scaleX: 1, opacity: 1 }}
@@ -1017,44 +1018,44 @@ const DailyStandupReport = () => {
 // --- UPDATED CHAT COMPONENTS ---
 
 const DeleteChatModal = ({ onConfirm, onClose, isDeleting }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="fixed inset-0 z-[101] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4"
-  >
     <motion.div
-      initial={{ scale: 0.95, y: 20, opacity: 0 }}
-      animate={{ scale: 1, y: 0, opacity: 1 }}
-      exit={{ scale: 0.95, y: 20, opacity: 0 }}
-      className="bg-white w-full max-w-sm rounded-3xl p-8 text-center shadow-2xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[101] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
-      <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-6">
-        <AlertTriangle className="text-rose-500" />
-      </div>
-      <h3 className="text-xl font-bold mb-2">Delete Conversation?</h3>
-      <p className="text-sm text-slate-500 mb-8">
-        This will permanently remove all messages. This action cannot be undone.
-      </p>
+        <motion.div
+            initial={{ scale: 0.95, y: 20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.95, y: 20, opacity: 0 }}
+            className="bg-white w-full max-w-sm rounded-3xl p-8 text-center shadow-2xl"
+        >
+            <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle className="text-rose-500" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Delete Conversation?</h3>
+            <p className="text-sm text-slate-500 mb-8">
+                This will permanently remove all messages. This action cannot be undone.
+            </p>
 
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={onClose}
-          disabled={isDeleting}
-          className="py-3 rounded-xl border font-bold hover:bg-slate-50"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={onConfirm}
-          disabled={isDeleting}
-          className="py-3 rounded-xl bg-rose-500 text-white font-bold hover:bg-rose-600"
-        >
-          {isDeleting ? 'Deleting...' : 'Delete'}
-        </button>
-      </div>
+            <div className="grid grid-cols-2 gap-3">
+                <button
+                    onClick={onClose}
+                    disabled={isDeleting}
+                    className="py-3 rounded-xl border font-bold hover:bg-slate-50"
+                >
+                    Cancel
+                </button>
+                <button
+                    onClick={onConfirm}
+                    disabled={isDeleting}
+                    className="py-3 rounded-xl bg-rose-500 text-white font-bold hover:bg-rose-600"
+                >
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+            </div>
+        </motion.div>
     </motion.div>
-  </motion.div>
 );
 
 
@@ -1094,7 +1095,7 @@ const ChatSidebar = ({
 
     return (
         <div className="w-full h-full flex flex-col bg-white border-r border-slate-100">
-            
+
             {/* ---------------- SEARCH HEADER ---------------- */}
             <div className="p-6 pb-2 flex-shrink-0">
                 <div className="relative group">
@@ -1114,7 +1115,7 @@ const ChatSidebar = ({
 
             {/* ---------------- SCROLLABLE LIST ---------------- */}
             <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar space-y-1">
-                
+
                 {/* === SEARCH RESULTS MODE === */}
                 {searchTerm ? (
                     <>
@@ -1183,7 +1184,7 @@ const ChatSidebar = ({
                                 const otherUser = conv.participants.find(
                                     p => p._id !== currentUser._id
                                 );
-                                
+
                                 // Skip if user data is missing (integrity check)
                                 if (!otherUser) return null;
 
@@ -1194,11 +1195,10 @@ const ChatSidebar = ({
                                     <div
                                         key={conv._id}
                                         onClick={() => onSelect(otherUser, conv)}
-                                        className={`group relative p-3 flex items-center gap-4 cursor-pointer rounded-2xl transition-all duration-200 border border-transparent ${
-                                            isSelected
-                                                ? 'bg-emerald-50/80 shadow-sm border-emerald-100/50'
-                                                : 'hover:bg-slate-50'
-                                        }`}
+                                        className={`group relative p-3 flex items-center gap-4 cursor-pointer rounded-2xl transition-all duration-200 border border-transparent ${isSelected
+                                            ? 'bg-emerald-50/80 shadow-sm border-emerald-100/50'
+                                            : 'hover:bg-slate-50'
+                                            }`}
                                     >
                                         {/* Avatar Wrapper */}
                                         <div className="relative w-12 h-12 flex-shrink-0">
@@ -1223,11 +1223,10 @@ const ChatSidebar = ({
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-baseline mb-0.5">
                                                 <p
-                                                    className={`truncate text-sm transition-colors ${
-                                                        isUnread
-                                                            ? 'font-extrabold text-slate-900'
-                                                            : 'font-bold text-slate-700'
-                                                    }`}
+                                                    className={`truncate text-sm transition-colors ${isUnread
+                                                        ? 'font-extrabold text-slate-900'
+                                                        : 'font-bold text-slate-700'
+                                                        }`}
                                                 >
                                                     {otherUser.name}
                                                 </p>
@@ -1243,11 +1242,10 @@ const ChatSidebar = ({
                                             </div>
 
                                             <p
-                                                className={`text-xs truncate transition-colors ${
-                                                    isUnread
-                                                        ? 'text-slate-800 font-semibold'
-                                                        : 'text-slate-500 group-hover:text-slate-600'
-                                                }`}
+                                                className={`text-xs truncate transition-colors ${isUnread
+                                                    ? 'text-slate-800 font-semibold'
+                                                    : 'text-slate-500 group-hover:text-slate-600'
+                                                    }`}
                                             >
                                                 {conv.lastMessage?.senderId === currentUser._id && 'You: '}
                                                 {conv.lastMessage?.message || 'Start the conversation...'}
@@ -1278,269 +1276,268 @@ const ChatSidebar = ({
 
 
 const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBack }) => {
-  const isMobile = useMediaQuery('(max-width: 767px)');
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef(null);
+    const isMobile = useMediaQuery('(max-width: 767px)');
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const messagesEndRef = useRef(null);
 
-  /* ---------------- FETCH MESSAGES ---------------- */
-  useEffect(() => {
-    let mounted = true;
+    /* ---------------- FETCH MESSAGES ---------------- */
+    useEffect(() => {
+        let mounted = true;
 
-    const loadMessages = async () => {
-      // Clear messages immediately if switching users to prevent showing old data
-      if (!conversation) {
-        setMessages([]);
-        return;
-      }
+        const loadMessages = async () => {
+            // Clear messages immediately if switching users to prevent showing old data
+            if (!conversation) {
+                setMessages([]);
+                return;
+            }
 
-      setIsLoading(true);
-      try {
-        const res = await fetch(`/api/chat/messages?conversationId=${conversation._id}`);
-        const data = await res.json();
-        
-        // Add a tiny delay to ensure the premium skeleton animation is seen (prevents flicker)
-        if (mounted && data.success) {
-           setTimeout(() => {
-             setMessages(data.messages.map(m => ({ ...m, status: 'sent' })));
-             setIsLoading(false);
-           }, 400); 
+            setIsLoading(true);
+            try {
+                const res = await fetch(`/api/chat/messages?conversationId=${conversation._id}`);
+                const data = await res.json();
+
+                // Add a tiny delay to ensure the premium skeleton animation is seen (prevents flicker)
+                if (mounted && data.success) {
+                    setTimeout(() => {
+                        setMessages(data.messages.map(m => ({ ...m, status: 'sent' })));
+                        setIsLoading(false);
+                    }, 400);
+                }
+            } catch {
+                toast.error('Failed to load messages');
+                if (mounted) setIsLoading(false);
+            }
+        };
+
+        loadMessages();
+
+        let pusher, channel;
+        if (conversation) {
+            pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
+                cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+            });
+
+            channel = pusher.subscribe(`chat-${conversation._id}`);
+            channel.bind('new-message', data => {
+                if (data.senderId._id !== currentUser._id) {
+                    setMessages(prev => [...prev, { ...data, status: 'sent' }]);
+                }
+            });
         }
-      } catch {
-        toast.error('Failed to load messages');
-        if (mounted) setIsLoading(false);
-      }
-    };
 
-    loadMessages();
+        return () => {
+            mounted = false;
+            if (pusher && conversation) {
+                pusher.unsubscribe(`chat-${conversation._id}`);
+                pusher.disconnect();
+            }
+        };
+    }, [conversation, currentUser._id]);
 
-    let pusher, channel;
-    if (conversation) {
-      pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
-        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
-      });
+    /* ---------------- MARK READ ---------------- */
+    useEffect(() => {
+        if (!conversation?.unreadCount) return;
+        fetch('/api/chat/mark-as-read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationId: conversation._id }),
+        }).then(onMessageSent);
+    }, [conversation, onMessageSent]);
 
-      channel = pusher.subscribe(`chat-${conversation._id}`);
-      channel.bind('new-message', data => {
-        if (data.senderId._id !== currentUser._id) {
-          setMessages(prev => [...prev, { ...data, status: 'sent' }]);
+    /* ---------------- AUTO SCROLL (FAST) ---------------- */
+    useEffect(() => {
+        if (!isLoading) {
+            requestAnimationFrame(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            });
         }
-      });
-    }
+    }, [messages.length, isLoading]);
 
-    return () => {
-      mounted = false;
-      if (pusher && conversation) {
-        pusher.unsubscribe(`chat-${conversation._id}`);
-        pusher.disconnect();
-      }
-    };
-  }, [conversation, currentUser._id]);
+    /* ---------------- SEND MESSAGE ---------------- */
+    const handleSendMessage = useCallback(async e => {
+        e.preventDefault();
+        const text = newMessage.trim();
+        if (!text) return;
 
-  /* ---------------- MARK READ ---------------- */
-  useEffect(() => {
-    if (!conversation?.unreadCount) return;
-    fetch('/api/chat/mark-as-read', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversationId: conversation._id }),
-    }).then(onMessageSent);
-  }, [conversation, onMessageSent]);
+        const tempId = `temp_${Date.now()}`;
+        setMessages(prev => [
+            ...prev,
+            {
+                _id: tempId,
+                senderId: currentUser,
+                message: text,
+                createdAt: new Date().toISOString(),
+                status: 'sending',
+            },
+        ]);
 
-  /* ---------------- AUTO SCROLL (FAST) ---------------- */
-  useEffect(() => {
-    if (!isLoading) {
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      });
-    }
-  }, [messages.length, isLoading]);
+        setNewMessage('');
 
-  /* ---------------- SEND MESSAGE ---------------- */
-  const handleSendMessage = useCallback(async e => {
-    e.preventDefault();
-    const text = newMessage.trim();
-    if (!text) return;
+        try {
+            const res = await fetch('/api/chat/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ receiverId: selectedUser._id, message: text }),
+            });
 
-    const tempId = `temp_${Date.now()}`;
-    setMessages(prev => [
-      ...prev,
-      {
-        _id: tempId,
-        senderId: currentUser,
-        message: text,
-        createdAt: new Date().toISOString(),
-        status: 'sending',
-      },
-    ]);
+            const result = await res.json();
+            if (!res.ok) throw new Error();
 
-    setNewMessage('');
+            setMessages(prev =>
+                prev.map(m => (m._id === tempId ? { ...result.data, status: 'sent' } : m))
+            );
+            onMessageSent();
+        } catch {
+            setMessages(prev =>
+                prev.map(m => (m._id === tempId ? { ...m, status: 'failed' } : m))
+            );
+        }
+    }, [newMessage, currentUser, selectedUser, onMessageSent]);
 
-    try {
-      const res = await fetch('/api/chat/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ receiverId: selectedUser._id, message: text }),
-      });
-
-      const result = await res.json();
-      if (!res.ok) throw new Error();
-
-      setMessages(prev =>
-        prev.map(m => (m._id === tempId ? { ...result.data, status: 'sent' } : m))
-      );
-      onMessageSent();
-    } catch {
-      setMessages(prev =>
-        prev.map(m => (m._id === tempId ? { ...m, status: 'failed' } : m))
-      );
-    }
-  }, [newMessage, currentUser, selectedUser, onMessageSent]);
-
-  /* ---------------- EMPTY STATE ---------------- */
-  if (!selectedUser) {
-    return (
-      <div className="hidden md:flex flex-1 items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-            <MessageSquare size={36} className="text-slate-300" />
-          </div>
-          <p className="text-slate-500 font-semibold">Select a user to start chatting</p>
-          <p className="text-xs text-slate-400 mt-1">Ultra-fast • Secure • Premium</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col flex-1 bg-white h-full relative">
-
-      {/* HEADER */}
-      <header className="flex items-center gap-4 p-4 border-b bg-white/90 backdrop-blur sticky top-0 z-10 flex-shrink-0">
-        {isMobile && (
-          <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100">
-            <ArrowLeft size={18} />
-          </button>
-        )}
-
-        <div className="relative w-11 h-11">
-          <Image
-            src={selectedUser.avatar}
-            fill
-            className="rounded-full object-cover ring-2 ring-emerald-500"
-            alt={selectedUser.name}
-          />
-        </div>
-
-        <div>
-          <h3 className="font-bold text-slate-800">{selectedUser.name}</h3>
-          <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
-            {selectedUser.role}
-          </span>
-        </div>
-      </header>
-
-      {/* MESSAGES AREA */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50 relative">
-        
-        {/* PREMIUM SKELETON LOADER */}
-        {isLoading && (
-          <div className="space-y-6 w-full animate-pulse mt-4">
-             {/* Received Skeleton */}
-             <div className="flex items-end gap-3 justify-start">
-               <div className="w-8 h-8 bg-slate-200 rounded-full shrink-0"></div>
-               <div className="h-10 w-32 bg-slate-200 rounded-2xl rounded-bl-sm"></div>
-             </div>
-             
-             {/* Sent Skeleton */}
-             <div className="flex items-end gap-3 justify-end">
-               <div className="h-14 w-48 bg-emerald-100/50 rounded-2xl rounded-br-sm"></div>
-             </div>
-
-             {/* Received Skeleton */}
-             <div className="flex items-end gap-3 justify-start">
-               <div className="w-8 h-8 bg-slate-200 rounded-full shrink-0"></div>
-               <div className="h-20 w-56 bg-slate-200 rounded-2xl rounded-bl-sm"></div>
-             </div>
-
-              {/* Sent Skeleton */}
-              <div className="flex items-end gap-3 justify-end">
-               <div className="h-10 w-24 bg-emerald-100/50 rounded-2xl rounded-br-sm"></div>
-             </div>
-          </div>
-        )}
-
-        {/* ACTUAL MESSAGES */}
-        {!isLoading && messages.length === 0 && (
-          <div className="text-center mt-24">
-            <p className="text-slate-400 font-medium">No messages yet</p>
-            <p className="text-xs text-slate-300">Say hello 👋</p>
-          </div>
-        )}
-
-        {!isLoading && messages.map((msg, i) => {
-          const isMe = msg.senderId._id === currentUser._id;
-          const prev = messages[i - 1];
-          const showAvatar = !isMe && (!prev || prev.senderId._id !== msg.senderId._id);
-
-          return (
-            <div
-              key={msg._id}
-              className={`flex items-end gap-3 ${isMe ? 'justify-end' : 'justify-start'}`}
-            >
-              {!isMe && (
-                <div className="w-8 h-8 shrink-0">
-                  {showAvatar && (
-                    <Image
-                      src={msg.senderId.avatar}
-                      width={32}
-                      height={32}
-                      className="rounded-full object-cover"
-                      alt=""
-                    />
-                  )}
+    /* ---------------- EMPTY STATE ---------------- */
+    if (!selectedUser) {
+        return (
+            <div className="hidden md:flex flex-1 items-center justify-center bg-white">
+                <div className="text-center">
+                    <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                        <MessageSquare size={36} className="text-slate-300" />
+                    </div>
+                    <p className="text-slate-500 font-semibold">Select a user to start chatting</p>
+                    <p className="text-xs text-slate-400 mt-1">Ultra-fast • Secure • Premium</p>
                 </div>
-              )}
-
-              <div
-                className={`px-4 py-2 text-sm max-w-[75%] shadow-sm ${
-                  isMe
-                    ? 'bg-emerald-600 text-white rounded-2xl rounded-br-sm'
-                    : 'bg-white border rounded-2xl rounded-bl-sm'
-                }`}
-              >
-                {msg.message}
-                <div className={`text-[10px] mt-1 text-right ${isMe ? 'text-emerald-100' : 'text-slate-400'}`}>
-                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              </div>
             </div>
-          );
-        })}
+        );
+    }
 
-        <div ref={messagesEndRef} />
-      </div>
+    return (
+        <div className="flex flex-col flex-1 bg-white h-full relative">
 
-      {/* INPUT */}
-      <footer className="p-4 border-t bg-white flex-shrink-0">
-        <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
-          <input
-            value={newMessage}
-            onChange={e => setNewMessage(e.target.value)}
-            placeholder="Type a message…"
-            className="flex-1 px-4 py-3 rounded-full bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 transition-all"
-          />
-          <button
-            disabled={!newMessage.trim()}
-            className="p-3 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50 disabled:scale-100"
-          >
-            <Send size={18} />
-          </button>
-        </form>
-      </footer>
-    </div>
-  );
+            {/* HEADER */}
+            <header className="flex items-center gap-4 p-4 border-b bg-white/90 backdrop-blur sticky top-0 z-10 flex-shrink-0">
+                {isMobile && (
+                    <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100">
+                        <ArrowLeft size={18} />
+                    </button>
+                )}
+
+                <div className="relative w-11 h-11">
+                    <Image
+                        src={selectedUser.avatar}
+                        fill
+                        className="rounded-full object-cover ring-2 ring-emerald-500"
+                        alt={selectedUser.name}
+                    />
+                </div>
+
+                <div>
+                    <h3 className="font-bold text-slate-800">{selectedUser.name}</h3>
+                    <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                        {selectedUser.role}
+                    </span>
+                </div>
+            </header>
+
+            {/* MESSAGES AREA */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50 relative">
+
+                {/* PREMIUM SKELETON LOADER */}
+                {isLoading && (
+                    <div className="space-y-6 w-full animate-pulse mt-4">
+                        {/* Received Skeleton */}
+                        <div className="flex items-end gap-3 justify-start">
+                            <div className="w-8 h-8 bg-slate-200 rounded-full shrink-0"></div>
+                            <div className="h-10 w-32 bg-slate-200 rounded-2xl rounded-bl-sm"></div>
+                        </div>
+
+                        {/* Sent Skeleton */}
+                        <div className="flex items-end gap-3 justify-end">
+                            <div className="h-14 w-48 bg-emerald-100/50 rounded-2xl rounded-br-sm"></div>
+                        </div>
+
+                        {/* Received Skeleton */}
+                        <div className="flex items-end gap-3 justify-start">
+                            <div className="w-8 h-8 bg-slate-200 rounded-full shrink-0"></div>
+                            <div className="h-20 w-56 bg-slate-200 rounded-2xl rounded-bl-sm"></div>
+                        </div>
+
+                        {/* Sent Skeleton */}
+                        <div className="flex items-end gap-3 justify-end">
+                            <div className="h-10 w-24 bg-emerald-100/50 rounded-2xl rounded-br-sm"></div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ACTUAL MESSAGES */}
+                {!isLoading && messages.length === 0 && (
+                    <div className="text-center mt-24">
+                        <p className="text-slate-400 font-medium">No messages yet</p>
+                        <p className="text-xs text-slate-300">Say hello 👋</p>
+                    </div>
+                )}
+
+                {!isLoading && messages.map((msg, i) => {
+                    const isMe = msg.senderId._id === currentUser._id;
+                    const prev = messages[i - 1];
+                    const showAvatar = !isMe && (!prev || prev.senderId._id !== msg.senderId._id);
+
+                    return (
+                        <div
+                            key={msg._id}
+                            className={`flex items-end gap-3 ${isMe ? 'justify-end' : 'justify-start'}`}
+                        >
+                            {!isMe && (
+                                <div className="w-8 h-8 shrink-0">
+                                    {showAvatar && (
+                                        <Image
+                                            src={msg.senderId.avatar}
+                                            width={32}
+                                            height={32}
+                                            className="rounded-full object-cover"
+                                            alt=""
+                                        />
+                                    )}
+                                </div>
+                            )}
+
+                            <div
+                                className={`px-4 py-2 text-sm max-w-[75%] shadow-sm ${isMe
+                                    ? 'bg-emerald-600 text-white rounded-2xl rounded-br-sm'
+                                    : 'bg-white border rounded-2xl rounded-bl-sm'
+                                    }`}
+                            >
+                                {msg.message}
+                                <div className={`text-[10px] mt-1 text-right ${isMe ? 'text-emerald-100' : 'text-slate-400'}`}>
+                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+
+                <div ref={messagesEndRef} />
+            </div>
+
+            {/* INPUT */}
+            <footer className="p-4 border-t bg-white flex-shrink-0">
+                <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
+                    <input
+                        value={newMessage}
+                        onChange={e => setNewMessage(e.target.value)}
+                        placeholder="Type a message…"
+                        className="flex-1 px-4 py-3 rounded-full bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 transition-all"
+                    />
+                    <button
+                        disabled={!newMessage.trim()}
+                        className="p-3 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50 disabled:scale-100"
+                    >
+                        <Send size={18} />
+                    </button>
+                </form>
+            </footer>
+        </div>
+    );
 };
 
 const ChatView = ({ user, onBack }) => {
@@ -1557,7 +1554,7 @@ const ChatView = ({ user, onBack }) => {
     // FIXED: Added isSilent parameter to prevent full-screen loader on updates
     const fetchChatData = useCallback(async (isSilent = false) => {
         if (!isSilent) setIsLoading(true); // Only show loader on initial fetch
-        
+
         try {
             const res = await fetch('/api/chat/messages');
             const data = await res.json();
@@ -1652,7 +1649,7 @@ const ChatView = ({ user, onBack }) => {
                         <Image src={user.avatar} width={36} height={36} className="rounded-full object-cover" alt="User Avatar" />
                     </div>
                 </header>
-                
+
                 {/* Desktop Header */}
                 <header className="p-5 px-6 border-b border-slate-100 flex-shrink-0 hidden md:flex items-center justify-between bg-white">
                     <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
@@ -1681,25 +1678,25 @@ const ChatView = ({ user, onBack }) => {
                         /* ACTUAL CONTENT */
                         <>
                             <div className={`w-full md:w-96 h-full flex-col bg-white ${isMobile && activeChatUser ? 'hidden' : 'flex'}`}>
-                                <ChatSidebar 
-                                    conversations={conversations} 
-                                    users={allUsers} 
-                                    onSelect={handleSelectConversation} 
-                                    selectedConvId={selectedConversation?._id} 
-                                    currentUser={user} 
-                                    onDelete={setDeletingConvId} 
+                                <ChatSidebar
+                                    conversations={conversations}
+                                    users={allUsers}
+                                    onSelect={handleSelectConversation}
+                                    selectedConvId={selectedConversation?._id}
+                                    currentUser={user}
+                                    onDelete={setDeletingConvId}
                                 />
                             </div>
 
                             <div className="flex-1 hidden md:flex border-l border-slate-100">
                                 {selectedUser ? (
-                                    <ChatBox 
-                                        selectedUser={selectedUser} 
-                                        conversation={selectedConversation} 
-                                        currentUser={user} 
+                                    <ChatBox
+                                        selectedUser={selectedUser}
+                                        conversation={selectedConversation}
+                                        currentUser={user}
                                         // FIXED: Pass true for silent update
-                                        onMessageSent={() => fetchChatData(true)} 
-                                        onBack={() => { }} 
+                                        onMessageSent={() => fetchChatData(true)}
+                                        onBack={() => { }}
                                     />
                                 ) : (
                                     <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50">
@@ -1713,21 +1710,21 @@ const ChatView = ({ user, onBack }) => {
 
                             <AnimatePresence>
                                 {isMobile && activeChatUser && (
-                                    <motion.div 
-                                        key="chatbox" 
-                                        className="absolute inset-0 z-20 bg-white" 
-                                        variants={slideAnimation} 
-                                        initial="initial" 
-                                        animate="animate" 
+                                    <motion.div
+                                        key="chatbox"
+                                        className="absolute inset-0 z-20 bg-white"
+                                        variants={slideAnimation}
+                                        initial="initial"
+                                        animate="animate"
                                         exit="exit"
                                     >
-                                        <ChatBox 
-                                            selectedUser={selectedUser} 
-                                            conversation={selectedConversation} 
-                                            currentUser={user} 
+                                        <ChatBox
+                                            selectedUser={selectedUser}
+                                            conversation={selectedConversation}
+                                            currentUser={user}
                                             // FIXED: Pass true for silent update
-                                            onMessageSent={() => fetchChatData(true)} 
-                                            onBack={handleBackToSidebar} 
+                                            onMessageSent={() => fetchChatData(true)}
+                                            onBack={handleBackToSidebar}
                                         />
                                     </motion.div>
                                 )}
@@ -1881,13 +1878,13 @@ export default function Dashboard({ user }) {
             const res = await fetch('/api/dashboard/data');
             if (!res.ok) throw new Error('Failed to fetch dashboard data');
             const data = await res.json();
-            
+
             // Batch updates to reduce re-renders
             setAttendance(data.initialAttendance || []);
             setTasks(data.initialTasks || []);
             setNotes(data.initialNotes || []);
             setNotifications(data.initialNotifications || []);
-            
+
             if (data.activeCheckIn) {
                 setActiveAttendance(data.activeCheckIn);
                 setCheckInTime(data.activeCheckIn.checkInTime);
@@ -1908,11 +1905,11 @@ export default function Dashboard({ user }) {
             setIsDataLoading(false);
         }
     }, []);
-    
+
     useEffect(() => {
         // Run fetch immediately
         fetchDashboardData();
-        
+
         // Timer for splash screen - Reduced to 1.2s for faster perceived load
         const timer = setTimeout(() => setShowSplash(false), 1200);
         return () => clearTimeout(timer);
@@ -2103,7 +2100,50 @@ export default function Dashboard({ user }) {
 
                                 {/* Controls Area */}
                                 <div className="flex items-center gap-2 sm:gap-6">
+                                    {/* ✅ Premium Projects Button (Compact & Aligned) */}
+                                    <Link
+                                        href="/projects"
+                                        className="
+    hidden lg:flex items-center gap-3 
+    pl-2 pr-5 py-1.5 
+    bg-white rounded-full 
+    shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] 
+    border border-slate-100 
+    hover:shadow-[0_4px_12px_-2px_rgba(16,185,129,0.1)] 
+    hover:border-emerald-100 
+    hover:scale-[1.01] 
+    transition-all duration-300 ease-out 
+    cursor-pointer group
+  "
+                                    >
+                                        {/* Icon Container - Scaled down to match neighbor height */}
+                                        <div className="
+    w-8 h-8 
+    bg-slate-900 rounded-full 
+    flex items-center justify-center 
+    text-white shadow-sm 
+    group-hover:bg-emerald-600 
+    transition-all duration-300
+  ">
+                                            <Grid size={16} strokeWidth={2.5} />
+                                        </div>
 
+                                        {/* Text Block - Tighter leading for vertical alignment */}
+                                        <div className="flex flex-col justify-center gap-[1px]">
+                                            <h3 className="
+      font-bold text-slate-800 text-sm leading-none
+      group-hover:text-emerald-700 transition-colors
+    ">
+                                                Projects
+                                            </h3>
+                                            <p className="
+      text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none
+      group-hover:text-emerald-600/70 transition-colors
+    ">
+                                                Canvas
+                                            </p>
+                                        </div>
+                                    </Link>
                                     {/* Date/Time Pill */}
                                     <div className="hidden lg:flex items-center gap-6 text-sm text-slate-600 bg-white/70 backdrop-blur-md border border-white/50 shadow-sm px-6 py-2.5 rounded-2xl">
                                         <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-emerald-500" /><span className="font-semibold">{currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' })}</span></div>
@@ -2132,123 +2172,123 @@ export default function Dashboard({ user }) {
 
                                     {/* Profile Dropdown */}
                                     <div ref={userDropdownRef} className="relative pl-2 ml-2">
-    {/* TRIGGER BUTTON - Clean, Pill Shape, No Borders */}
-    <motion.button
-        whileHover={{ scale: 1.02, backgroundColor: "rgba(241, 245, 249, 0.6)" }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        className={`group flex items-center gap-3 pr-3 pl-1.5 py-1.5 rounded-full transition-all duration-300 focus:outline-none ${isDropdownOpen ? 'bg-slate-100 shadow-inner' : 'hover:bg-slate-50'}`}
-    >
-        {/* Avatar Wrapper - Enforces Perfect Circle */}
-        <div className="relative">
-            {/* Animated Glow Ring on Hover */}
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]" />
-            
-            <div className="relative h-[44px] w-[44px] rounded-full ring-[3px] ring-white shadow-md overflow-hidden z-10">
-                <Image
-                    src={profileUser.avatar}
-                    alt={profileUser.name}
-                    fill
-                    className="object-cover"
-                    priority
-                />
-            </div>
-            
-            {/* Status Dot */}
-            <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full z-20 shadow-sm" />
-        </div>
+                                        {/* TRIGGER BUTTON - Clean, Pill Shape, No Borders */}
+                                        <motion.button
+                                            whileHover={{ scale: 1.02, backgroundColor: "rgba(241, 245, 249, 0.6)" }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                            className={`group flex items-center gap-3 pr-3 pl-1.5 py-1.5 rounded-full transition-all duration-300 focus:outline-none ${isDropdownOpen ? 'bg-slate-100 shadow-inner' : 'hover:bg-slate-50'}`}
+                                        >
+                                            {/* Avatar Wrapper - Enforces Perfect Circle */}
+                                            <div className="relative">
+                                                {/* Animated Glow Ring on Hover */}
+                                                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-[2px]" />
 
-        {/* User Info */}
-        <div className="hidden md:flex flex-col items-start text-left mr-1">
-            <span className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 transition-colors leading-tight">
-                {profileUser.name.split(' ')[0]}
-            </span>
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider group-hover:text-emerald-600 transition-colors">
-                {profileUser.role}
-            </span>
-        </div>
+                                                <div className="relative h-[44px] w-[44px] rounded-full ring-[3px] ring-white shadow-md overflow-hidden z-10">
+                                                    <Image
+                                                        src={profileUser.avatar}
+                                                        alt={profileUser.name}
+                                                        fill
+                                                        className="object-cover"
+                                                        priority
+                                                    />
+                                                </div>
 
-        {/* Smooth Chevron */}
-        <motion.div 
-            animate={{ rotate: isDropdownOpen ? 180 : 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} // Custom Bezier for smoothness
-            className="hidden md:flex items-center justify-center text-slate-400 group-hover:text-emerald-600"
-        >
-            <ChevronDown size={16} strokeWidth={2.5} />
-        </motion.div>
-    </motion.button>
+                                                {/* Status Dot */}
+                                                <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full z-20 shadow-sm" />
+                                            </div>
 
-    {/* DROPDOWN MENU */}
-    <AnimatePresence>
-        {isDropdownOpen && (
-            <motion.div
-                initial={{ opacity: 0, y: 8, scale: 0.98, filter: "blur(4px)" }}
-                animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-                exit={{ opacity: 0, y: 8, scale: 0.98, filter: "blur(4px)" }}
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute top-full right-0 mt-3 w-72 rounded-[28px] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1),0_10px_30px_-10px_rgba(0,0,0,0.05)] bg-white/90 backdrop-blur-2xl border border-white/60 z-50 origin-top-right overflow-hidden ring-1 ring-slate-900/5"
-            >
-                {/* Header with Subtle Gradient */}
-                <div className="p-5 relative overflow-hidden bg-gradient-to-b from-white to-slate-50/50">
-                    <div className="relative z-10 flex items-center gap-4">
-                        <div className="relative h-12 w-12 rounded-full ring-4 ring-white shadow-sm overflow-hidden shrink-0">
-                            <Image src={profileUser.avatar} alt={profileUser.name} fill className="object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-slate-900 truncate text-base">{profileUser.name}</h4>
-                            <p className="text-xs font-medium text-slate-500 truncate flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                Online
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                                            {/* User Info */}
+                                            <div className="hidden md:flex flex-col items-start text-left mr-1">
+                                                <span className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 transition-colors leading-tight">
+                                                    {profileUser.name.split(' ')[0]}
+                                                </span>
+                                                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider group-hover:text-emerald-600 transition-colors">
+                                                    {profileUser.role}
+                                                </span>
+                                            </div>
 
-                {/* Menu List */}
-                <div className="p-2 space-y-1 bg-white/50">
-                    <Link href="/performance">
-                        <motion.div 
-                            whileHover={{ x: 4, backgroundColor: "rgba(255, 255, 255, 1)" }}
-                            className="group flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
-                        >
-                            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 text-slate-500 group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300">
-                                <TrendingUp size={18} strokeWidth={2.5} />
-                            </div>
-                            <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-900">Performance</span>
-                        </motion.div>
-                    </Link>
+                                            {/* Smooth Chevron */}
+                                            <motion.div
+                                                animate={{ rotate: isDropdownOpen ? 180 : 0 }}
+                                                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} // Custom Bezier for smoothness
+                                                className="hidden md:flex items-center justify-center text-slate-400 group-hover:text-emerald-600"
+                                            >
+                                                <ChevronDown size={16} strokeWidth={2.5} />
+                                            </motion.div>
+                                        </motion.button>
 
-                    <Link href="/leaves">
-                        <motion.div 
-                             whileHover={{ x: 4, backgroundColor: "rgba(255, 255, 255, 1)" }}
-                             className="group flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
-                        >
-                            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 text-slate-500 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
-                                <FileText size={18} strokeWidth={2.5} />
-                            </div>
-                            <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-900">Leave Requests</span>
-                        </motion.div>
-                    </Link>
-                    
-                    {/* Soft Separator */}
-                    <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-2 mx-6" />
-                    
-                    <button onClick={handleLogout} className="w-full">
-                        <motion.div 
-                             whileHover={{ x: 4, backgroundColor: "rgba(255, 241, 242, 1)" }}
-                             className="group flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all"
-                        >
-                            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-rose-50 text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
-                                <LogOut size={18} strokeWidth={2.5} />
-                            </div>
-                            <span className="text-sm font-bold text-rose-500 group-hover:text-rose-600">Sign Out</span>
-                        </motion.div>
-                    </button>
-                </div>
-            </motion.div>
-        )}
-    </AnimatePresence>
-</div>
+                                        {/* DROPDOWN MENU */}
+                                        <AnimatePresence>
+                                            {isDropdownOpen && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 8, scale: 0.98, filter: "blur(4px)" }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+                                                    exit={{ opacity: 0, y: 8, scale: 0.98, filter: "blur(4px)" }}
+                                                    transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                                                    className="absolute top-full right-0 mt-3 w-72 rounded-[28px] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1),0_10px_30px_-10px_rgba(0,0,0,0.05)] bg-white/90 backdrop-blur-2xl border border-white/60 z-50 origin-top-right overflow-hidden ring-1 ring-slate-900/5"
+                                                >
+                                                    {/* Header with Subtle Gradient */}
+                                                    <div className="p-5 relative overflow-hidden bg-gradient-to-b from-white to-slate-50/50">
+                                                        <div className="relative z-10 flex items-center gap-4">
+                                                            <div className="relative h-12 w-12 rounded-full ring-4 ring-white shadow-sm overflow-hidden shrink-0">
+                                                                <Image src={profileUser.avatar} alt={profileUser.name} fill className="object-cover" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h4 className="font-bold text-slate-900 truncate text-base">{profileUser.name}</h4>
+                                                                <p className="text-xs font-medium text-slate-500 truncate flex items-center gap-1.5">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                                    Online
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Menu List */}
+                                                    <div className="p-2 space-y-1 bg-white/50">
+                                                        <Link href="/performance">
+                                                            <motion.div
+                                                                whileHover={{ x: 4, backgroundColor: "rgba(255, 255, 255, 1)" }}
+                                                                className="group flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
+                                                            >
+                                                                <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 text-slate-500 group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300">
+                                                                    <TrendingUp size={18} strokeWidth={2.5} />
+                                                                </div>
+                                                                <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-900">Performance</span>
+                                                            </motion.div>
+                                                        </Link>
+
+                                                        <Link href="/leaves">
+                                                            <motion.div
+                                                                whileHover={{ x: 4, backgroundColor: "rgba(255, 255, 255, 1)" }}
+                                                                className="group flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
+                                                            >
+                                                                <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 text-slate-500 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+                                                                    <FileText size={18} strokeWidth={2.5} />
+                                                                </div>
+                                                                <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-900">Leave Requests</span>
+                                                            </motion.div>
+                                                        </Link>
+
+                                                        {/* Soft Separator */}
+                                                        <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-2 mx-6" />
+
+                                                        <button onClick={handleLogout} className="w-full">
+                                                            <motion.div
+                                                                whileHover={{ x: 4, backgroundColor: "rgba(255, 241, 242, 1)" }}
+                                                                className="group flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all"
+                                                            >
+                                                                <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-rose-50 text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
+                                                                    <LogOut size={18} strokeWidth={2.5} />
+                                                                </div>
+                                                                <span className="text-sm font-bold text-rose-500 group-hover:text-rose-600">Sign Out</span>
+                                                            </motion.div>
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
                                 </div>
                             </div>
                         </div>
