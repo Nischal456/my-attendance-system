@@ -1,54 +1,34 @@
 import dbConnect from '../../../../lib/dbConnect';
-import User from '../../../../models/User';
-import Project from '../../../../models/Project'; // ✅ We use Project to access tasks
+import Project from '../../../../models/Project';
 import Attendance from '../../../../models/Attendance';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import { 
-    startOfWeek, 
     subWeeks, 
     eachWeekOfInterval, 
     format, 
-    differenceInCalendarDays, 
     startOfDay, 
+    differenceInCalendarDays, 
     isSameDay
 } from 'date-fns';
 
 // --- Helper: Calculate Streak ---
 const calculateStreak = (dates) => {
     if (!dates || dates.length === 0) return 0;
-    
-    // Sort dates descending
     const sortedDates = dates.map(d => startOfDay(new Date(d))).sort((a, b) => b - a);
-    
-    // Remove duplicates
     const uniqueDates = [];
     sortedDates.forEach(d => {
-        if (!uniqueDates.some(ud => isSameDay(ud, d))) {
-            uniqueDates.push(d);
-        }
+        if (!uniqueDates.some(ud => isSameDay(ud, d))) uniqueDates.push(d);
     });
-
     if (uniqueDates.length === 0) return 0;
-
     const today = startOfDay(new Date());
     const lastLogin = uniqueDates[0];
-    
-    // If last login was not today or yesterday, streak is broken
-    const diffToLast = differenceInCalendarDays(today, lastLogin);
-    if (diffToLast > 1) return 0;
+    if (differenceInCalendarDays(today, lastLogin) > 1) return 0; // Streak broken if not today/yesterday
 
     let streak = 1;
     for (let i = 0; i < uniqueDates.length - 1; i++) {
-        const current = uniqueDates[i];
-        const next = uniqueDates[i + 1];
-        const diff = differenceInCalendarDays(current, next);
-
-        if (diff === 1) {
-            streak++;
-        } else {
-            break;
-        }
+        if (differenceInCalendarDays(uniqueDates[i], uniqueDates[i+1]) === 1) streak++;
+        else break;
     }
     return streak;
 };
@@ -61,78 +41,68 @@ export default async function handler(req, res) {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = new mongoose.Types.ObjectId(decoded.userId);
+        const userId = decoded.userId; // Keep as string for safe comparison
 
-        // --- 1. Aggregations (Parallel for Speed) ---
-        const [
-            attendanceData, 
-            taskData, 
-            recentAttendanceLogs
-        ] = await Promise.all([
-            
-            // A. Attendance Aggregation
-            Attendance.aggregate([
-                { $match: { user: userId } },
-                { 
-                    $project: {
-                        duration: 1,
-                        checkInTime: 1,
-                        workLocation: 1, 
-                        month: { $month: "$checkInTime" }
-                    }
-                }
-            ]),
-
-            // B. Project/Task Aggregation (Unwind embedded tasks)
-            Project.aggregate([
-                { $unwind: "$tasks" },
-                { $match: { "tasks.createdBy": userId } },
-                { 
-                    $project: {
-                        isCompleted: "$tasks.isCompleted",
-                        createdAt: "$tasks.createdAt"
-                    }
-                }
-            ]),
-
-            // C. Recent Logs for Streak
-            Attendance.find({ user: userId })
-                .sort({ checkInTime: -1 })
-                .limit(60)
-                .select('checkInTime')
-                .lean()
+        // 1. Fetch Data
+        // We fetch ALL projects the user is involved in (Leader OR Member)
+        const [attendanceData, projects] = await Promise.all([
+            Attendance.find({ user: userId }).lean(),
+            Project.find({
+                $or: [{ leader: userId }, { assignedTo: userId }, { "tasks.createdBy": userId }]
+            }).lean()
         ]);
 
-        // --- 2. Process Task Stats ---
-        const totalTasks = taskData.length;
-        const completedTasks = taskData.filter(t => t.isCompleted).length;
-        const onTimeRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-        // Weekly Velocity (Last 4 Weeks)
+        // 2. Robust Task Calculation (JavaScript Filter)
+        let totalTasks = 0;
+        let completedTasks = 0;
         const weeklyStats = {};
         const weeksInterval = eachWeekOfInterval({ start: subWeeks(new Date(), 4), end: new Date() });
-        
         weeksInterval.forEach(week => { weeklyStats[format(week, 'w')] = 0; });
 
-        taskData.forEach(task => {
-            if(task.isCompleted && task.createdAt) {
-                const weekNum = format(new Date(task.createdAt), 'w');
-                if (weeklyStats[weekNum] !== undefined) weeklyStats[weekNum]++;
+        projects.forEach(project => {
+            if (project.tasks && Array.isArray(project.tasks)) {
+                project.tasks.forEach(task => {
+                    // LOGIC: You get credit if:
+                    // A) You created the task
+                    // B) OR You are the Project Leader (Team Velocity)
+                    // C) OR You are assigned to the project (Member contribution)
+                    const isMyTask = 
+                        String(task.createdBy) === String(userId) || 
+                        String(project.leader) === String(userId) ||
+                        (project.assignedTo && project.assignedTo.some(id => String(id) === String(userId)));
+
+                    if (isMyTask) {
+                        totalTasks++;
+                        
+                        if (task.isCompleted) {
+                            completedTasks++;
+                            
+                            // Weekly Velocity
+                            if (task.createdAt) {
+                                const weekNum = format(new Date(task.createdAt), 'w');
+                                if (weeklyStats[weekNum] !== undefined) weeklyStats[weekNum]++;
+                            }
+                        }
+                    }
+                });
             }
         });
 
+        const onTimeRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
         const tasksChartData = weeksInterval.map(week => ({
-            week: format(week, 'd'), // Label
+            week: format(week, 'd'),
             count: weeklyStats[format(week, 'w')] || 0
         }));
 
-        // --- 3. Process Attendance Hours ---
+        // 3. Process Attendance Hours (Monthly)
         const monthlyHoursMap = {};
         let officeSeconds = 0;
         let homeSeconds = 0;
 
         attendanceData.forEach(record => {
-            const monthKey = `${format(new Date(0, record.month - 1), 'MMM')}`;
+            const date = new Date(record.checkInTime);
+            const monthKey = format(date, 'MMM');
             const seconds = record.duration || 0;
             
             monthlyHoursMap[monthKey] = (monthlyHoursMap[monthKey] || 0) + seconds;
@@ -152,15 +122,16 @@ export default async function handler(req, res) {
             });
         }
 
-        // --- 4. Process Streak ---
-        const streakDates = recentAttendanceLogs.map(log => log.checkInTime);
+        // 4. Streak
+        const streakDates = attendanceData.map(log => log.checkInTime);
         const loginStreak = calculateStreak(streakDates);
 
-        // --- 5. Return Data ---
+        // 5. Final Response
         res.status(200).json({
             success: true,
             stats: {
                 totalCompleted: completedTasks,
+                totalTasks: totalTasks, // Added total for context
                 onTimeRate
             },
             locationData: {
@@ -172,12 +143,12 @@ export default async function handler(req, res) {
             achievements: {
                 loginStreak,
                 onFire: completedTasks > 5,
-                taskMaster: completedTasks > 50
+                taskMaster: completedTasks > 20
             }
         });
 
     } catch (error) {
-        console.error("Performance Stats API Error:", error);
+        console.error("Performance API Error:", error);
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 }
