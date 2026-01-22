@@ -1,29 +1,53 @@
 import dbConnect from '../../../../lib/dbConnect';
 import User from '../../../../models/User';
-import Task from '../../../../models/Task';
+import Project from '../../../../models/Project'; // ✅ We use Project to access tasks
 import Attendance from '../../../../models/Attendance';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
-import { startOfWeek, subWeeks, eachWeekOfInterval, format, differenceInCalendarDays, startOfDay } from 'date-fns';
+import { 
+    startOfWeek, 
+    subWeeks, 
+    eachWeekOfInterval, 
+    format, 
+    differenceInCalendarDays, 
+    startOfDay, 
+    isSameDay
+} from 'date-fns';
 
-// ✅ FIX: Re-added the helper function to calculate the streak
+// --- Helper: Calculate Streak ---
 const calculateStreak = (dates) => {
-    if (dates.length === 0) return 0;
-    let streak = 0;
-    let today = startOfDay(new Date());
+    if (!dates || dates.length === 0) return 0;
+    
+    // Sort dates descending
+    const sortedDates = dates.map(d => startOfDay(new Date(d))).sort((a, b) => b - a);
+    
+    // Remove duplicates
+    const uniqueDates = [];
+    sortedDates.forEach(d => {
+        if (!uniqueDates.some(ud => isSameDay(ud, d))) {
+            uniqueDates.push(d);
+        }
+    });
 
-    const todayLogin = dates.some(d => differenceInCalendarDays(today, d) === 0);
-    if (todayLogin) {
-        streak = 1;
-        for (let i = 1; i < dates.length; i++) {
-            const prevDay = new Date(today);
-            prevDay.setDate(today.getDate() - i);
-            const hasLoginForPrevDay = dates.some(d => differenceInCalendarDays(prevDay, d) === 0);
-            if (hasLoginForPrevDay) {
-                streak++;
-            } else {
-                break;
-            }
+    if (uniqueDates.length === 0) return 0;
+
+    const today = startOfDay(new Date());
+    const lastLogin = uniqueDates[0];
+    
+    // If last login was not today or yesterday, streak is broken
+    const diffToLast = differenceInCalendarDays(today, lastLogin);
+    if (diffToLast > 1) return 0;
+
+    let streak = 1;
+    for (let i = 0; i < uniqueDates.length - 1; i++) {
+        const current = uniqueDates[i];
+        const next = uniqueDates[i + 1];
+        const diff = differenceInCalendarDays(current, next);
+
+        if (diff === 1) {
+            streak++;
+        } else {
+            break;
         }
     }
     return streak;
@@ -32,75 +56,128 @@ const calculateStreak = (dates) => {
 export default async function handler(req, res) {
     await dbConnect();
     const { token } = req.cookies;
-    if (!token) return res.status(401).json({ message: 'Not authenticated' });
+    
+    if (!token) return res.status(401).json({ success: false, message: 'Not authenticated' });
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = new mongoose.Types.ObjectId(decoded.userId);
 
-        const [taskStats, monthlyHours, weeklyTasks, locationHours, recentAttendance] = await Promise.all([
-            // --- STATS AGGREGATION ---
-            Task.aggregate([
-                { $match: { assignedTo: userId, status: 'Completed' } },
-                { $group: { _id: null, totalCompleted: { $sum: 1 }, onTime: { $sum: { $cond: [{ $lte: ["$completedAt", "$deadline"] }, 1, 0] } } } }
-            ]),
-            // --- MONTHLY HOURS AGGREGATION ---
+        // --- 1. Aggregations (Parallel for Speed) ---
+        const [
+            attendanceData, 
+            taskData, 
+            recentAttendanceLogs
+        ] = await Promise.all([
+            
+            // A. Attendance Aggregation
             Attendance.aggregate([
-                { $match: { user: userId, duration: { $ne: null } } },
-                { $group: { _id: { year: { $year: "$checkInTime" }, month: { $month: "$checkInTime" } }, totalSeconds: { $sum: "$duration" } } },
-                { $sort: { "_id.year": -1, "_id.month": -1 } },
-                { $limit: 6 }
+                { $match: { user: userId } },
+                { 
+                    $project: {
+                        duration: 1,
+                        checkInTime: 1,
+                        workLocation: 1, 
+                        month: { $month: "$checkInTime" }
+                    }
+                }
             ]),
-            // --- WEEKLY TASK COMPLETION AGGREGATION ---
-            Task.aggregate([
-                { $match: { assignedTo: userId, status: 'Completed', completedAt: { $gte: subWeeks(new Date(), 12) } } },
-                { $group: { _id: { $week: "$completedAt" }, count: { $sum: 1 } } },
-                { $sort: { "_id": 1 } }
+
+            // B. Project/Task Aggregation (Unwind embedded tasks)
+            Project.aggregate([
+                { $unwind: "$tasks" },
+                { $match: { "tasks.createdBy": userId } },
+                { 
+                    $project: {
+                        isCompleted: "$tasks.isCompleted",
+                        createdAt: "$tasks.createdAt"
+                    }
+                }
             ]),
-            // --- LOCATION-BASED HOURS AGGREGATION ---
-            Attendance.aggregate([
-                { $match: { user: userId, duration: { $ne: null } } },
-                { $group: { _id: "$workLocation", totalSeconds: { $sum: "$duration" } } }
-            ]),
-            // ✅ FIX: Re-added the query to fetch attendance for the streak calculation
-            Attendance.find({ user: userId }).sort({ checkInTime: -1 }).limit(90).select('checkInTime').lean(),
+
+            // C. Recent Logs for Streak
+            Attendance.find({ user: userId })
+                .sort({ checkInTime: -1 })
+                .limit(60)
+                .select('checkInTime')
+                .lean()
         ]);
 
-        const stats = {
-            totalCompleted: taskStats[0]?.totalCompleted || 0,
-            onTimeRate: (taskStats[0]?.totalCompleted > 0) ? ((taskStats[0]?.onTime / taskStats[0]?.totalCompleted) * 100).toFixed(0) : 0,
-        };
+        // --- 2. Process Task Stats ---
+        const totalTasks = taskData.length;
+        const completedTasks = taskData.filter(t => t.isCompleted).length;
+        const onTimeRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-        const hoursChartData = monthlyHours.reverse().map(month => ({
-            month: `${month._id.year}-${String(month._id.month).padStart(2, '0')}`,
-            hours: month.totalSeconds / 3600
+        // Weekly Velocity (Last 4 Weeks)
+        const weeklyStats = {};
+        const weeksInterval = eachWeekOfInterval({ start: subWeeks(new Date(), 4), end: new Date() });
+        
+        weeksInterval.forEach(week => { weeklyStats[format(week, 'w')] = 0; });
+
+        taskData.forEach(task => {
+            if(task.isCompleted && task.createdAt) {
+                const weekNum = format(new Date(task.createdAt), 'w');
+                if (weeklyStats[weekNum] !== undefined) weeklyStats[weekNum]++;
+            }
+        });
+
+        const tasksChartData = weeksInterval.map(week => ({
+            week: format(week, 'd'), // Label
+            count: weeklyStats[format(week, 'w')] || 0
         }));
 
-        const weeksInterval = eachWeekOfInterval({ start: subWeeks(new Date(), 11), end: new Date() }, { weekStartsOn: 1 });
-        const tasksChartData = weeksInterval.map(weekStart => {
-            const weekNumber = parseInt(format(weekStart, 'w'));
-            const weekData = weeklyTasks.find(w => w._id === weekNumber);
-            return { week: format(weekStart, 'MMM d'), count: weekData ? weekData.count : 0 };
+        // --- 3. Process Attendance Hours ---
+        const monthlyHoursMap = {};
+        let officeSeconds = 0;
+        let homeSeconds = 0;
+
+        attendanceData.forEach(record => {
+            const monthKey = `${format(new Date(0, record.month - 1), 'MMM')}`;
+            const seconds = record.duration || 0;
+            
+            monthlyHoursMap[monthKey] = (monthlyHoursMap[monthKey] || 0) + seconds;
+
+            if (record.workLocation === 'Office' || !record.workLocation) officeSeconds += seconds;
+            else homeSeconds += seconds;
         });
-        
-        const locationData = {
-            officeHours: locationHours.find(loc => loc._id === 'Office')?.totalSeconds / 3600 || 0,
-            homeHours: locationHours.find(loc => loc._id === 'Home')?.totalSeconds / 3600 || 0,
-        };
-        
-        // ✅ FIX: Re-added the full achievements logic
-        const uniqueCheckinDays = [...new Set(recentAttendance.map(a => startOfDay(new Date(a.checkInTime)).toISOString()))].map(iso => new Date(iso));
-        const checkInStreak = calculateStreak(uniqueCheckinDays);
 
-        const achievements = {
-            onFire: weeklyTasks.some(w => w.count >= 5),
-            taskMaster: stats.totalCompleted >= 50,
-            loginStreak: checkInStreak,
-        };
+        const hoursChartData = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date();
+            d.setMonth(d.getMonth() - i);
+            const key = format(d, 'MMM');
+            hoursChartData.push({
+                month: key,
+                hours: ((monthlyHoursMap[key] || 0) / 3600).toFixed(1)
+            });
+        }
 
-        res.status(200).json({ success: true, stats, hoursChartData, tasksChartData, locationData, achievements });
+        // --- 4. Process Streak ---
+        const streakDates = recentAttendanceLogs.map(log => log.checkInTime);
+        const loginStreak = calculateStreak(streakDates);
+
+        // --- 5. Return Data ---
+        res.status(200).json({
+            success: true,
+            stats: {
+                totalCompleted: completedTasks,
+                onTimeRate
+            },
+            locationData: {
+                officeHours: (officeSeconds / 3600),
+                homeHours: (homeSeconds / 3600)
+            },
+            hoursChartData,
+            tasksChartData,
+            achievements: {
+                loginStreak,
+                onFire: completedTasks > 5,
+                taskMaster: completedTasks > 50
+            }
+        });
+
     } catch (error) {
         console.error("Performance Stats API Error:", error);
-        res.status(500).json({ message: 'Internal Server Error' });
+        res.status(500).json({ success: false, message: 'Server Error' });
     }
 }

@@ -87,7 +87,7 @@ export default function ProjectCanvas() {
             setProject(data.data);
             setCurrentUserId(data.currentUserId);
         } else {
-            toast.error("Project not found");
+            toast.error("Project not found Go back to your dashboard ");
         }
     } catch (e) { toast.error("Connection failed"); } 
     finally { 
@@ -236,7 +236,54 @@ export default function ProjectCanvas() {
   };
 
   if (loading) return <CanvasLoader />;
-  if (!project) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Project Not Found</div>;
+ if (!project)
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      <div className="max-w-md w-full text-center px-6">
+        {/* Card */}
+        <div className="relative rounded-2xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-[0_20px_60px_-20px_rgba(15,23,42,0.15)] p-8">
+          
+          {/* Icon */}
+          <div className="mx-auto mb-5 w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
+            <ArrowLeft size={22} className="text-slate-400" />
+          </div>
+
+          {/* Title */}
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight">
+            Project Not Found
+          </h2>
+
+          {/* Description */}
+          <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+            The project you’re looking for doesn’t exist or may have been removed.
+          </p>
+
+          {/* CTA */}
+          <Link
+            href="/dashboard"
+            className="
+              mt-6 inline-flex items-center gap-2
+              rounded-full px-5 py-2.5
+              bg-slate-900 text-white text-sm font-semibold
+              shadow-lg shadow-slate-900/20
+              hover:bg-slate-800 hover:shadow-xl
+              transition-all duration-300
+              focus:outline-none focus:ring-2 focus:ring-slate-900/30
+            "
+          >
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </Link>
+        </div>
+
+        {/* Subtle hint */}
+        <p className="mt-6 text-xs text-slate-400">
+          If you think this is a mistake, please check your project permissions.
+        </p>
+      </div>
+    </div>
+  );
+
 
   const isLeader = project?.leader?._id === currentUserId;
   const isCompleted = project.status === 'Completed';
