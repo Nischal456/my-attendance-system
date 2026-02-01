@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
-import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, DollarSign, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home, Send, Search, ArrowLeft, AlertTriangle, AlertCircle } from 'react-feather';
+import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, Wallet, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home, Send, Search, ArrowLeft, AlertTriangle, AlertCircle } from 'react-feather';
 import { ChevronDown, MessageSquarePlus } from 'lucide-react';
 import toast from 'react-hot-toast'; // Uses global _app.js Toaster
 import dynamic from 'next/dynamic';
@@ -113,7 +113,7 @@ const getSenderUI = (author) => {
     const lower = author?.toLowerCase() || '';
     if (lower.includes('hr')) return { Icon: UserIcon, iconBg: 'bg-rose-100 text-rose-600' };
     if (lower.includes('project')) return { Icon: Briefcase, iconBg: 'bg-purple-100 text-purple-600' };
-    if (lower.includes('finance')) return { Icon: DollarSign, iconBg: 'bg-emerald-100 text-emerald-600' };
+    if (lower.includes('finance')) return { Icon: Wallet, iconBg: 'bg-emerald-100 text-emerald-600' };
     return { Icon: Info, iconBg: 'bg-blue-100 text-blue-600' };
 };
 
