@@ -1,5 +1,5 @@
 import { Inter } from 'next/font/google';
-import './globals.css'; 
+import './globals.css';
 import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -18,8 +18,9 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'GeckoWorks OMS',
   description: 'Smart Office Management System',
+  manifest: '/manifest.json',
   icons: {
-    icon: '/paw.png',
+    icon: '/new.png',
     shortcut: '/paw.png',
     apple: '/paw.png',
   },
@@ -40,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={inter.className}>
         {children}
         {/* Global Toaster Configuration */}
-        <Toaster 
+        <Toaster
           position="top-center"
           toastOptions={{
             duration: 3000,
