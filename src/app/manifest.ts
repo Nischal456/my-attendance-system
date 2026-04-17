@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Smart Office Management System',
     start_url: '/login',
     display: 'standalone',
-    background_color: '#0f172a',
-    theme_color: '#0f172a',
+    background_color: '#ffffffff',
+    theme_color: '#ffffffff',
     icons: [
       {
         src: '/paw.png',
