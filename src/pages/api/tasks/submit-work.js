@@ -13,7 +13,7 @@ cloudinary.v2.config({
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '10mb', // Allow up to 10mb for file uploads
+      sizeLimit: '50mb', // Allow up to 50mb for high-res photo uploads
     },
   },
 };
