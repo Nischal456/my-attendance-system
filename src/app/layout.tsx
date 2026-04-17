@@ -4,9 +4,29 @@ import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ['latin'] });
 
-export const metadata = {
+import type { Metadata, Viewport } from 'next';
+
+export const viewport: Viewport = {
+  themeColor: '#0f172a',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
+
+export const metadata: Metadata = {
   title: 'GeckoWorks OMS',
   description: 'Smart Office Management System',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'GeckoWorks OMS',
+  },
+  applicationName: 'GeckoWorks OMS',
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
