@@ -18,6 +18,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'GeckoWorks OMS',
   description: 'Smart Office Management System',
+  icons: {
+    icon: '/paw.png',
+    shortcut: '/paw.png',
+    apple: '/paw.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
