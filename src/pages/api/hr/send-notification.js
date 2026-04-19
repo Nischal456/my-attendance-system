@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import dbConnect from '../../../../lib/dbConnect';
 import User from '../../../../models/User';
 import Notification from '../../../../models/Notification';
+import { sendPushNotification } from '../../../../lib/webPush';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -41,11 +42,26 @@ export default async function handler(req, res) {
                 recipient: targetUser,
                 link: '#', 
             });
+
+            // Send Web Push to this specific individual
+            const recipientUser = await User.findById(targetUser).select('pushSubscriptions');
+            if (recipientUser && recipientUser.pushSubscriptions && recipientUser.pushSubscriptions.length > 0) {
+                const pushPromises = recipientUser.pushSubscriptions.map(sub => 
+                    sendPushNotification(sub, {
+                        title: `Message from ${hrUser.name} (HR) 📩`,
+                        body: content,
+                        url: '/dashboard',
+                        icon: '/paw.png'
+                    })
+                );
+                await Promise.allSettled(pushPromises);
+            }
+
             res.status(201).json({ success: true, message: `Notification sent successfully to the selected user.` });
 
         } else {
             // --- Logic for sending to ALL users (your original logic) ---
-            const allTargetUsers = await User.find({ role: { $ne: 'HR' } }).select('_id');
+            const allTargetUsers = await User.find({ role: { $ne: 'HR' } }).select('_id pushSubscriptions');
             
             if (allTargetUsers.length === 0) {
                 return res.status(200).json({ success: true, message: 'No users to notify.' });
@@ -59,8 +75,28 @@ export default async function handler(req, res) {
             }));
 
             await Notification.insertMany(notificationsToCreate);
+
+            // Execute Native Web Push Broadcast
+            const broadcastPromises = [];
+            allTargetUsers.forEach(user => {
+                if (user.pushSubscriptions && user.pushSubscriptions.length > 0) {
+                    user.pushSubscriptions.forEach(sub => {
+                        broadcastPromises.push(
+                            sendPushNotification(sub, {
+                                title: "System Broadcast 🚨",
+                                body: content,
+                                url: '/dashboard',
+                                icon: '/paw.png'
+                            })
+                        );
+                    });
+                }
+            });
+
+            // Use allSettled so if one token is expired, it doesn't crash the whole broadcast
+            await Promise.allSettled(broadcastPromises);
             
-            res.status(201).json({ success: true, message: `Notification sent to ${allTargetUsers.length} users.` });
+            res.status(201).json({ success: true, message: `Broadcast sent to ${allTargetUsers.length} users.` });
         }
 
     } catch (error) {

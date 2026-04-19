@@ -3,6 +3,7 @@ import dbConnect from '../../../../lib/dbConnect';
 import User from '../../../../models/User';
 import LeaveRequest from '../../../../models/LeaveRequest';
 import Notification from '../../../../models/Notification'; // Import Notification model
+import { sendPushNotification } from '../../../../lib/webPush';
 
 export default async function handler(req, res) {
   if (req.method !== 'PUT') {
@@ -43,6 +44,20 @@ export default async function handler(req, res) {
       recipient: updatedLeaveRequest.user._id, // Assign the notification to the specific user
       link: '/leaves/report' // Link them to their leave report page
     });
+
+    // Send the Native Web Push Alert
+    const targetUser = await User.findById(updatedLeaveRequest.user._id).select('pushSubscriptions');
+    if (targetUser && targetUser.pushSubscriptions && targetUser.pushSubscriptions.length > 0) {
+        const pushPromises = targetUser.pushSubscriptions.map(sub => 
+            sendPushNotification(sub, {
+                title: status === 'Approved' ? 'Leave Approved ✅' : 'Leave Declined ❌',
+                body: notificationContent,
+                url: '/leaves/report',
+                icon: '/paw.png'
+            })
+        );
+        await Promise.allSettled(pushPromises);
+    }
 
     res.status(200).json({ success: true, message: `Request has been ${status}.`, data: updatedLeaveRequest });
   } catch (error) {

@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import dbConnect from '../../../../lib/dbConnect';
 import User from '../../../../models/User';
 import LeaveRequest from '../../../../models/LeaveRequest';
+import { sendPushNotification } from '../../../../lib/webPush';
 
 export default async function handler(req, res) {
   // 1. Only allow POST requests
@@ -49,7 +50,28 @@ export default async function handler(req, res) {
     // 6. Save the new leave request to the database
     await newLeaveRequest.save();
 
-    // 7. Send a success response
+    // 7. Notify HR about the new leave request via Web Push
+    const hrUsers = await User.find({ role: 'HR' }).select('pushSubscriptions');
+    const pushPromises = [];
+    
+    hrUsers.forEach(hr => {
+        if (hr.pushSubscriptions && hr.pushSubscriptions.length > 0) {
+            hr.pushSubscriptions.forEach(sub => {
+                pushPromises.push(
+                    sendPushNotification(sub, {
+                        title: "New Leave Request 📅",
+                        body: `${user.name} has requested ${leaveType} leave.`,
+                        url: '/hr/dashboard',
+                        icon: '/hr.png'
+                    })
+                );
+            });
+        }
+    });
+    
+    await Promise.allSettled(pushPromises);
+
+    // 8. Send a success response
     res.status(201).json({ success: true, message: 'Leave request submitted successfully.' });
 
   } catch (error) {
