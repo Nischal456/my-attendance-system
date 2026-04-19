@@ -36,6 +36,10 @@ const UserSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Notification'
   }],
+  pushSubscriptions: {
+    type: Array,
+    default: [],
+  },
   // --- NEW FIELDS FOR PASSWORD RESET ---
   passwordResetToken: {
     type: String,

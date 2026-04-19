@@ -4,6 +4,7 @@ import User from '../../../../models/User';
 import Task from '../../../../models/Task';
 import Notification from '../../../../models/Notification'; // Import Notification model
 import cloudinary from 'cloudinary';
+import { sendPushNotification } from '../../../../lib/webPush';
 
 // Configure Cloudinary
 cloudinary.v2.config({
@@ -99,6 +100,24 @@ export default async function handler(req, res) {
 
     if (notifications.length > 0) {
         await Notification.insertMany(notifications);
+
+        // PUSH NOTIFICATIONS: Send native push to all involved users asynchronously
+        const involvedUsers = await User.find({ _id: { $in: uniqueInvolvedIds } });
+        const pushPromises = [];
+        for (const u of involvedUsers) {
+            if (u.pushSubscriptions && u.pushSubscriptions.length > 0) {
+                const payload = {
+                    title: 'New Task Assigned',
+                    body: `"${title}" has been assigned to you by ${pmUser.name}.`,
+                    url: '/dashboard',
+                    icon: '/paw.png'
+                };
+                for (const sub of u.pushSubscriptions) {
+                    pushPromises.push(sendPushNotification(sub, payload));
+                }
+            }
+        }
+        Promise.all(pushPromises).catch(err => console.error("Push Notification Error:", err));
     }
 
   } catch (error) {

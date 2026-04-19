@@ -3,6 +3,7 @@ import Project from '../../../../models/Project';
 import User from '../../../../models/User'; // Ensure User model is loaded for population
 import Notification from '../../../../models/Notification';
 import jwt from 'jsonwebtoken';
+import { sendPushNotification } from '../../../../lib/webPush';
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -31,10 +32,10 @@ export default async function handler(req, res) {
 
       // POST: Add Task
       if (req.method === 'POST') {
-        const { content } = req.body;
+        const { content, priority } = req.body;
         const project = await Project.findByIdAndUpdate(
             id, 
-            { $push: { tasks: { content, createdBy: currentUserId } } }, 
+            { $push: { tasks: { content, priority: priority || 'Medium', createdBy: currentUserId } } }, 
             { new: true }
         ).populate('tasks.createdBy', 'name avatar');
         
@@ -60,7 +61,7 @@ export default async function handler(req, res) {
             }
         }
         
-        // 2. SET REMINDER (Creates Notification)
+        // 2. SET REMINDER (Creates Notification & Push)
         else if (action === 'setReminder') {
             try {
                 await Notification.create({
@@ -72,8 +73,25 @@ export default async function handler(req, res) {
                     remindAt: reminderDate || new Date(),
                     createdAt: new Date()
                 });
+
+                // Immediately Push Alert Confirmation
+                const user = await User.findById(currentUserId);
+                if (user && user.pushSubscriptions) {
+                    const payload = JSON.stringify({
+                        title: 'WorkOS Reminder Set',
+                        body: `We will remind you about ${reminderNote || 'this project'} at the scheduled time.`,
+                        url: `/projects/${id}`
+                    });
+                    
+                    for (let sub of user.pushSubscriptions) {
+                        try {
+                            await sendPushNotification(sub, payload);
+                        } catch (err) {
+                            console.error('Failed to send confirmation push:', err);
+                        }
+                    }
+                }
             } catch (e) {
-                // If Notification model fails, log it but don't crash the request
                 console.log("Notification error:", e);
             }
             return res.status(200).json({ success: true, message: 'Reminder set' });

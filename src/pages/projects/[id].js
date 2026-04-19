@@ -63,6 +63,7 @@ export default function ProjectCanvas() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [newTask, setNewTask] = useState('');
+  const [newPriority, setNewPriority] = useState('Medium');
   const [newComment, setNewComment] = useState('');
   
   // Modals
@@ -175,17 +176,19 @@ export default function ProjectCanvas() {
         content: newTask, 
         isCompleted: false, 
         isPinned: false,
+        priority: newPriority,
         createdBy: { name: 'Me', avatar: '' }, 
         createdAt: new Date() 
     };
     
-    setProject(prev => ({ ...prev, tasks: [tempTask, ...prev.tasks] }));
+    setProject(prev => ({ ...prev, tasks: [...prev.tasks, tempTask] }));
     setNewTask('');
+    setNewPriority('Medium');
 
     await fetch(`/api/projects/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newTask })
+        body: JSON.stringify({ content: tempTask.content, priority: tempTask.priority })
     });
     refreshData(); 
   };
@@ -367,43 +370,103 @@ export default function ProjectCanvas() {
 
         {activeTab === 'board' ? (
             <>
-                {/* Input Area */}
-                {!isCompleted && (
-                    <div className="mb-12 sticky top-24 z-30">
-                        <form onSubmit={addTask} className="relative group">
-                            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors"><Plus size={24} strokeWidth={3} /></div>
-                            <input type="text" value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="Add a new target..." className="w-full pl-16 pr-6 py-5 text-lg font-medium bg-white rounded-[2rem] shadow-[0_20px_40px_-10px_rgba(0,0,0,0.06)] border border-slate-100 outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all placeholder:text-slate-300" />
-                        </form>
-                    </div>
-                )}
+                {/* Notion Style Editor Canvas */}
+                <div className="space-y-1 group/canvas relative max-w-3xl mx-auto">
+                    {/* Vertical guideline mimicking a document editor block line */}
+                    <div className="hidden sm:block absolute left-4 top-2 bottom-2 w-[1.5px] bg-slate-100 opacity-0 group-hover/canvas:opacity-100 transition-opacity duration-500" />
 
-                <div className="space-y-3">
                     <AnimatePresence mode='popLayout'>
-                        {sortedTasks.map((task) => (
-                            <motion.div layout initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} key={task._id} onClick={() => !isCompleted && toggleTask(task._id)}
-                                className={`group relative p-5 rounded-3xl transition-all duration-200 border-2 select-none ${isCompleted ? 'bg-slate-50 border-transparent opacity-60 cursor-default' : 'cursor-pointer'} ${task.isCompleted ? 'bg-rose-50 border-rose-100' : 'bg-white hover:shadow-lg'} ${task.isPinned ? 'border-amber-400/50 shadow-amber-100/50' : 'border-slate-50 hover:border-emerald-100'}`}
-                            >
-                                <div className="flex items-start gap-4">
-                                    <div className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${task.isCompleted ? 'bg-rose-500 border-rose-500 text-white scale-110' : 'border-slate-200 group-hover:border-emerald-400 bg-white'}`}>
-                                        {task.isCompleted && <Check size={14} strokeWidth={4} />}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className={`text-lg font-medium transition-all ${task.isCompleted ? 'text-rose-800 line-through decoration-rose-400 decoration-2 decoration-wavy opacity-70' : 'text-slate-800'}`}>{task.content}</p>
-                                        <div className="mt-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider opacity-60">
-                                            <div className="flex items-center gap-1.5">{task.createdBy?.avatar && <Image src={task.createdBy.avatar} width={16} height={16} className="rounded-full" alt="" />}<span>{task.createdBy?.name || 'User'}</span></div>
-                                            {task.isPinned && <span className="text-amber-500 flex items-center gap-1"><MapPin size={10} className="fill-amber-500"/> Pinned</span>}
-                                            <span className="text-slate-300">•</span>
-                                            <span>{new Date(task.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                                        </div>
-                                    </div>
-                                    {isLeader && !isCompleted && (
-                                        <button onClick={(e) => togglePinTask(e, task._id)} className={`p-2 rounded-full transition-all ${task.isPinned ? 'text-amber-500 bg-amber-50' : 'text-slate-200 hover:text-amber-500 hover:bg-slate-50'}`}><MapPin size={16} className={task.isPinned ? 'fill-amber-500' : ''}/></button>
-                                    )}
+                        {sortedTasks.length === 0 && (
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-16 sm:py-24 px-4 text-center select-none">
+                                <div className="w-24 h-24 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-6 shadow-inner relative overflow-hidden group border border-slate-100">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-100/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                                    <Layers size={36} className="text-slate-300 group-hover:text-emerald-500 transition-colors duration-500 transform group-hover:scale-110" strokeWidth={1.5}/>
                                 </div>
+                                <h3 className="text-2xl font-black text-slate-800 tracking-tight mb-3">Blank Canvas</h3>
+                                <p className="text-slate-400 text-[15px] max-w-sm leading-relaxed font-medium">Standard to-do lists are outdated. You are in a real-time <span className="text-emerald-500 font-bold">WorkOS Canvas</span>. Start typing below and press Enter to flow.</p>
+                            </motion.div>
+                        )}
+                        {sortedTasks.map((task) => (
+                            <motion.div layout initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} key={task._id}
+                                className={`relative group px-1 sm:px-2 py-2 flex items-start gap-4 transition-all duration-200 select-none ${isCompleted ? 'opacity-60 cursor-default' : 'cursor-text hover:bg-slate-50 rounded-xl'} ${task.isCompleted ? 'opacity-50' : ''}`}
+                            >
+                                {/* Left Side: Checkbox / Drag Handle Area */}
+                                <div className="flex items-center gap-2 mt-1 z-10 bg-white group-hover:bg-transparent">
+                                    {/* Invisible drag handle (UI only for notion feel) */}
+                                    <div className="hidden sm:block opacity-0 group-hover:opacity-30 cursor-grab text-slate-400">
+                                        <svg width="12" height="16" viewBox="0 0 14 16" fill="currentColor"><path d="M4.5 12a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0-4.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0-4.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM9.5 12a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0-4.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0-4.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" /></svg>
+                                    </div>
+                                    
+                                    <button onClick={() => !isCompleted && toggleTask(task._id)}
+                                        className={`w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] rounded-md border-[1.5px] flex items-center justify-center transition-all shadow-sm ${task.isCompleted ? 'bg-slate-800 border-slate-800 text-white' : 'border-slate-300 group-hover:border-slate-400 bg-white group-hover:bg-transparent'}`}>
+                                        {task.isCompleted && <Check size={14} strokeWidth={4} />}
+                                    </button>
+                                </div>
+
+                                {/* Text Content */}
+                                <div className="flex-1 pb-1 border-b border-transparent group-hover:border-slate-100/60">
+                                    <p className={`text-[15px] sm:text-[17px] leading-relaxed transition-all outline-none pb-1 ${task.isCompleted ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-800'}`}>
+                                        {task.content}
+                                    </p>
+                                    
+                                    {/* Sub-meta rendering conditionally if pinned or non-creator */}
+                                    <AnimatePresence>
+                                        {(task.isPinned || task.priority !== 'Medium' || (task.createdBy && task.createdBy.name && task.createdBy.name !== 'Me')) && (
+                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex items-center gap-2 mt-1.5 text-[10px] uppercase font-bold tracking-widest text-slate-400">
+                                                {task.createdBy?.name !== 'Me' && task.createdBy?.name && <span className="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded-md text-slate-500">{task.createdBy?.avatar && <Image src={task.createdBy.avatar} width={12} height={12} className="rounded-full object-cover" alt=""/>} {task.createdBy?.name}</span>}
+                                                {task.isPinned && <span className="text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md flex items-center gap-1"><MapPin size={10} className="fill-amber-500"/> Pinned</span>}
+                                                
+                                                {/* Priority Badge */}
+                                                {task.priority && task.priority !== 'Medium' && (
+                                                    <span className={`px-2 py-0.5 rounded-md flex items-center gap-1 ${task.priority === 'High' ? 'bg-orange-50 text-orange-600' : task.priority === 'Urgent' ? 'bg-rose-50 text-rose-600 animate-pulse' : 'bg-blue-50 text-blue-600'}`}>
+                                                        {task.priority}
+                                                    </span>
+                                                )}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
+                                {/* Hover Actions */}
+                                {!isCompleted && (
+                                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 mt-1 pr-2 transition-opacity">
+                                        <button onClick={(e) => togglePinTask(e, task._id)} className={`p-1.5 rounded-lg transition-colors ${task.isPinned ? 'text-amber-500 bg-amber-50' : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100'}`}><MapPin size={14} className={task.isPinned ? 'fill-amber-500' : ''}/></button>
+                                    </div>
+                                )}
                             </motion.div>
                         ))}
                     </AnimatePresence>
-                    {project.tasks.length === 0 && <div className="text-center py-24"><p className="text-slate-300 font-bold text-xl tracking-tight">No updates yet.</p></div>}
+
+                    {/* Notion-style Input Block at the VERY BOTTOM */}
+                    {!isCompleted && (
+                        <motion.div layout className="relative flex items-center gap-4 mt-2 px-1 sm:px-2 py-2 group">
+                            <div className="flex items-center gap-2 mt-0.5 z-10 bg-white">
+                                <div className="hidden sm:block w-3" /> {/* Spacer for drag handle align */}
+                                <div className="w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] flex items-center justify-center text-slate-300 group-focus-within:text-emerald-500 transition-colors">
+                                    <Plus size={20} strokeWidth={2.5} />
+                                </div>
+                            </div>
+                            <form onSubmit={addTask} className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
+                                <input 
+                                    type="text" 
+                                    value={newTask} 
+                                    onChange={(e) => setNewTask(e.target.value)} 
+                                    placeholder="Type a daily task or /command..." 
+                                    className="w-full flex-1 text-[15px] sm:text-[17px] leading-relaxed bg-transparent outline-none placeholder:text-slate-300 text-slate-800 transition-all font-medium py-1" 
+                                    autoComplete="off"
+                                />
+                                <div className="flex items-center gap-2 opacity-50 focus-within:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                                    <select value={newPriority} onChange={e => setNewPriority(e.target.value)} className="text-xs font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none cursor-pointer">
+                                        <option value="Low">Low</option>
+                                        <option value="Medium">Med</option>
+                                        <option value="High">High</option>
+                                        <option value="Urgent">Urgent</option>
+                                    </select>
+                                    <button type="submit" disabled={!newTask.trim()} className="bg-slate-900 text-white p-1 rounded-md hover:bg-emerald-600 disabled:opacity-30 transition-colors hidden sm:block"><Check size={14}/></button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    )}
                 </div>
             </>
         ) : (

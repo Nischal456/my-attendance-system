@@ -1,8 +1,8 @@
 import dbConnect from '../../../../lib/dbConnect';
+import Task from '../../../../models/Task';
 import Project from '../../../../models/Project';
 import Attendance from '../../../../models/Attendance';
 import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
 import { 
     subWeeks, 
     eachWeekOfInterval, 
@@ -12,7 +12,6 @@ import {
     isSameDay
 } from 'date-fns';
 
-// --- Helper: Calculate Streak ---
 const calculateStreak = (dates) => {
     if (!dates || dates.length === 0) return 0;
     const sortedDates = dates.map(d => startOfDay(new Date(d))).sort((a, b) => b - a);
@@ -23,7 +22,7 @@ const calculateStreak = (dates) => {
     if (uniqueDates.length === 0) return 0;
     const today = startOfDay(new Date());
     const lastLogin = uniqueDates[0];
-    if (differenceInCalendarDays(today, lastLogin) > 1) return 0; // Streak broken if not today/yesterday
+    if (differenceInCalendarDays(today, lastLogin) > 1) return 0;
 
     let streak = 1;
     for (let i = 0; i < uniqueDates.length - 1; i++) {
@@ -34,6 +33,8 @@ const calculateStreak = (dates) => {
 };
 
 export default async function handler(req, res) {
+    if (req.method !== 'GET') return res.status(405).json({ message: 'Method not allowed' });
+    
     await dbConnect();
     const { token } = req.cookies;
     
@@ -41,50 +42,69 @@ export default async function handler(req, res) {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.userId; // Keep as string for safe comparison
+        const userId = decoded.userId;
 
-        // 1. Fetch Data
-        // We fetch ALL projects the user is involved in (Leader OR Member)
-        const [attendanceData, projects] = await Promise.all([
+        // Fetch exactly from real Tasks, Attendance, and Projects
+        const [attendanceData, tasksData, projects] = await Promise.all([
             Attendance.find({ user: userId }).lean(),
+            Task.find({
+                $or: [
+                    { assignedTo: userId },
+                    { assistedBy: userId }
+                ]
+            }).lean(),
             Project.find({
                 $or: [{ leader: userId }, { assignedTo: userId }, { "tasks.createdBy": userId }]
             }).lean()
         ]);
 
-        // 2. Robust Task Calculation (JavaScript Filter)
-        let totalTasks = 0;
-        let completedTasks = 0;
-        const weeklyStats = {};
-        const weeksInterval = eachWeekOfInterval({ start: subWeeks(new Date(), 4), end: new Date() });
-        weeksInterval.forEach(week => { weeklyStats[format(week, 'w')] = 0; });
-
+        // Integrate Canvas Sub-tasks into the dataset
         projects.forEach(project => {
             if (project.tasks && Array.isArray(project.tasks)) {
                 project.tasks.forEach(task => {
-                    // LOGIC: You get credit if:
-                    // A) You created the task
-                    // B) OR You are the Project Leader (Team Velocity)
-                    // C) OR You are assigned to the project (Member contribution)
                     const isMyTask = 
                         String(task.createdBy) === String(userId) || 
                         String(project.leader) === String(userId) ||
                         (project.assignedTo && project.assignedTo.some(id => String(id) === String(userId)));
 
                     if (isMyTask) {
-                        totalTasks++;
-                        
-                        if (task.isCompleted) {
-                            completedTasks++;
-                            
-                            // Weekly Velocity
-                            if (task.createdAt) {
-                                const weekNum = format(new Date(task.createdAt), 'w');
-                                if (weeklyStats[weekNum] !== undefined) weeklyStats[weekNum]++;
-                            }
-                        }
+                        tasksData.push({
+                            status: task.isCompleted ? 'Completed' : 'To Do',
+                            completedAt: task.isCompleted ? task.createdAt : null,
+                            deadline: null
+                        });
                     }
                 });
+            }
+        });
+
+        let totalTasks = tasksData.length;
+        let completedTasks = 0;
+        let inProgressTasks = 0;
+        let toDoTasks = 0;
+        let overdueTasks = 0;
+
+        const weeklyStats = {};
+        const weeksInterval = eachWeekOfInterval({ start: subWeeks(new Date(), 4), end: new Date() });
+        weeksInterval.forEach(week => { weeklyStats[format(week, 'w')] = 0; });
+
+        const today = new Date();
+
+        tasksData.forEach(task => {
+            if (task.status === 'Completed') {
+                completedTasks++;
+                if (task.completedAt) {
+                    const weekNum = format(new Date(task.completedAt), 'w');
+                    if (weeklyStats[weekNum] !== undefined) weeklyStats[weekNum]++;
+                }
+            } else if (task.status === 'In Progress') {
+                inProgressTasks++;
+            } else {
+                toDoTasks++;
+            }
+
+            if (task.status !== 'Completed' && task.deadline && new Date(task.deadline) < today) {
+                overdueTasks++;
             }
         });
 
@@ -95,7 +115,6 @@ export default async function handler(req, res) {
             count: weeklyStats[format(week, 'w')] || 0
         }));
 
-        // 3. Process Attendance Hours (Monthly)
         const monthlyHoursMap = {};
         let officeSeconds = 0;
         let homeSeconds = 0;
@@ -122,16 +141,48 @@ export default async function handler(req, res) {
             });
         }
 
-        // 4. Streak
         const streakDates = attendanceData.map(log => log.checkInTime);
         const loginStreak = calculateStreak(streakDates);
 
-        // 5. Final Response
+        // --- NEW GAMIFICATION LOGIC ---
+        const xp = (completedTasks * 150) + (loginStreak * 50) + (totalTasks * 25);
+        const currentLevel = Math.floor(xp / 500) + 1;
+        const xpForCurrentLevel = xp % 500;
+        const levelProgress = (xpForCurrentLevel / 500) * 100;
+
+        let productivityPersona = "Warming Up";
+        let personaColor = "text-slate-500 bg-slate-100";
+        
+        if (onTimeRate >= 90 && completedTasks > 10) {
+            productivityPersona = "Elite Executor ⚡";
+            personaColor = "text-amber-700 bg-amber-100";
+        } else if (onTimeRate >= 70 && completedTasks > 5) {
+            productivityPersona = "Rising Star 🌟";
+            personaColor = "text-indigo-700 bg-indigo-100";
+        } else if (loginStreak > 5) {
+            productivityPersona = "Unbreakable 🏔️";
+            personaColor = "text-emerald-700 bg-emerald-100";
+        } else if (totalTasks > 0) {
+            productivityPersona = "Active Explorer 🚀";
+            personaColor = "text-blue-700 bg-blue-100";
+        }
+
         res.status(200).json({
             success: true,
+            gamification: {
+                xp,
+                currentLevel,
+                levelProgress: Math.round(levelProgress),
+                xpToNextLevel: 500 - xpForCurrentLevel,
+                persona: productivityPersona,
+                personaColor
+            },
             stats: {
-                totalCompleted: completedTasks,
-                totalTasks: totalTasks, // Added total for context
+                totalTasks,
+                completedTasks,
+                inProgressTasks,
+                toDoTasks,
+                overdueTasks,
                 onTimeRate
             },
             locationData: {

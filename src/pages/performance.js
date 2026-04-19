@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
-import { CheckCircle, Award, ArrowLeft, Clock, Zap, Star, GitCommit, Home, Briefcase, TrendingUp, AlertCircle, Loader } from 'react-feather';
+import { CheckCircle, Award, ArrowLeft, Clock, Zap, Star, GitCommit, Home, Briefcase, TrendingUp, AlertCircle, Loader, List, AlertTriangle } from 'react-feather';
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -163,9 +163,24 @@ export default function PerformancePage({ user }) {
             datasets: [{
                 data: [stats.locationData.officeHours, stats.locationData.homeHours],
                 backgroundColor: ['#10b981', '#6366f1'], 
-                hoverOffset: 10,
+                hoverOffset: 12,
                 borderWidth: 0,
-                borderRadius: 5
+                borderRadius: 4
+            }]
+        };
+    }, [stats]);
+
+    const taskStatusChartData = useMemo(() => {
+        if (!stats?.stats) return { labels: [], datasets: [] };
+        const { completedTasks, inProgressTasks, toDoTasks } = stats.stats;
+        return {
+            labels: ['Completed', 'In Progress', 'To Do'],
+            datasets: [{
+                data: [completedTasks || 0, inProgressTasks || 0, toDoTasks || 0],
+                backgroundColor: ['#10b981', '#3b82f6', '#f59e0b'], 
+                hoverOffset: 12,
+                borderWidth: 0,
+                borderRadius: 4
             }]
         };
     }, [stats]);
@@ -262,21 +277,87 @@ export default function PerformancePage({ user }) {
                     animate="visible" 
                     variants={containerVariants}
                 >
-                    <motion.div variants={itemVariants} className="mb-10">
-                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">Performance Overview</h1>
-                        <p className="text-slate-500 mt-2 text-lg font-medium">Track your productivity, attendance, and achievements.</p>
+                    {/* Premium Profile Hero Banner */}
+                    <motion.div variants={itemVariants} className="mb-12 bg-white p-8 rounded-[2.5rem] shadow-md border border-slate-100 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-indigo-50 to-emerald-50 rounded-bl-[10rem] opacity-70 z-0 pointer-events-none"></div>
+                        
+                        <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+                            {/* Dynamic Avatar with Level Badge */}
+                            <div className="relative w-32 h-32 shrink-0 group">
+                                <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 rounded-[2rem] group-hover:opacity-40 transition-opacity duration-500"></div>
+                                <div className="absolute -bottom-3 -right-3 bg-slate-900 text-white font-black text-sm w-11 h-11 flex items-center justify-center rounded-xl shadow-xl z-20 ring-4 ring-white border-b-2 border-slate-700 transform group-hover:-rotate-12 transition-transform duration-300">
+                                    L{stats?.gamification?.currentLevel ?? 1}
+                                </div>
+                                <Image src={user.avatar || '/default-avatar.png'} fill className="rounded-[1.5rem] object-cover ring-4 ring-white shadow-sm transform -rotate-3 group-hover:rotate-0 transition-all duration-300 z-10" alt={user.name} />
+                            </div>
+
+                            {/* Identity & Progress */}
+                            <div className="text-center md:text-left flex-1 w-full max-w-xl">
+                                <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter mb-3">{user.name}</h1>
+                                
+                                <div className="flex flex-wrap justify-center md:justify-start items-center gap-2 mb-6">
+                                    <span className="bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border border-slate-200">
+                                        {user.role}
+                                    </span>
+                                    {stats?.gamification && (
+                                        <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border border-white shadow-sm ${stats.gamification.personaColor}`}>
+                                            {stats.gamification.persona}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Gamified XP Progress Bar */}
+                                {stats?.gamification && (
+                                    <div className="w-full">
+                                        <div className="flex justify-between items-end mb-2 px-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Level {stats.gamification.currentLevel} Progress</span>
+                                            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">
+                                                +{stats.gamification.xpToNextLevel} XP to Next Level
+                                            </span>
+                                        </div>
+                                        <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-200/60 p-0.5">
+                                            <motion.div 
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${stats.gamification.levelProgress}%` }}
+                                                transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
+                                                className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Total Impact Score */}
+                            <div className="hidden lg:flex flex-col items-end pr-4 pl-8 border-l border-slate-100">
+                               <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Total Impact Score</p>
+                               <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 to-emerald-500 mb-4 tracking-tighter">
+                                   {stats?.gamification?.xp?.toLocaleString() || 0} <span className="text-lg text-slate-300 font-bold tracking-normal">XP</span>
+                               </p>
+                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                   <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span> System Active
+                               </p>
+                            </div>
+                        </div>
                     </motion.div>
                     
-                    {/* Top Stats Row */}
-                    <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <motion.div variants={itemVariants}><StatCard title="Total Tasks" value={stats.stats?.totalCompleted ?? 0} icon={<CheckCircle size={28} />} /></motion.div>
-                        <motion.div variants={itemVariants}><StatCard title="On-Time Rate" value={stats.stats?.onTimeRate ?? 0} unit="%" icon={<Award size={28} />} /></motion.div>
-                        <motion.div variants={itemVariants}><StatCard title="Office Hours" value={(stats.locationData?.officeHours ?? 0).toFixed(1)} unit="h" icon={<Briefcase size={28} />} /></motion.div>
-                        <motion.div variants={itemVariants}><StatCard title="Remote Hours" value={(stats.locationData?.homeHours ?? 0).toFixed(1)} unit="h" icon={<Home size={28} />} /></motion.div>
+                    {/* --- TASK PRODUCTIVITY HUB --- */}
+                    <motion.div variants={itemVariants} className="mt-12 mb-6">
+                        <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                            <span className="w-10 h-10 bg-emerald-100 text-emerald-600 flex items-center justify-center rounded-[1rem]"><List size={22} /></span>
+                            Task Productivity Hub
+                        </h2>
                     </motion.div>
 
-                    {/* --- Row 1: Charts --- */}
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-8">
+                    {/* Task Stats Row */}
+                    <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <motion.div variants={itemVariants}><StatCard title="Total Tasks" value={stats.stats?.totalTasks ?? 0} icon={<List size={28} />} /></motion.div>
+                        <motion.div variants={itemVariants}><StatCard title="Completed" value={stats.stats?.completedTasks ?? 0} icon={<CheckCircle size={28} />} /></motion.div>
+                        <motion.div variants={itemVariants}><StatCard title="Overdue" value={stats.stats?.overdueTasks ?? 0} icon={<AlertTriangle size={28} />} /></motion.div>
+                        <motion.div variants={itemVariants}><StatCard title="On-Time Rate" value={stats.stats?.onTimeRate ?? 0} unit="%" icon={<Award size={28} />} /></motion.div>
+                    </motion.div>
+
+                    {/* Task Charts */}
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-12">
                         <motion.div variants={itemVariants} className="lg:col-span-3 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><TrendingUp size={20} className="text-emerald-500"/> Weekly Task Velocity</h3>
@@ -287,16 +368,15 @@ export default function PerformancePage({ user }) {
                         </motion.div>
                         <motion.div variants={itemVariants} className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Home size={20} className="text-indigo-500"/> Work Location</h3>
+                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Star size={20} className="text-emerald-500"/> Task Breakdown</h3>
                             </div>
                             <div className="relative flex-grow min-h-[300px] flex items-center justify-center">
-                                <Doughnut data={locationChartData} options={doughnutOptions} />
-                                {/* Center Text Overlay */}
+                                <Doughnut data={taskStatusChartData} options={doughnutOptions} />
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     <div className="text-center mt-[-30px]"> 
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total</p>
-                                        <p className="text-3xl font-black text-slate-800 tracking-tight">
-                                            {((stats.locationData?.officeHours || 0) + (stats.locationData?.homeHours || 0)).toFixed(0)}h
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</p>
+                                        <p className="text-4xl font-black text-slate-800 tracking-tight">
+                                            {stats.stats?.totalTasks ?? 0}
                                         </p>
                                     </div>
                                 </div>
@@ -304,40 +384,76 @@ export default function PerformancePage({ user }) {
                         </motion.div>
                     </div>
 
-                    {/* --- Row 2: Monthly Hours & Achievements --- */}
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 pb-10">
-                        <motion.div variants={itemVariants} className="lg:col-span-3 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
+                    {/* --- ATTENDANCE & PRESENCE HUB --- */}
+                    <motion.div variants={itemVariants} className="mt-16 mb-6">
+                        <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                            <span className="w-10 h-10 bg-indigo-100 text-indigo-600 flex items-center justify-center rounded-[1rem]"><Clock size={22} /></span>
+                            Attendance & Presence
+                        </h2>
+                    </motion.div>
+
+                    {/* Attendance Stats Row */}
+                    <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <motion.div variants={itemVariants}><StatCard title="Office Hours" value={(stats.locationData?.officeHours ?? 0).toFixed(1)} unit="h" icon={<Briefcase size={28} />} /></motion.div>
+                        <motion.div variants={itemVariants}><StatCard title="Remote Hours" value={(stats.locationData?.homeHours ?? 0).toFixed(1)} unit="h" icon={<Home size={28} />} /></motion.div>
+                        <motion.div variants={itemVariants}><StatCard title="Total Logged" value={((stats.locationData?.officeHours ?? 0) + (stats.locationData?.homeHours ?? 0)).toFixed(1)} unit="h" icon={<Clock size={28} />} /></motion.div>
+                        <motion.div variants={itemVariants}><StatCard title="Login Streak" value={stats.achievements?.loginStreak ?? 0} unit=" days" icon={<Zap size={28} />} /></motion.div>
+                    </motion.div>
+
+                    {/* Attendance Charts */}
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 pb-10">
+                        {/* Bar Chart (Span 2) */}
+                        <motion.div variants={itemVariants} className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
                              <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Clock size={20} className="text-blue-500"/> Monthly Hours Trend</h3>
+                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Clock size={20} className="text-blue-500"/> Monthly Trend</h3>
                             </div>
                             <div className="relative flex-grow min-h-[300px] w-full">
                                 <Bar options={lineOptions} data={hoursChartData} />
                             </div>
                         </motion.div>
 
-                         <motion.div variants={itemVariants} className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
+                        {/* Location Doughnut (Span 1) */}
+                        <motion.div variants={itemVariants} className="lg:col-span-1 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Award size={20} className="text-amber-500"/> Achievements</h3>
+                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Home size={20} className="text-indigo-500"/> Work Env</h3>
                             </div>
-                            <div className="space-y-4 overflow-y-auto pr-2 max-h-[350px] custom-scrollbar">
+                            <div className="relative flex-grow min-h-[300px] flex items-center justify-center">
+                                <Doughnut data={locationChartData} options={{...doughnutOptions, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }}} />
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div className="text-center mt-[-30px]"> 
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logged</p>
+                                        <p className="text-2xl font-black text-slate-800 tracking-tight">
+                                            {((stats.locationData?.officeHours || 0) + (stats.locationData?.homeHours || 0)).toFixed(0)}h
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                         {/* Achievements Space (Span 1) */}
+                         <motion.div variants={itemVariants} className="lg:col-span-1 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Award size={20} className="text-amber-500"/> Trophy Rank</h3>
+                            </div>
+                            <div className="space-y-4 overflow-y-auto pr-2 flex-grow custom-scrollbar">
                                 <AchievementCard 
-                                    title="Consistency King" 
-                                    description="Logged in on consecutive workdays." 
+                                    title="Consistency" 
+                                    description="Consecutive syncs" 
                                     achieved={(stats?.achievements?.loginStreak ?? 0) > 0} 
                                     value={stats?.achievements?.loginStreak ?? 0} 
-                                    icon={<GitCommit size={24} />} 
+                                    icon={<GitCommit size={20} />} 
                                 />
                                 <AchievementCard 
-                                    title="Productivity Master" 
-                                    description="Completed 5+ tasks in a single week." 
+                                    title="On Fire" 
+                                    description="5+ Tasks/week." 
                                     achieved={stats?.achievements?.onFire ?? false} 
-                                    icon={<Zap size={24} />} 
+                                    icon={<Zap size={20} />} 
                                 />
                                 <AchievementCard 
                                     title="Veteran" 
-                                    description="Completed 50+ tasks in total." 
+                                    description="50+ Tasks total." 
                                     achieved={stats?.achievements?.taskMaster ?? false} 
-                                    icon={<Star size={24} />} 
+                                    icon={<Star size={20} />} 
                                 />
                             </div>
                         </motion.div>

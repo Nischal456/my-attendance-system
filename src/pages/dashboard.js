@@ -7,6 +7,7 @@ import { Wallet } from 'lucide-react';
 import { ChevronDown, MessageSquarePlus } from 'lucide-react';
 import toast from 'react-hot-toast'; // Uses global _app.js Toaster
 import dynamic from 'next/dynamic';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 const Bar = dynamic(() => import('react-chartjs-2').then((mod) => mod.Bar), { ssr: false });
 const Chart = dynamic(() => import('chart.js').then((mod) => mod.Chart), { ssr: false });
 import { Layout, Grid } from 'react-feather';
@@ -1784,6 +1785,8 @@ export default function Dashboard({ user }) {
 
     const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
 
+    const { isSubscribed, permission, requestPermissionAndSubscribe } = usePushNotifications();
+
     const notificationDropdownRef = useRef(null);
     const userDropdownRef = useRef(null);
     const isDesktop = useMediaQuery('(min-width: 768px)');
@@ -2316,6 +2319,19 @@ export default function Dashboard({ user }) {
                                             </div>
                                             <h2 className="text-2xl font-extrabold text-slate-800">{profileUser.name}</h2>
                                             <p className="text-slate-500 font-medium">{profileUser.role}</p>
+                                            
+                                            {/* Push Notification Toggle Button */}
+                                            {!isSubscribed && permission !== 'denied' && (
+                                                <motion.button
+                                                    onClick={requestPermissionAndSubscribe}
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    className="mt-4 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[11px] uppercase tracking-wider font-extrabold py-2 px-5 rounded-full shadow-xl shadow-emerald-200/50 hover:shadow-emerald-300 transition-all border border-emerald-400"
+                                                >
+                                                    <Bell size={14} className="animate-pulse" />
+                                                    Enable Alerts
+                                                </motion.button>
+                                            )}
                                         </div>
                                     </div>
 

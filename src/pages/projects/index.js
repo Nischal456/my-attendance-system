@@ -187,6 +187,20 @@ export default function ProjectsGallery() {
             </header>
 
             {/* Grid */}
+            {sortedProjects.length === 0 && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-20 sm:py-32 px-4 text-center select-none w-full border-2 border-dashed border-slate-100 rounded-[3rem] bg-slate-50/50">
+                    <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-[2rem] sm:rounded-[3rem] flex items-center justify-center mb-6 sm:mb-8 shadow-sm relative overflow-hidden group border border-slate-100">
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-100/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        <Layers size={40} className="text-slate-300 group-hover:text-emerald-500 transition-colors duration-500 transform group-hover:scale-110 sm:w-12 sm:h-12" strokeWidth={1} />
+                    </div>
+                    <h3 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight mb-3 sm:mb-4">No Projects Yet</h3>
+                    <p className="text-slate-500 text-[15px] sm:text-lg max-w-md leading-relaxed font-medium mb-8">Your WorkOS workspace is a blank slate. Create your first project to orchestrate your team's workflow.</p>
+                    <button onClick={openModal} className="bg-slate-900 text-white px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-emerald-600 transition-all shadow-xl hover:shadow-emerald-200/50 flex items-center gap-2 active:scale-95">
+                        <Plus size={18} /> Start a Project
+                    </button>
+                </motion.div>
+            )}
+
             <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 <AnimatePresence mode='popLayout'>
                     {sortedProjects.map((project) => {
@@ -274,23 +288,26 @@ export default function ProjectsGallery() {
                         <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} className="w-full max-w-4xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[600px] border border-white/20" onClick={e => e.stopPropagation()}>
 
                             {/* Left Side: Inputs */}
-                            <div className="flex-1 p-8 md:p-12 flex flex-col overflow-y-auto order-2 md:order-1">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-2xl font-black text-slate-900">New Project</h2>
+                            <div className="flex-1 p-8 md:p-12 flex flex-col overflow-y-auto order-2 md:order-1 relative bg-gradient-to-br from-white to-slate-50/50">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500"></div>
+                                <div className="flex justify-between items-center mb-10">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600"><Layers size={20}/></div>
+                                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">New Project</h2>
+                                    </div>
                                     <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full md:hidden"><X size={24} /></button>
                                 </div>
-                                <div className="space-y-6 flex-1">
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Title</label>
-                                        <input autoFocus type="text" placeholder="Project Name" className="w-full text-3xl font-bold bg-transparent border-b-2 border-slate-100 focus:border-emerald-500 outline-none placeholder:text-slate-300 text-slate-900 py-2 transition-colors" value={newTitle} onChange={e => setNewTitle(e.target.value)} />
+                                <div className="space-y-8 flex-1">
+                                    <div className="group">
+                                        <input autoFocus type="text" placeholder="Project Title..." className="w-full text-4xl sm:text-5xl font-black bg-transparent border-none outline-none placeholder:text-slate-200 text-slate-900 transition-colors focus:ring-0 px-0" value={newTitle} onChange={e => setNewTitle(e.target.value)} />
+                                        <div className="h-0.5 w-0 group-focus-within:w-full bg-emerald-500 transition-all duration-500 mt-2"></div>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Description</label>
-                                        <textarea placeholder="Brief description..." className="w-full h-32 bg-slate-50 rounded-2xl p-4 text-sm font-medium border-none outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none" value={newDescription} onChange={e => setNewDescription(e.target.value)} />
+                                    <div className="group relative">
+                                        <textarea placeholder="Describe the mission objective..." className="w-full h-40 bg-transparent text-lg font-medium border-none outline-none focus:ring-0 resize-none placeholder:text-slate-300 text-slate-600 leading-relaxed px-0" value={newDescription} onChange={e => setNewDescription(e.target.value)} />
                                     </div>
                                 </div>
-                                <button onClick={createProject} disabled={isCreating} className="mt-8 w-full py-4 rounded-2xl font-bold bg-slate-900 text-white hover:bg-emerald-600 shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2">
-                                    {isCreating ? 'Creating...' : 'Create Project'}
+                                <button onClick={createProject} disabled={isCreating} className="mt-8 w-full py-4 rounded-2xl font-bold bg-slate-900 text-white hover:bg-emerald-600 shadow-[0_10px_40px_-10px_rgba(16,185,129,0.4)] hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.6)] transition-all active:scale-95 flex justify-center items-center gap-2">
+                                    {isCreating ? 'Deploying...' : 'Launch Project'}
                                 </button>
                             </div>
 
@@ -301,7 +318,7 @@ export default function ProjectsGallery() {
                                     <div className="relative"><Search className="absolute left-3 top-2.5 text-slate-400" size={16} /><input type="text" placeholder="Search..." className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl text-sm border border-slate-200 focus:outline-none focus:border-emerald-500 transition-all shadow-sm" value={userSearch} onChange={e => setUserSearch(e.target.value)} /></div>
                                 </div>
                                 <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                                    {loadingUsers ? <div className="text-center py-4 text-slate-400 text-xs">Loading...</div> : availableUsers.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase())).map(user => {
+                                    {loadingUsers ? <div className="text-center py-4 text-slate-400 text-xs">Loading...</div> : availableUsers.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase()) && u._id !== currentUserId).map(user => {
                                         const isSelected = selectedUsers.includes(user._id);
                                         return (
                                             <div key={user._id} onClick={() => toggleUserSelection(user._id)} className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all border ${isSelected ? 'bg-emerald-50 border-emerald-200 shadow-sm' : 'bg-white border-transparent hover:border-slate-200'}`}>

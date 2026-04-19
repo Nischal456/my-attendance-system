@@ -1,6 +1,6 @@
 {
-  "name": "GeckoWorks OMS",
-  "short_name": "GeckoWorks",
+  "name": "WorkOS Enterprise",
+  "short_name": "WorkOS",
   "description": "Smart Office Management System",
   "start_url": "/login",
   "display": "standalone",
@@ -8,13 +8,13 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/paw.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable any"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/paw.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable any"
