@@ -173,7 +173,7 @@ export default function LoginPage() {
                 className="mx-auto mb-10 h-36 w-36 rounded-[2.5rem] bg-white flex items-center justify-center shadow-[0_24px_48px_-14px_rgba(16,185,129,0.15)] ring-1 ring-emerald-50 relative overflow-hidden group"
               >
                  <div className="absolute inset-0 bg-gradient-to-tr from-emerald-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative h-28 w-28"><Image src="/logo.png" alt="Gecko Works" fill className="object-contain drop-shadow-md" priority /></div>
+                <div className="relative h-28 w-28"><Image src="/logo.png" alt="WorkOS" fill className="object-contain drop-shadow-md" priority unoptimized /></div>
               </motion.div>
               
               {/* Animated Gradient Text */}
@@ -216,7 +216,7 @@ export default function LoginPage() {
                 {/* Header */}
                 <div className="flex flex-col items-center justify-center mb-10">
                   <div className="lg:hidden relative h-20 w-20 mb-5 flex items-center justify-center rounded-[1.5rem] bg-white shadow-xl shadow-emerald-100">
-                    <Image src="/logo.png" alt="Logo" width={50} height={50} className="w-auto h-auto object-contain" />
+                    <Image src="/logo.png" alt="Logo" width={50} height={50} className="w-auto h-auto object-contain" unoptimized />
                   </div>
                   <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} transition={{delay:0.2}} className="text-center">
                       <h2 className="text-4xl font-black text-slate-800 tracking-tight mb-2">{greeting}</h2>
@@ -236,7 +236,7 @@ export default function LoginPage() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="name@geckoworks.com"
+                        placeholder="name@workos.com"
                         required
                         className="w-full bg-slate-50/50 border-2 border-slate-100 rounded-[1.5rem] py-4 pl-14 pr-4 text-slate-800 font-bold focus:outline-none focus:border-emerald-400 focus:bg-white focus:shadow-lg focus:shadow-emerald-100 transition-all placeholder:text-slate-300"
                       />
@@ -289,7 +289,7 @@ export default function LoginPage() {
       </div>
 
       <div className="fixed bottom-4 w-full text-center pointer-events-none z-40 lg:w-1/2 lg:right-0">
-        <p className="text-[10px] font-medium text-slate-400/80">&copy; 2025 Gecko Works. All Rights Reserved.</p>
+        <p className="text-[10px] font-medium text-slate-400/80">&copy; 2025 WorkOS Enterprise. All Rights Reserved.</p>
       </div>
     </div>
   );
