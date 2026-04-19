@@ -62,15 +62,13 @@ export default async function handler(req, res) {
         projects.forEach(project => {
             if (project.tasks && Array.isArray(project.tasks)) {
                 project.tasks.forEach(task => {
-                    const isMyTask = 
-                        String(task.createdBy) === String(userId) || 
-                        String(project.leader) === String(userId) ||
-                        (project.assignedTo && project.assignedTo.some(id => String(id) === String(userId)));
+                    // Accuracy Fix: ONLY count if the user actually authored the Canvas task themselves.
+                    const isMyTask = String(task.createdBy) === String(userId);
 
                     if (isMyTask) {
                         tasksData.push({
                             status: task.isCompleted ? 'Completed' : 'To Do',
-                            completedAt: task.isCompleted ? task.createdAt : null,
+                            completedAt: task.isCompleted ? new Date() : null, // Used for gamification
                             deadline: null
                         });
                     }

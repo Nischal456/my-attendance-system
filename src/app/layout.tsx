@@ -16,20 +16,20 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'GeckoWorks OMS',
-  description: 'Smart Office Management System',
+  title: 'WorkOS Enterprise',
+  description: 'Smart Office Management Platform',
   manifest: '/manifest.json',
   icons: {
-    icon: '/new.png',
-    shortcut: '/paw.png',
-    apple: '/paw.png',
+    icon: '/favicon.ico?v=4',
+    shortcut: '/favicon.ico?v=4',
+    apple: '/favicon.ico?v=4',
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'GeckoWorks OMS',
+    title: 'WorkOS',
   },
-  applicationName: 'GeckoWorks OMS',
+  applicationName: 'WorkOS',
   formatDetection: {
     telephone: false,
   },

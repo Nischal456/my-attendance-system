@@ -1,9 +1,16 @@
 import '../app/globals.css'; // Your global styles
 import { Toaster } from 'react-hot-toast';
+import Head from 'next/head';
 
 function MyApp({ Component, pageProps }) {
   return (
     <>
+      <Head>
+        <title>WorkOS Enterprise</title>
+        <meta name="description" content="WorkOS Enterprise platform" />
+        <link rel="icon" href="/favicon.ico?v=4" />
+        <link rel="apple-touch-icon" href="/favicon.ico?v=4" />
+      </Head>
       <Component {...pageProps} />
       
       {/* Global Premium Toaster Configuration */}

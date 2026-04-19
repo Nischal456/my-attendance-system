@@ -340,6 +340,27 @@ export default function PerformancePage({ user }) {
                         </div>
                     </motion.div>
                     
+                    {/* --- HOW GAMIFICATION WORKS --- */}
+                    <motion.div variants={itemVariants} className="mb-8">
+                        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2rem] p-6 shadow-lg text-white relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 transform scale-150 group-hover:scale-110 transition-transform duration-700">
+                                <Zap size={100} />
+                            </div>
+                            <div className="relative z-10">
+                                <h3 className="text-xl font-black mb-2 flex items-center gap-2"><Zap size={20} className="fill-white"/> How You Evolve in WorkOS</h3>
+                                <p className="text-sm font-medium text-indigo-100 max-w-3xl leading-relaxed mb-4">
+                                    Your Impact Score (XP) is the heart of your performance. Every completed task grants heavy XP.
+                                    Consistent syncs build your Login Streak, which multiplies your reputation. Every 500 XP unlocks a new Tier Level.
+                                </p>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <span className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-xl text-xs font-bold ring-1 ring-white/30">+150 XP per Task</span>
+                                    <span className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-xl text-xs font-bold ring-1 ring-white/30">+50 XP per Streak Day</span>
+                                    <span className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-xl text-xs font-bold ring-1 ring-white/30">Level Up Every 500 XP</span>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                    
                     {/* --- TASK PRODUCTIVITY HUB --- */}
                     <motion.div variants={itemVariants} className="mt-12 mb-6">
                         <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
