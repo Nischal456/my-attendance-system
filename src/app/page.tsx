@@ -5,7 +5,7 @@ import { motion, Variants } from 'framer-motion';
 import { 
   User, Shield, CheckCircle, Users, Zap, Layout, 
   BarChart2, Lock, ChevronRight, Activity, Layers, Database, 
-  Globe, Server, Cpu, PieChart, Command ,LogIn,UserCheck
+  Globe, Server, Cpu, LogIn, UserCheck, ArrowRight
 } from 'react-feather';
 
 export default function HomePage() {
@@ -16,135 +16,164 @@ export default function HomePage() {
     { label: "Deep Analytics", icon: <BarChart2 size={14} /> },
   ];
 
-  // --- ULTRA FAST VARIANTS ---
+  // --- ULTRA PREMIUM VARIANTS ---
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
       transition: { 
-        staggerChildren: 0.05, // Very fast stagger (machine gun effect)
-        delayChildren: 0.1
+        staggerChildren: 0.1, 
+        delayChildren: 0.2,
+        ease: [0.25, 0.1, 0.25, 1]
       }
     }
   };
 
   const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 10 },
+    hidden: { opacity: 0, y: 20, filter: 'blur(10px)' },
     visible: { 
       opacity: 1, 
       y: 0, 
-      // High stiffness = Snappy, 120fps feel
-      transition: { type: "spring", stiffness: 260, damping: 20 } 
+      filter: 'blur(0px)',
+      transition: { 
+        type: "spring", 
+        stiffness: 200, 
+        damping: 20,
+        mass: 0.8
+      } 
     }
   };
 
-  const cardVariants: Variants = {
-    hidden: { opacity: 0, x: 20, rotateY: 5 },
+  const cardContainerVariants: Variants = {
+    hidden: { opacity: 0, scale: 0.95, y: 30, rotateX: 10 },
     visible: { 
       opacity: 1, 
-      x: 0, 
-      rotateY: 0,
+      scale: 1,
+      y: 0, 
+      rotateX: 0,
       transition: { 
         type: "spring", 
-        stiffness: 220, // Snaps in quickly
+        stiffness: 150, 
         damping: 25, 
-        delay: 0.2 
+        delay: 0.4,
+        mass: 1.2
       } 
     }
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-slate-50 font-sans selection:bg-emerald-500/30 selection:text-emerald-900">
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#FAFCFF] font-sans selection:bg-emerald-500/20 selection:text-emerald-900 flex items-center justify-center">
 
-      {/* --- HIGH PERFORMANCE BACKGROUND ENGINE --- */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden transform-gpu">
+      {/* --- HYPER-REALISTIC BACKGROUND ENGINE --- */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         
-        {/* Moving Grid - Speed: Fast */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_70%,transparent_100%)] animate-pan-grid will-change-transform"></div>
+        {/* Subtle Ambient Base */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50 to-[#F0FDF4] opacity-80"></div>
 
-        {/* Aurora Mesh - Speed: Turbo */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-[1400px] opacity-60">
-          <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-gradient-to-r from-emerald-300/30 to-teal-300/30 rounded-full blur-[100px] mix-blend-multiply animate-aurora-1 will-change-transform"></div>
-          <div className="absolute top-[10%] right-[-20%] w-[50vw] h-[50vw] bg-gradient-to-bl from-cyan-200/40 to-emerald-100/40 rounded-full blur-[90px] mix-blend-multiply animate-aurora-2 animation-delay-1000 will-change-transform"></div>
+        {/* Micro-Grid Pattern */}
+        <div 
+          className="absolute inset-0 opacity-[0.4]"
+          style={{
+            backgroundImage: `linear-gradient(to right, #10B98108 1px, transparent 1px), linear-gradient(to bottom, #10B98108 1px, transparent 1px)`,
+            backgroundSize: `32px 32px`,
+            maskImage: `radial-gradient(ellipse 80% 80% at 50% 30%, black 20%, transparent 80%)`,
+            WebkitMaskImage: `radial-gradient(ellipse 80% 80% at 50% 30%, black 20%, transparent 80%)`,
+          }}
+        ></div>
+
+        {/* Cinematic Aurora Glows */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-full opacity-70 mix-blend-multiply">
+          <motion.div 
+            animate={{ 
+              x: ['-10%', '10%', '-10%'], 
+              y: ['-10%', '5%', '-10%'],
+              scale: [1, 1.1, 1] 
+            }}
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-emerald-300/30 rounded-full blur-[120px] will-change-transform"
+          />
+          <motion.div 
+            animate={{ 
+              x: ['10%', '-10%', '10%'], 
+              y: ['10%', '-5%', '10%'],
+              scale: [1, 1.2, 1] 
+            }}
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+            className="absolute top-[10%] right-[-10%] w-[50vw] h-[50vw] bg-teal-200/40 rounded-full blur-[100px] will-change-transform"
+          />
+          <motion.div 
+            animate={{ 
+              y: ['10%', '-10%', '10%'],
+              scale: [1, 1.1, 1] 
+            }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 4 }}
+            className="absolute bottom-[-10%] left-[20%] w-[40vw] h-[40vw] bg-cyan-200/20 rounded-full blur-[90px] will-change-transform"
+          />
         </div>
 
-        {/* Floating Icons - Speed: Rapid */}
-        <div className="absolute inset-0 overflow-hidden">
-           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} className="absolute top-[15%] left-[10%] text-emerald-900/5 animate-float-slow"><Activity size={56} strokeWidth={1} /></motion.div>
-           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 0.2 }} className="absolute bottom-[20%] right-[10%] text-teal-900/5 animate-float-medium"><Database size={100} strokeWidth={0.5} /></motion.div>
-           <div className="absolute top-[40%] left-[5%] text-emerald-800/5 animate-float-fast blur-[2px]"><Layers size={40} strokeWidth={1.5} /></div>
-           <div className="absolute top-[10%] right-[20%] text-cyan-900/5 animate-float-slow"><Globe size={48} strokeWidth={1} /></div>
-           <div className="absolute bottom-[10%] left-[20%] text-emerald-700/5 animate-float-medium blur-[1px]"><Cpu size={64} strokeWidth={1} /></div>
-           <div className="absolute top-[25%] right-[35%] text-slate-400/10 animate-float-v-slow blur-[4px]"><Server size={80} strokeWidth={0.5} /></div>
-        </div>
-
-        {/* Noise Grain */}
-        <div className="absolute inset-0 opacity-[0.04] mix-blend-overlay pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
+        {/* Optical Noise for Premium Texture */}
+        <div className="absolute inset-0 opacity-[0.025] mix-blend-overlay pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
       </div>
 
       {/* --- MAIN LAYOUT --- */}
-      <main className="relative z-10 flex min-h-screen flex-col lg:flex-row items-center justify-center p-6 gap-12 lg:gap-20 max-w-7xl mx-auto">
+      <main className="relative z-10 flex flex-col lg:flex-row items-center justify-between w-full max-w-[1300px] px-6 sm:px-12 py-12 lg:py-20 gap-16 lg:gap-20">
 
         {/* LEFT SIDE: Brand Narrative */}
         <motion.div 
-          className="w-full lg:w-1/2 flex flex-col items-center lg:items-start text-center lg:text-left"
+          className="w-full lg:w-[55%] flex flex-col items-center lg:items-start text-center lg:text-left pt-8 lg:pt-0"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-
           {/* Version Pill */}
-          <motion.div variants={itemVariants} className="mb-8 group relative overflow-hidden inline-flex items-center gap-2 rounded-full border border-emerald-200/40 bg-white/60 px-4 py-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] backdrop-blur-md transition-all duration-200 hover:bg-white/80 hover:shadow-emerald-200/40 hover:scale-105 hover:-translate-y-0.5 cursor-default transform-gpu">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+          <motion.div variants={itemVariants} className="mb-8 group relative overflow-hidden inline-flex items-center gap-2.5 rounded-full border border-emerald-500/15 bg-white/80 px-4 py-1.5 shadow-sm backdrop-blur-md transition-all duration-300 hover:shadow-emerald-500/10 hover:border-emerald-500/30 hover:bg-white cursor-default">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
             </span>
-            <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-800/90">OMS 2.0 Version is here</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-800">Gecko OMS v2.0</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
           </motion.div>
 
-          {/* Logo Area */}
-          <motion.div variants={itemVariants} className="mb-6 relative group cursor-pointer">
-            <div className="absolute -inset-10 bg-gradient-to-r from-emerald-100/0 via-emerald-100/40 to-emerald-100/0 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          {/* Logo */}
+          <motion.div variants={itemVariants} className="mb-6 relative group">
+            <div className="absolute -inset-8 bg-emerald-500/5 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
             <Image
               src="/logo.png"
               alt="Gecko Works Logo"
-              width={190}
-              height={95}
-              className="relative h-auto w-auto drop-shadow-sm transition-transform duration-300 group-hover:scale-[1.02]"
+              width={160}
+              height={80}
+              className="relative h-auto w-auto object-contain transition-transform duration-500 group-hover:scale-[1.02]"
               priority
             />
           </motion.div>
 
           {/* Headline */}
-          <motion.h1 variants={itemVariants} className="max-w-2xl text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl lg:text-[4.5rem] leading-[1.1]">
-            Unlock Your Team’s{" "}
-            <span className="relative inline-block whitespace-nowrap mt-2 lg:mt-0">
-              <span className="absolute -inset-1 bg-emerald-200/30 blur-lg rounded-lg transform skew-x-3"></span>
-              <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 animate-gradient-x bg-[length:200%_auto]">
+          <motion.h1 variants={itemVariants} className="max-w-2xl text-[2.75rem] sm:text-6xl lg:text-[4.2rem] font-extrabold tracking-tight text-slate-900 leading-[1.05] drop-shadow-sm">
+            Unlock Your Team's <br className="hidden sm:block lg:hidden" />
+            <span className="relative inline-block whitespace-nowrap mt-2">
+              <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 animate-gradient-x bg-[length:200%_auto] z-10">
                 Potential
               </span>
-              <motion.span 
-                initial={{ scale: 0, rotate: -45 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.5, type: "spring", stiffness: 300, damping: 10 }}
-                className="absolute -top-6 -right-6 text-emerald-400/40 hidden lg:block"
-              >
-                 <Zap size={32} fill="currentColor" />
-              </motion.span>
+              {/* Subtle underline glow */}
+              <span className="absolute bottom-1 left-0 w-full h-[30%] bg-emerald-300/30 blur-md -z-0"></span>
             </span>
           </motion.h1>
 
-          <motion.p variants={itemVariants} className="mt-8 max-w-lg text-lg font-medium leading-relaxed text-slate-500/90">
+          <motion.p variants={itemVariants} className="mt-6 max-w-[480px] text-base sm:text-lg font-medium leading-relaxed text-slate-500">
             Welcome to <span className="font-bold text-slate-800">Gecko Works</span>. The ultra-fast, secure ecosystem for managing personnel, tasks, and analytics in one fluid interface.
           </motion.p>
 
-          {/* Feature Chips - Faster Hover */}
+          {/* Feature Chips */}
           <motion.div variants={itemVariants} className="mt-10 flex flex-wrap justify-center lg:justify-start gap-3">
             {features.map((item, idx) => (
-              <div key={idx} className="group relative flex items-center gap-2 rounded-xl border border-white/60 bg-white/40 px-5 py-2.5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-1 hover:bg-white hover:shadow-[0_8px_30px_rgba(16,185,129,0.1)] hover:border-emerald-200 transform-gpu">
-                <div className="text-emerald-500/70 group-hover:text-emerald-600 group-hover:scale-110 transition-all duration-200">{item.icon}</div>
-                <span className="text-xs font-bold text-slate-600 group-hover:text-slate-900 transition-colors">{item.label}</span>
+              <div key={idx} className="group flex items-center gap-2 rounded-xl border border-slate-200/50 bg-white/60 px-4 py-2 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-md hover:shadow-emerald-500/5 hover:border-emerald-200">
+                <div className="text-emerald-500 group-hover:text-emerald-600 transition-colors duration-300">
+                  {item.icon}
+                </div>
+                <span className="text-xs font-bold text-slate-600 group-hover:text-slate-900 transition-colors">
+                  {item.label}
+                </span>
               </div>
             ))}
           </motion.div>
@@ -152,153 +181,102 @@ export default function HomePage() {
 
         {/* RIGHT SIDE: The Ultra Premium Login Card */}
         <motion.div 
-          className="w-full lg:w-[420px] perspective-1000 z-50"
-          variants={cardVariants}
+          className="w-full max-w-[400px] lg:w-[45%] perspective-1000 z-50 relative"
+          variants={cardContainerVariants}
           initial="hidden"
           animate="visible"
         >
-          <div className="relative group transition-all duration-300 hover:rotate-y-1 hover:rotate-x-1 transform-gpu">
+          {/* Card Ambient Glow */}
+          <div className="absolute -inset-[2px] rounded-[2.5rem] bg-gradient-to-b from-white via-emerald-100 to-white/50 opacity-100 blur-sm transition duration-500"></div>
+          <div className="absolute -inset-4 rounded-[3rem] bg-emerald-500/10 blur-2xl opacity-50"></div>
 
-            {/* Aurora Glow Behind Card */}
-            <div className="absolute -inset-[3px] rounded-[2.5rem] bg-gradient-to-b from-white via-emerald-200/60 to-transparent opacity-0 blur-xl transition duration-500 group-hover:opacity-100 group-hover:blur-2xl"></div>
+          {/* CARD CONTAINER */}
+          <div className="relative overflow-hidden rounded-[2.2rem] border border-white bg-white/80 p-8 sm:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05),0_0_0_1px_rgba(255,255,255,0.5)_inset] backdrop-blur-2xl transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(16,185,129,0.15)] transform-gpu">
+            
+            {/* Internal Glass Shine */}
+            <div className="absolute top-0 left-0 w-full h-[40%] bg-gradient-to-b from-white/80 to-transparent pointer-events-none"></div>
 
-            {/* CARD CONTAINER */}
-            <div className="relative overflow-hidden rounded-[2.2rem] border border-white/60 bg-white/60 p-8 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.08)] backdrop-blur-xl sm:p-9 transition-all duration-200 hover:shadow-[0_50px_100px_-20px_rgba(16,185,129,0.2)] hover:bg-white/70 transform-gpu">
-              
-              {/* Internal Glass Shine */}
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/60 to-transparent opacity-50 pointer-events-none"></div>
-
-              {/* Card Header */}
-              <div className="relative mb-8 text-center z-10">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-white shadow-inner border border-emerald-100">
-                    <UserCheck className="text-emerald-600" size={28} />
-                </div>
-                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Access Portal</h2>
-                <p className="text-sm font-medium text-slate-400 mt-1">Secure gateway for personnel</p>
+            {/* Card Header */}
+            <div className="relative mb-8 text-center z-10 flex flex-col items-center">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-white shadow-[0_4px_20px_rgba(16,185,129,0.15),inset_0_2px_0_rgba(255,255,255,1)] border border-emerald-100">
+                  <UserCheck className="text-emerald-600" size={26} strokeWidth={2.5} />
               </div>
-
-              {/* BUTTONS STACK */}
-              <div className="space-y-4 relative z-10">
-
-                {/* 1. Employee Login - 200ms transitions */}
-                <Link href="/login" className="group/btn relative flex w-full items-center gap-4 overflow-hidden rounded-2xl bg-white border border-emerald-100/80 p-2 pr-4 transition-all duration-200 hover:border-emerald-300 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.25)] hover:-translate-y-1 active:scale-[0.98] transform-gpu">
-                  
-                  {/* Icon Box */}
-                  <div className="relative flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-200/50 transition-transform duration-200 group-hover/btn:scale-110 group-hover/btn:rotate-3">
-                    <User size={22} strokeWidth={2.5} />
-                    <div className="absolute inset-0 rounded-xl border border-white/20"></div>
-                  </div>
-
-                  {/* Text */}
-                  <div className="relative flex-1 text-left">
-                    <p className="text-[15px] font-bold text-slate-800 group-hover/btn:text-emerald-950 transition-colors">Employee Login</p>
-                    <p className="text-xs font-medium text-slate-400 group-hover/btn:text-emerald-600/70">Operations & Tasks</p>
-                  </div>
-
-                  {/* Arrow */}
-                  <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-300 transition-all duration-200 group-hover/btn:bg-emerald-50 group-hover/btn:text-emerald-600 group-hover/btn:translate-x-1">
-                    <ChevronRight size={18} />
-                  </div>
-                </Link>
-
-                {/* 2. Client Login */}
-                <Link href="/client/login" className="group/btn relative flex w-full items-center gap-4 overflow-hidden rounded-2xl bg-slate-50/50 border border-transparent p-2 pr-4 transition-all duration-200 hover:bg-white hover:border-blue-100 hover:shadow-[0_10px_40px_-10px_rgba(59,130,246,0.15)] hover:-translate-y-1 active:scale-[0.98] transform-gpu">
-
-                  <div className="relative flex h-14 w-14 items-center justify-center rounded-xl bg-white text-blue-500 shadow-sm transition-transform duration-200 group-hover/btn:scale-110 group-hover/btn:-rotate-3 group-hover/btn:text-blue-600">
-                    <Users size={22} strokeWidth={2.5} />
-                  </div>
-
-                  <div className="relative flex-1 text-left">
-                    <p className="text-[15px] font-bold text-slate-700 group-hover/btn:text-blue-900 transition-colors">Client Portal</p>
-                    <p className="text-xs font-medium text-slate-400 group-hover/btn:text-blue-500/80">Project Tracking</p>
-                  </div>
-
-                  <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-transparent text-slate-300 transition-all duration-200 group-hover/btn:text-blue-400 group-hover/btn:translate-x-1">
-                    <ChevronRight size={18} />
-                  </div>
-                </Link>
-
-                {/* 3. Admin Login */}
-                <Link href="/login" className="relative mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold uppercase tracking-wider text-slate-400/80 transition-all duration-200 hover:bg-slate-100/50 hover:text-slate-600 hover:tracking-widest">
-                  <Shield size={14} /> Admin Access
-                </Link>
-              </div>
-
-              {/* Secure Footer */}
-              <div className="mt-8 border-t border-slate-100/80 pt-5 text-center">
-                <p className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-900/20">
-                  <Lock size={10} className="opacity-70" />
-                  Encrypted Connection
-                </p>
-              </div>
-
+              <h2 className="text-[1.35rem] font-extrabold text-slate-800 tracking-tight">Access Portal</h2>
+              <p className="text-xs font-medium text-slate-400 mt-1.5 tracking-wide">Secure gateway for personnel</p>
             </div>
+
+            {/* BUTTONS STACK */}
+            <div className="space-y-3.5 relative z-10">
+
+              {/* 1. Employee Login */}
+              <Link href="/login" className="group/btn relative flex w-full items-center gap-4 overflow-hidden rounded-[1.25rem] bg-white border border-slate-100 p-2.5 pr-5 transition-all duration-300 hover:border-emerald-300/50 hover:shadow-[0_8px_25px_-5px_rgba(16,185,129,0.15)] hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0">
+                
+                <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20 transition-transform duration-300 group-hover/btn:scale-[1.08] group-hover/btn:-rotate-2">
+                  <User size={20} strokeWidth={2.5} />
+                  <div className="absolute inset-0 rounded-xl border border-white/20"></div>
+                </div>
+
+                <div className="relative flex-1 text-left min-w-0">
+                  <p className="text-[14px] font-bold text-slate-800 group-hover/btn:text-emerald-700 transition-colors truncate">Employee Login</p>
+                  <p className="text-[11px] font-medium text-slate-400 group-hover/btn:text-emerald-600/70 truncate mt-0.5">Operations & Tasks</p>
+                </div>
+
+                <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-300 transition-all duration-300 group-hover/btn:bg-emerald-50 group-hover/btn:text-emerald-600 group-hover/btn:translate-x-1">
+                  <ArrowRight size={16} strokeWidth={2.5} />
+                </div>
+              </Link>
+
+              {/* 2. Client Login */}
+              <Link href="/client/login" className="group/btn relative flex w-full items-center gap-4 overflow-hidden rounded-[1.25rem] bg-slate-50/50 border border-transparent p-2.5 pr-5 transition-all duration-300 hover:bg-white hover:border-blue-200/50 hover:shadow-[0_8px_25px_-5px_rgba(59,130,246,0.12)] hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0">
+
+                <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white text-blue-500 shadow-sm border border-slate-100 transition-transform duration-300 group-hover/btn:scale-[1.08] group-hover/btn:rotate-2 group-hover/btn:text-blue-600 group-hover/btn:border-blue-100">
+                  <Users size={20} strokeWidth={2.5} />
+                </div>
+
+                <div className="relative flex-1 text-left min-w-0">
+                  <p className="text-[14px] font-bold text-slate-700 group-hover/btn:text-blue-800 transition-colors truncate">Client Portal</p>
+                  <p className="text-[11px] font-medium text-slate-400 group-hover/btn:text-blue-500/80 truncate mt-0.5">Project Tracking</p>
+                </div>
+
+                <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-transparent text-slate-300 transition-all duration-300 group-hover/btn:text-blue-500 group-hover/btn:translate-x-1 group-hover/btn:bg-blue-50">
+                  <ArrowRight size={16} strokeWidth={2.5} />
+                </div>
+              </Link>
+
+              {/* 3. Admin Login */}
+              <Link href="/login" className="relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 transition-all duration-300 hover:bg-slate-50 hover:text-slate-700">
+                <Shield size={14} /> Admin Access
+              </Link>
+            </div>
+
+            {/* Secure Footer */}
+            <div className="mt-6 border-t border-slate-100/60 pt-5 text-center">
+              <p className="flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400/60">
+                <Lock size={10} />
+                Encrypted Connection
+              </p>
+            </div>
+
           </div>
         </motion.div>
 
       </main>
 
-      {/* --- CSS ENGINE (ACCELERATED) --- */}
+      {/* --- CSS ENGINE (SMOOTH & ELEGANT) --- */}
       <style jsx global>{`
-        /* 1. Aurora Flow (Sped Up significantly) */
-        @keyframes aurora-1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(20px, -40px) scale(1.1); }
-        }
-        @keyframes aurora-2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(-30px, 30px) scale(0.95); }
-        }
-        .animate-aurora-1 { animation: aurora-1 6s ease-in-out infinite; }
-        .animate-aurora-2 { animation: aurora-2 8s ease-in-out infinite; }
-        
-        /* 2. Floating Icons Logic (Rapid) */
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-15px) rotate(5deg); }
-        }
-        @keyframes float-medium {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(-5deg); }
-        }
-        @keyframes float-fast {
-          0%, 100% { transform: translateY(0) scale(1); }
-          50% { transform: translateY(-8px) scale(1.05); }
-        }
-        @keyframes float-v-slow {
-          0%, 100% { transform: translate(0,0) rotate(0deg); }
-          50% { transform: translate(10px, -10px) rotate(2deg); }
-        }
-
-        .animate-float-slow { animation: float-slow 4s ease-in-out infinite; }
-        .animate-float-medium { animation: float-medium 3s ease-in-out infinite; }
-        .animate-float-fast { animation: float-fast 2s ease-in-out infinite; }
-        .animate-float-v-slow { animation: float-v-slow 6s ease-in-out infinite; }
-
-        /* 3. Text Gradient Flow (Fast) */
         @keyframes gradient-x {
           0% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
         }
-        .animate-gradient-x { animation: gradient-x 3s ease infinite; }
-
-        /* 4. Grid Pan (Rushing) */
-        @keyframes pan-grid {
-          0% { transform: translateY(0); }
-          100% { transform: translateY(40px); }
-        }
-        .animate-pan-grid { animation: pan-grid 5s linear infinite; }
+        .animate-gradient-x { animation: gradient-x 4s ease-in-out infinite; }
         
         @keyframes shimmer {
           100% { transform: translateX(100%); }
         }
-        .animate-shimmer { animation: shimmer 1s infinite; }
+        .animate-shimmer { animation: shimmer 2s infinite linear; }
 
-        /* Utilities */
         .perspective-1000 { perspective: 1000px; }
-        .rotate-y-1 { transform: rotateY(1deg); }
-        .rotate-x-1 { transform: rotateX(1deg); }
       `}</style>
     </div>
   );
