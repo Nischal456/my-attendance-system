@@ -1,8 +1,8 @@
-import dbConnect from '../../../lib/dbConnect';
-import Attendance from '../../../models/Attendance';
-import User from '../../../models/User';
-import Notification from '../../../models/Notification';
-import { sendPushNotification } from '../../../lib/webPush';
+import dbConnect from '@/lib/dbConnect';
+import Attendance from '@/models/Attendance';
+import User from '@/models/User';
+import Notification from '@/models/Notification';
+import { sendPushNotification } from '@/lib/webPush';
 
 export default async function handler(req, res) {
   // Only allow GET or POST
