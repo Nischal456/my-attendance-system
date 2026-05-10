@@ -147,7 +147,7 @@ export default function CompletedTasksPage({ user, completedTasks }) {
             <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 shadow-sm transition-all">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-20">
-                        <Link href="/dashboard" className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors bg-white px-4 py-2 rounded-full border border-slate-200 hover:border-slate-300 shadow-sm group">
+                        <Link href="/workspace" className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors bg-white px-4 py-2 rounded-full border border-slate-200 hover:border-slate-300 shadow-sm group">
                             <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Back to Dashboard
                         </Link>
                         
@@ -208,7 +208,7 @@ export default function CompletedTasksPage({ user, completedTasks }) {
                             </div>
                             <h3 className="text-lg font-bold text-slate-700">No completed tasks yet</h3>
                             <p className="text-slate-400 text-sm mt-1">When you finish tasks, they will appear here.</p>
-                            <Link href="/dashboard" className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 hover:shadow-xl">
+                            <Link href="/workspace" className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 hover:shadow-xl">
                                 Go to Dashboard
                             </Link>
                         </motion.div>

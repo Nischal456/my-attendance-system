@@ -226,7 +226,7 @@ export default function PerformancePage({ user }) {
                 </div>
                 <h2 className="text-xl font-black mb-2 text-slate-800">Unable to load data</h2>
                 <p className="mb-6 text-sm font-medium text-slate-400">{error}</p>
-                <Link href="/dashboard" className="block w-full py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl active:scale-95">
+                <Link href="/workspace" className="block w-full py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl active:scale-95">
                     Return to Dashboard
                 </Link>
             </div>
@@ -253,7 +253,7 @@ export default function PerformancePage({ user }) {
 
             <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-40 transition-all">
                 <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-10 h-20 flex justify-between items-center">
-                    <Link href="/dashboard" className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors bg-white px-4 py-2.5 rounded-2xl border border-slate-100 hover:border-slate-300 shadow-sm group">
+                    <Link href="/workspace" className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors bg-white px-4 py-2.5 rounded-2xl border border-slate-100 hover:border-slate-300 shadow-sm group">
                         <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> 
                         Dashboard
                     </Link>

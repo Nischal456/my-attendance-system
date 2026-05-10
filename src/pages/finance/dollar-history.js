@@ -362,7 +362,12 @@ export async function getServerSideProps(context) {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.userId).lean();
-        if (!user || user.role !== "Finance") return { redirect: { destination: "/dashboard", permanent: false } };
+        if (!user) return { redirect: { destination: "/dashboard", permanent: false } };
+        
+        const allUserRoles = [user.role, ...(user.accessRoles || [])];
+        if (!allUserRoles.some(r => ['Finance', 'Superadmin'].includes(r))) {
+            return { redirect: { destination: "/dashboard", permanent: false } };
+        }
         return { props: { user: JSON.parse(JSON.stringify(user)) } };
     } catch (error) { return { redirect: { destination: "/login", permanent: false } }; }
 }

@@ -121,7 +121,7 @@ export default function MyLeaveHub() {
       return (
           <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 text-slate-600">
               <p className="mb-4 text-lg font-semibold">Unable to load leave data.</p>
-              <Link href="/dashboard" className="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors">Return to Dashboard</Link>
+              <Link href="/workspace" className="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors">Return to Workspace</Link>
           </div>
       );
   }
@@ -152,7 +152,7 @@ export default function MyLeaveHub() {
 
       <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-40 transition-all">
         <div className="max-w-5xl mx-auto py-5 px-4 sm:px-6 lg:px-8">
-            <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors bg-white px-3 py-1.5 rounded-full border border-slate-200 hover:border-slate-300 shadow-sm mb-4 group">
+            <Link href="/workspace" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors bg-white px-3 py-1.5 rounded-full border border-slate-200 hover:border-slate-300 shadow-sm mb-4 group">
                 <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                 Back to Dashboard
             </Link>

@@ -6,15 +6,15 @@ function MyApp({ Component, pageProps }) {
   return (
     <>
       <Head>
-        <title>WorkOS Enterprise</title>
-        <meta name="description" content="WorkOS Enterprise platform" />
+        <title>Gecko Oms Enterprise</title>
+        <meta name="description" content="GeckoOms Enterprise platform" />
         <link rel="icon" href="/favicon.ico?v=4" />
         <link rel="apple-touch-icon" href="/favicon.ico?v=4" />
       </Head>
       <Component {...pageProps} />
-      
+
       {/* Global Premium Toaster Configuration */}
-      <Toaster 
+      <Toaster
         position="top-center"
         toastOptions={{
           duration: 3000,

@@ -1,6 +1,6 @@
 {
-  "name": "WorkOS Enterprise",
-  "short_name": "WorkOS",
+  "name": "GeckoOms Enterprise",
+  "short_name": "GeckoOms",
   "description": "Smart Office Management System",
   "start_url": "/login",
   "display": "standalone",

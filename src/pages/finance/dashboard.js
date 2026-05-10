@@ -9,7 +9,7 @@ import {
     Trash2, Target, Search, Grid, Activity,
     Facebook, Instagram, Linkedin, Video, AlertTriangle, AlertCircle
 } from 'react-feather';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ArrowLeft } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
@@ -262,7 +262,7 @@ const NotificationDropdown = ({ isOpen, notifications, onClose, onMarkRead }) =>
 );
 
 // 6. Dollar Spend Card (Credit Card Style)
-const DollarCardWidget = ({ dollarData, dollarBalance, onAddClick, onLoadClick, onItemClick, onDelete }) => {
+const DollarCardWidget = ({ dollarData, dollarBalance, auditLogs, onAddClick, onLoadClick, onItemClick, onDelete }) => {
     const recentActivity = [...dollarData].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
@@ -285,7 +285,7 @@ const DollarCardWidget = ({ dollarData, dollarBalance, onAddClick, onLoadClick, 
                         </div>
                         <div className="flex justify-between items-end opacity-90">
                             <div><div className="flex items-center gap-3 mb-1"><div className="flex -space-x-2"><div className="w-8 h-8 rounded-full bg-rose-500/80 border-2 border-slate-900 backdrop-blur-md"></div><div className="w-8 h-8 rounded-full bg-amber-400/80 border-2 border-slate-900 backdrop-blur-md"></div></div><span className="text-sm text-emerald-100/60 font-mono tracking-widest">•••• 5869</span></div></div>
-                            <Image src="/geckoworks.png" alt="Logo" width={30} height={30} className="opacity-50 grayscale brightness-200" />
+                            <img src="/logo.png" alt="Logo" style={{ width: 30, height: 30 }} className="opacity-50 grayscale brightness-200" />
                         </div>
                     </div>
                 </div>
@@ -315,8 +315,16 @@ const DollarCardWidget = ({ dollarData, dollarBalance, onAddClick, onLoadClick, 
                                     {d.type === 'Load' ? <ArrowDownLeft size={18} /> : <Target size={18} />}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="font-bold text-slate-800 text-sm truncate block">{d.type === 'Load' ? 'Wallet Load' : d.companyName}</p>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide truncate block">{d.type === 'Load' ? formatDate(d.date) : d.campaignName || 'Ad Spend'}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-bold text-slate-800 text-sm truncate block">{d.type === 'Load' ? 'Wallet Load' : d.companyName}</p>
+                                        {d.addedBy && (
+                                            <div className="hidden sm:flex items-center gap-1 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded-full" title={`Entered by ${d.addedBy.name || 'System'}`}>
+                                                <img src={d.addedBy.avatar || '/default-avatar.png'} style={{ width: 10, height: 10 }} className="rounded-full opacity-80" alt="avatar" />
+                                                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[60px]">{(d.addedBy.name || 'System').split(' ')[0]}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide truncate block mt-0.5">{d.type === 'Load' ? formatDate(d.date) : d.campaignName || 'Ad Spend'}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
@@ -326,6 +334,46 @@ const DollarCardWidget = ({ dollarData, dollarBalance, onAddClick, onLoadClick, 
                         </motion.div>
                     )) : <div className="h-full flex flex-col items-center justify-center text-slate-400"><Layers size={24} className="mb-2 opacity-20" /><span className="text-xs font-bold uppercase tracking-wide opacity-50">No Data</span></div>}
                 </div>
+            </div>
+        </div>
+    );
+};
+
+// 6.5 Audit History Box
+const AuditHistoryBox = ({ auditLogs, unreadCount, onMarkRead }) => {
+    return (
+        <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col h-80 overflow-hidden">
+            <div className="flex justify-between items-center mb-4 px-1 flex-shrink-0">
+                <h3 className="font-extrabold text-slate-800 flex items-center gap-2 text-lg">
+                    <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span className="hidden sm:flex items-center gap-2">History {unreadCount > 0 && <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full leading-none">{unreadCount}</span>}</span>
+                    <span className="sm:hidden flex items-center gap-2">Audit {unreadCount > 0 && <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full leading-none">{unreadCount}</span>}</span>
+                </h3>
+                {unreadCount > 0 && (
+                    <button onClick={onMarkRead} className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-wider flex items-center gap-1">Mark as read</button>
+                )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar">
+                {auditLogs && auditLogs.length > 0 ? auditLogs.map((log, i) => (
+                    <div key={log._id || i} className={`flex gap-3 items-start p-3 rounded-2xl border ${log.isRead ? 'bg-slate-50/50 border-slate-100' : 'bg-indigo-50/30 border-indigo-100/50 relative'}`}>
+                        {!log.isRead && <div className="absolute top-3 right-3 w-1.5 h-1.5 bg-rose-500 rounded-full"></div>}
+                        <img src={log.user?.avatar || '/default-avatar.png'} style={{ width: 28, height: 28 }} className="rounded-full shadow-sm mt-0.5 border border-slate-200" alt="avatar" />
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-600 leading-tight">
+                                <span className="font-bold text-slate-800">{log.user?.name?.split(' ')[0]}</span>{' '}
+                                <span className={`font-bold ${log.action === 'Added' ? 'text-emerald-600' : log.action === 'Edited' ? 'text-blue-600' : 'text-rose-600'}`}>
+                                    {log.action.toLowerCase()}
+                                </span>{' '}
+                                <span className="text-slate-500">{log.details.substring(log.details.indexOf(':') + 1)}</span>
+                            </p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-1">
+                                <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'Added' ? 'bg-emerald-400' : log.action === 'Edited' ? 'bg-blue-400' : 'bg-rose-400'}`}></span>
+                                {new Date(log.date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                            </p>
+                        </div>
+                    </div>
+                )) : <div className="h-full flex flex-col items-center justify-center text-slate-400"><svg className="w-6 h-6 mb-2 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span className="text-xs font-bold uppercase tracking-wide opacity-50">System Clear</span></div>}
             </div>
         </div>
     );
@@ -368,6 +416,15 @@ const TransactionRow = memo(({ transaction, remainingBalance, onRowClick, onDele
                         <div className="flex flex-wrap items-center gap-2 mt-1 w-full overflow-hidden">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 truncate max-w-[120px]">{transaction.category}</span>
                             <span className="text-[10px] font-bold text-slate-400 flex-shrink-0">{formatDate(transaction.date)}</span>
+                            {(transaction.createdBy || transaction.loggedBy) && (() => {
+                                const author = transaction.createdBy || transaction.loggedBy;
+                                return (
+                                    <div className="flex items-center gap-1.5 ml-1 px-2 py-0.5 rounded-md bg-indigo-50/50 border border-indigo-100/50" title={`Entered by ${author.name || 'System'}`}>
+                                        <img src={author.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=fallback'} style={{ width: 14, height: 14 }} className="rounded-full border border-indigo-200" alt="avatar" />
+                                        <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1"><CheckCircle size={8} className="text-indigo-400" /> By {(author.name || 'System').split(' ')[0]}</span>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
@@ -488,6 +545,9 @@ const DollarDetailModal = ({ transaction, onClose }) => {
                     <div className="flex justify-between text-sm"><span className="text-slate-500 font-medium">Date</span><span className="font-bold text-slate-700">{formatDate(transaction.date, true)}</span></div>
                     {transaction.type === 'Spend' && (<div className="flex justify-between text-sm"><span className="text-slate-500 font-medium">Platform</span><span className="font-bold text-slate-700 flex items-center gap-1">{transaction.platform}</span></div>)}
                     <div className="flex justify-between text-sm"><span className="text-slate-500 font-medium">Rate</span><span className="font-bold text-slate-700">Rs. {transaction.exchangeRate}</span></div>
+                    {transaction.addedBy && (
+                        <div className="flex justify-between text-sm pt-3 border-t border-slate-200"><span className="text-slate-500 font-medium">Logged By</span><span className="font-bold text-slate-700 flex items-center gap-2"><img src={transaction.addedBy.avatar || '/default-avatar.png'} style={{ width: 16, height: 16 }} className="rounded-full" alt="avatar" /> {transaction.addedBy.name || 'System'}</span></div>
+                    )}
                     <div className="flex justify-between text-sm pt-3 border-t border-slate-200"><span className="text-slate-500 font-bold">Total Cost (NPR)</span><span className="font-extrabold text-slate-800">{formatCurrency(transaction.nprEquivalent || (transaction.amount * transaction.exchangeRate))}</span></div>
                 </div>
             </motion.div>
@@ -509,6 +569,20 @@ const TransactionDetailModal = ({ transaction, onClose }) => (
                         <div className="flex justify-between items-center"><span className="text-slate-400 font-bold uppercase text-xs tracking-wider">Category</span><span className="font-bold text-slate-700">{transaction.category}</span></div>
                         {transaction.description && (<div className="pt-4"><p className="text-slate-400 font-bold uppercase text-xs tracking-wider mb-2">Description</p><p className="text-slate-600 bg-slate-50 p-4 rounded-2xl leading-relaxed border border-slate-100">{transaction.description}</p></div>)}
                     </div>
+
+                    {/* --- THE DIGITAL FINGERPRINT (AUDIT TRAIL) --- */}
+                    {(transaction.createdBy || transaction.loggedBy) && (() => {
+                        const author = transaction.createdBy || transaction.loggedBy;
+                        return (
+                            <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-end gap-2 text-slate-400">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 opacity-70">↳ Entered By</span>
+                                <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-full border border-slate-100/50 hover:bg-slate-100 transition-colors">
+                                    <img src={author.avatar || '/default-avatar.png'} style={{ width: 16, height: 16 }} className="rounded-full border border-slate-200" alt="Avatar" />
+                                    <span className="text-xs font-bold text-slate-600">{(author.name || 'System').split(' ')[0]}</span>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </motion.div>
             </div>
         )}
@@ -516,16 +590,18 @@ const TransactionDetailModal = ({ transaction, onClose }) => (
 );
 
 // --- Main Finance Dashboard Component ---
-export default function FinanceDashboard({ user }) {
+export default function FinanceDashboard({ financeUser, allUsers, initialTransactions, canAccessHub }) {
     const router = useRouter();
 
     // States
     const [showSplash, setShowSplash] = useState(true);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [transactions, setAllTransactions] = useState([]);
+    const [transactions, setAllTransactions] = useState(initialTransactions);
     const [bankAccount, setBankAccount] = useState({ balance: 0 });
-    const [allUsers, setAllUsers] = useState([]);
+    const [allUsersList, setAllUsersList] = useState(allUsers);
     const [notifications, setNotifications] = useState([]);
+    const [auditLogs, setAuditLogs] = useState([]);
+    const [unreadAuditCount, setUnreadAuditCount] = useState(0);
     const [dollarData, setDollarData] = useState([]);
     const [dollarBalance, setDollarBalance] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -565,8 +641,10 @@ export default function FinanceDashboard({ user }) {
             if (dashRes.ok) {
                 setAllTransactions(dashData.transactions || []);
                 setBankAccount(dashData.bankAccount || { balance: 0 });
-                setAllUsers(dashData.allUsers || []);
+                setAllUsersList(dashData.allUsers || []);
                 setNotifications(dashData.notifications || []);
+                setAuditLogs(dashData.auditLogs || []);
+                setUnreadAuditCount(dashData.unreadAuditCount || 0);
                 if (!targetUser && dashData.allUsers?.length) setTargetUser(dashData.allUsers[0]._id);
             }
             if (dollarJson.success) {
@@ -576,7 +654,7 @@ export default function FinanceDashboard({ user }) {
         } catch (err) { toast.error("Connection Sync Error"); }
     }, [targetUser]);
 
-    useEffect(() => { refetchData(); }, []);
+    useEffect(() => { refetchData(); }, [refetchData]);
 
     // Outside Clicks
     useEffect(() => {
@@ -590,9 +668,20 @@ export default function FinanceDashboard({ user }) {
 
     // --- Core Calculations ---
 
+    // 0. Calculate Running Balances (Reverse Chronological)
+    const transactionsWithBalance = useMemo(() => {
+        let currentBal = bankAccount.balance;
+        return transactions.map(t => {
+            const runningBal = currentBal;
+            if (t.type === 'Income' || t.type === 'Deposit') currentBal -= t.amount;
+            else currentBal += t.amount;
+            return { ...t, runningBalance: runningBal };
+        });
+    }, [transactions, bankAccount.balance]);
+
     // 1. Filter Logic
     const filteredTransactionsForDisplay = useMemo(() => {
-        return transactions.filter(t => {
+        return transactionsWithBalance.filter(t => {
             const d = new Date(t.date);
             const matchesYear = d.getUTCFullYear() === viewingYear;
             const matchesMonth = d.getUTCMonth() === viewingMonth;
@@ -608,21 +697,6 @@ export default function FinanceDashboard({ user }) {
         return { totalIncome: inc, totalExpenses: exp, netProfit: inc - exp };
     }, [filteredTransactionsForDisplay]);
 
-    // 3. Running Balance Logic
-    // Logic: Current Bank Balance is the End State. We work backwards for history.
-    const transactionsWithRunningBalance = useMemo(() => {
-        let currentBalance = bankAccount.balance;
-        const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)); // Newest to Oldest
-
-        // Note: To do this perfectly across all history requires scanning from T=0 or T=Now. 
-        // For this UI, we will approximate by showing the current transaction amount. 
-        // If you want true running balance per row for historical data, it requires backend support.
-        // For now, we return the transaction object.
-        return filteredTransactionsForDisplay.map(t => {
-            return { ...t, remainingBalance: 0 };
-        });
-    }, [filteredTransactionsForDisplay, bankAccount.balance, transactions]);
-
     const handleLogout = async () => {
         await fetch('/api/auth/logout');
 
@@ -633,6 +707,13 @@ export default function FinanceDashboard({ user }) {
     };
     const openModal = (type) => { setModalType(type); setIsModalOpen(true); };
     const handleMarkAsRead = async () => { if (!unreadNotifications.length) return; await fetch('/api/notification/mark-as-read', { method: 'POST' }); setNotifications(p => p.map(n => ({ ...n, isRead: true }))); };
+
+    const handleMarkAuditRead = async () => {
+        if (!unreadAuditCount) return;
+        await fetch('/api/finance/mark-audit-read', { method: 'POST' });
+        setUnreadAuditCount(0);
+        setAuditLogs(prev => prev.map(log => ({ ...log, isRead: true })));
+    };
 
     const handleDeleteTransaction = async (id) => { if (!confirm("Are you sure? This affects the balance.")) return; try { const res = await fetch(`/api/finance/transactions?id=${id}`, { method: 'DELETE' }); if (!res.ok) throw new Error("Failed"); toast.success("Deleted."); refetchData(); } catch (e) { toast.error(e.message); } };
     const handleDeleteDollarSpend = async (id) => { if (!confirm("Delete record?")) return; try { const res = await fetch(`/api/finance/dollar-spend?id=${id}`, { method: 'DELETE' }); if (!res.ok) throw new Error("Failed"); toast.success("Deleted."); refetchData(); } catch (e) { toast.error(e.message); } };
@@ -654,7 +735,7 @@ export default function FinanceDashboard({ user }) {
             summary, // This comes from your existing useMemo calculation
             period: periodString,
             type: statementType, // 'monthly' or 'yearly'
-            user // The logged in user object
+            user: financeUser // The logged in user object
         });
 
         toast.success("Statement Generated Successfully");
@@ -663,7 +744,7 @@ export default function FinanceDashboard({ user }) {
     const yearOptions = [...Array(5)].map((_, i) => new Date().getFullYear() - i);
     const monthOptions = Array.from({ length: 12 }, (_, i) => ({ value: i, label: new Date(0, i).toLocaleString('default', { month: 'long' }) }));
 
-    if (showSplash) return <AnimatePresence mode="wait"><DashboardEntryLoader key="loader" userName={user.name} /></AnimatePresence>;
+    if (showSplash) return <AnimatePresence mode="wait"><DashboardEntryLoader key="loader" userName={financeUser.name} /></AnimatePresence>;
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 selection:bg-emerald-100 selection:text-emerald-900 flex flex-col">
@@ -675,16 +756,22 @@ export default function FinanceDashboard({ user }) {
 
             {/* --- Sticky Header --- */}
             <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/80 px-4 py-3 lg:px-8 flex justify-between items-center sticky top-0 z-40 transition-all">
-                <div className="flex items-center gap-3 group">
+                <Link href="/dashboard" className="flex items-center gap-3 group hover:scale-[1.02] transition-transform cursor-pointer">
                     <div className="relative">
                         <div className="absolute inset-0 bg-emerald-300 blur-md rounded-full opacity-0 group-hover:opacity-40 transition-opacity"></div>
-                        <Image src="/finance.png" alt="Finance" width={44} height={44} />
+                        <img src="/finance.png" alt="Finance" style={{ width: 44, height: 44 }} />
                     </div>
                     <div className="hidden sm:block leading-tight">
                         <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Finance <span className="text-emerald-600">Dashboard</span></h1>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{getGreeting()}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                            {canAccessHub && (
+                                <Link href="/dashboard" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-lg text-xs font-bold transition-colors mt-1">
+                                    <ArrowLeft size={10} className="text-emerald-500" /> Return to Hub
+                                </Link>
+                            )}
+                        </p>
                     </div>
-                </div>
+                </Link>
 
                 <div className="flex items-center gap-3">
                     <div ref={notificationDropdownRef} className="relative">
@@ -697,13 +784,27 @@ export default function FinanceDashboard({ user }) {
                     <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
                     <div ref={userDropdownRef} className="relative">
                         <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 pl-1 pr-2 py-1 bg-white border border-slate-200/60 rounded-full hover:shadow-md transition-all group">
-                            <Image src={user.avatar} width={34} height={34} className="rounded-full border border-slate-100 group-hover:scale-105 transition-transform" alt="User" />
-                            <span className="text-xs font-bold text-slate-700 hidden sm:block group-hover:text-emerald-700 transition-colors">{user.name.split(' ')[0]}</span>
+                            <img src={financeUser.avatar} style={{ width: 34, height: 34 }} className="rounded-full border border-slate-100 group-hover:scale-105 transition-transform" alt="User" />
+                            <span className="text-xs font-bold text-slate-700 hidden sm:block group-hover:text-emerald-700 transition-colors">{financeUser.name.split(' ')[0]}</span>
                             <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
                         <AnimatePresence>
                             {isDropdownOpen && (
-                                <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute top-full right-0 mt-3 w-56 rounded-2xl shadow-xl bg-white border border-slate-100 z-50 overflow-hidden origin-top-right"><div className="p-4 border-b border-slate-50 bg-slate-50/50"><p className="text-sm font-bold text-slate-800">{user.name}</p><p className="text-[10px] uppercase font-bold text-emerald-600">{user.role}</p></div><div className="p-1"><button onClick={handleLogout} className="w-full text-left px-4 py-2.5 text-sm font-bold text-rose-500 hover:bg-rose-50 rounded-xl flex items-center gap-3 transition-colors"><LogOut size={16} /> Sign Out</button></div></motion.div>
+                                <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute top-full right-0 mt-3 w-56 rounded-2xl shadow-2xl bg-white border border-slate-100 z-50 overflow-hidden origin-top-right">
+                                    <div className="p-4 border-b border-slate-50 bg-slate-50/50"><p className="text-sm font-bold text-slate-800">{financeUser.name}</p><p className="text-[10px] uppercase font-bold text-emerald-600">{financeUser.role}</p></div>
+
+                                    {/* --- UNIVERSAL WORKSPACE SWITCHER --- */}
+                                    {financeUser.role === 'Superadmin' && (
+                                        <div className="p-2 border-b border-slate-50">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 mb-1">Workspaces</p>
+                                            <Link href="/dashboard" className="w-full text-left px-3 py-2 text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg flex items-center gap-2 transition-colors"><Layers size={14} /> Personal Portal</Link>
+                                            <Link href="/hr/dashboard" className="w-full text-left px-3 py-2 text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg flex items-center gap-2 transition-colors"><Layers size={14} /> HR Dashboard</Link>
+                                            <Link href="/pm/dashboard" className="w-full text-left px-3 py-2 text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg flex items-center gap-2 transition-colors"><Layers size={14} /> PM Dashboard</Link>
+                                        </div>
+                                    )}
+
+                                    <div className="p-1"><button onClick={handleLogout} className="w-full text-left px-4 py-2.5 text-sm font-bold text-rose-500 hover:bg-rose-50 rounded-xl flex items-center gap-3 transition-colors"><LogOut size={16} /> Sign Out</button></div>
+                                </motion.div>
                             )}
                         </AnimatePresence>
                     </div>
@@ -730,6 +831,7 @@ export default function FinanceDashboard({ user }) {
                                 <DollarCardWidget
                                     dollarData={dollarData}
                                     dollarBalance={dollarBalance}
+                                    auditLogs={auditLogs}
                                     onAddClick={() => setIsDollarModalOpen(true)}
                                     onLoadClick={() => setIsLoadFundsModalOpen(true)}
                                     onItemClick={(transaction) => setViewingDollarTransaction(transaction)}
@@ -740,8 +842,11 @@ export default function FinanceDashboard({ user }) {
                                 <ActionCard onAction={openModal} />
                                 <ProfitMarginWidget income={summary.totalIncome} expense={summary.totalExpenses} />
                             </div>
+
+                            <AuditHistoryBox auditLogs={auditLogs} unreadCount={unreadAuditCount} onMarkRead={handleMarkAuditRead} />
+
                             <div className="flex-1">
-                                <NotificationCard allUsers={allUsers} onSubmit={handleSendNotification} content={notificationContent} setContent={setNotificationContent} targetUser={targetUser} setTargetUser={setTargetUser} isSending={isSending} />
+                                <NotificationCard allUsers={allUsersList} onSubmit={handleSendNotification} content={notificationContent} setContent={setNotificationContent} targetUser={targetUser} setTargetUser={setTargetUser} isSending={isSending} />
                             </div>
                         </motion.div>
 
@@ -783,7 +888,7 @@ export default function FinanceDashboard({ user }) {
                                                 <TransactionRow
                                                     key={t._id}
                                                     transaction={t}
-                                                    remainingBalance={bankAccount.balance} // Passing current balance as reference
+                                                    remainingBalance={t.runningBalance} // Accurate historical balance!
                                                     index={index}
                                                     onRowClick={() => setViewingTransaction(t)}
                                                     onDelete={(id) => handleDeleteTransaction(id)}
@@ -827,13 +932,42 @@ export async function getServerSideProps(context) {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.userId).select("-password").lean();
-        if (!user || user.role !== "Finance") {
+        const financeUser = await User.findById(decoded.userId).select("-password").lean();
+
+        if (!financeUser) {
             context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
             return { redirect: { destination: "/login", permanent: false } };
         }
-        return { props: { user: JSON.parse(JSON.stringify(user)) } };
+
+        const allUserRoles = [financeUser.role, ...(financeUser.accessRoles || [])];
+        if (!allUserRoles.some(r => ['Finance', 'Superadmin'].includes(r))) {
+            return { redirect: { destination: '/dashboard', permanent: false } };
+        }
+
+        const Transaction = require('../../../models/Transaction').default;
+        const transactions = await Transaction.find({}).populate('loggedBy', 'name avatar').sort({ date: -1 }).lean();
+        const allUsers = await User.find({}).select('name role avatar email').lean();
+
+        const hasAccess = (requiredRoles) => allUserRoles.some(r => requiredRoles.includes(r));
+        let allowedRoutes = [];
+        if (hasAccess(['Staff', 'Intern', 'Manager', 'Superadmin'])) allowedRoutes.push('/workspace');
+        if (hasAccess(['HR', 'Superadmin'])) allowedRoutes.push('/hr/dashboard');
+        if (hasAccess(['Project Manager', 'Superadmin'])) allowedRoutes.push('/pm/dashboard');
+        if (hasAccess(['Finance', 'Superadmin'])) allowedRoutes.push('/finance/dashboard');
+        if (hasAccess(['Superadmin'])) allowedRoutes.push('/superadmin/dashboard');
+        allowedRoutes = [...new Set(allowedRoutes)];
+        const canAccessHub = allowedRoutes.length > 1;
+
+        return {
+            props: {
+                financeUser: JSON.parse(JSON.stringify(financeUser)),
+                allUsers: JSON.parse(JSON.stringify(allUsers)),
+                initialTransactions: JSON.parse(JSON.stringify(transactions)),
+                canAccessHub
+            }
+        };
     } catch (error) {
+        console.error("Finance Auth Error:", error.message);
         context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
         return { redirect: { destination: "/login", permanent: false } };
     }

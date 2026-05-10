@@ -18,9 +18,10 @@ export default async function handler(req, res) {
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // 2. Authorize: Make sure the user is an HR Manager
-    const hrUser = await User.findById(decoded.userId);
-    if (!hrUser || hrUser.role !== 'HR') {
+    // 2. Authorize: Make sure the user is an HR Manager or Superadmin
+    const requestUser = await User.findById(decoded.userId);
+    const allUserRoles = [requestUser.role, ...(requestUser.accessRoles || [])];
+    if (!requestUser || !allUserRoles.some(r => ['HR', 'Superadmin'].includes(r))) {
       return res.status(403).json({ message: 'Forbidden: You do not have permission to perform this action.' });
     }
 
@@ -28,6 +29,11 @@ export default async function handler(req, res) {
     const { name, email, password, role, phoneNumber, avatar } = req.body;
     if (!name || !email || !password || !role) {
       return res.status(400).json({ message: 'Name, email, password, and role are required.' });
+    }
+
+    // Strict Check: Only Superadmins can create Superadmins
+    if (role === 'Superadmin' && requestUser.role !== 'Superadmin') {
+        return res.status(403).json({ message: 'Forbidden: Only existing Superadmins can assign the Superadmin role.' });
     }
 
     // 4. Check if a user with this email already exists
@@ -47,7 +53,7 @@ export default async function handler(req, res) {
       password: hashedPassword,
       role,
       phoneNumber: phoneNumber || null,
-      // If you have a default avatar, it will be set by the model
+      createdBy: requestUser._id
     });
 
     await newUser.save();

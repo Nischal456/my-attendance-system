@@ -2,6 +2,7 @@ import dbConnect from '../../../../lib/dbConnect';
 import User from '../../../../models/User';
 import Attendance from '../../../../models/Attendance';
 import LeaveRequest from '../../../../models/LeaveRequest';
+import HRAuditLog from '../../../../models/HRAuditLog';
 import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
@@ -15,15 +16,21 @@ export default async function handler(req, res) {
         
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const hrUser = await User.findById(decoded.userId);
-        if (!hrUser || hrUser.role !== 'HR') {
+        if (!hrUser) return res.status(403).json({ message: 'Forbidden: Access denied.' });
+        
+        const allUserRoles = [hrUser.role, ...(hrUser.accessRoles || [])];
+        if (!allUserRoles.some(r => ['HR', 'Superadmin'].includes(r))) {
             return res.status(403).json({ message: 'Forbidden: Access denied.' });
         }
 
-        const [allAttendance, allLeaveRequests, allUsers] = await Promise.all([
+        const [allAttendance, allLeaveRequests, allUsers, hrAuditLogs] = await Promise.all([
             Attendance.find({}).populate("user", "name role avatar").sort({ checkInTime: -1 }).lean(),
             LeaveRequest.find({}).populate('user', 'name role').sort({ createdAt: -1 }).lean(),
-            User.find({ role: { $ne: 'HR' } }).select('name role avatar').sort({ name: 1 }).lean()
+            User.find({}).select('-password -__v').populate('createdBy', 'name').populate('promotedBy', 'name').sort({ name: 1 }).lean(),
+            HRAuditLog.find({}).populate('user', 'name avatar role').sort({ date: -1 }).lean()
         ]);
+        
+        const unreadAuditCount = hrAuditLogs.filter(log => !log.isRead).length;
         
         const now = new Date();
         const pendingLeaveRequests = allLeaveRequests.filter(l => l.status === 'Pending');
@@ -36,6 +43,8 @@ export default async function handler(req, res) {
             initialConcludedLeaves: concludedLeaveRequests,
             initialApprovedLeaves: approvedLeaves,
             allUsers: allUsers,
+            auditLogs: hrAuditLogs,
+            unreadAuditCount: unreadAuditCount
         });
 
     } catch (error) {

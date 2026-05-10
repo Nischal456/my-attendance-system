@@ -32,6 +32,10 @@ const LeaveRequestSchema = new mongoose.Schema({
     hrComments: {
         type: String,
         trim: true,
+    },
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
     }
 }, { timestamps: true });
 

@@ -38,13 +38,20 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: 'Task not found.' });
     }
 
-    // 6. CRITICAL SECURITY CHECK: Ensure the employee updating the task is the one it's assigned to.
-    if (task.assignedTo.toString() !== employeeId) {
+    const updaterUser = await User.findById(employeeId);
+    
+    // 6. CRITICAL SECURITY CHECK: Ensure the employee updating the task has permission.
+    const isAssigned = task.assignedTo.toString() === employeeId;
+    const isPM = updaterUser.role === 'Project Manager';
+    const isSuperadmin = updaterUser.role === 'Superadmin';
+    
+    if (!isAssigned && !isPM && !isSuperadmin) {
       return res.status(403).json({ message: 'Forbidden: You do not have permission to update this task.' });
     }
 
     // 7. Update the task status
     task.status = newStatus;
+    task.updatedBy = employeeId;
     
     // If the task is being marked as 'Completed', record the completion timestamp
     if (newStatus === 'Completed' && !task.completedAt) {

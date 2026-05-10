@@ -181,6 +181,16 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
                                     {task.status === 'Completed' && <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-200"><span className="text-slate-500 flex items-center gap-2"><CheckCircle size={14} className="text-emerald-500"/> Completed</span><span className="font-bold text-emerald-600">{formatDeadline(task.completedAt, false)}</span></div>}
                                 </div>
                             </div>
+                            
+                            {task.updatedBy && (
+                                <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm mt-3">
+                                    <Image src={task.updatedBy.avatar || '/default-avatar.png'} width={24} height={24} className="rounded-full shadow-sm" alt="Updater" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Last Updated By</span>
+                                        <span className="text-xs font-bold text-emerald-600">{task.updatedBy.name}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -509,7 +519,7 @@ const TaskCardWrapper = ({ task, onEdit, onDelete, onOpenDetails }) => {
     )
 }
 
-export default function PMDashboard({ pmUser, allUsers, initialTasks }) {
+export default function PMDashboard({ pmUser, allUsers, initialTasks, canAccessHub }) {
   const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
@@ -528,7 +538,7 @@ export default function PMDashboard({ pmUser, allUsers, initialTasks }) {
   // Splash Screen Logic
   useEffect(() => { const timer = setTimeout(() => setShowSplash(false), 1500); return () => clearTimeout(timer); }, []);
   // Time Logic
-  useEffect(() => { const t = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => { const t = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearTimeout(t); }, []);
   // Dropdown Logic
   useEffect(() => { const h = (e) => { if (userDropdownRef.current && !userDropdownRef.current.contains(e.target)) setIsDropdownOpen(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
   
@@ -648,7 +658,11 @@ export default function PMDashboard({ pmUser, allUsers, initialTasks }) {
                          </div>
                          <div>
                              <h1 className="text-xl font-extrabold text-slate-900 tracking-tight leading-none hidden sm:block">Command Center</h1>
-                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider hidden sm:block">Project Manager</p>
+                             {canAccessHub && (
+                                 <Link href="/dashboard" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-lg text-xs font-bold transition-colors mt-1">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Return to Hub
+                                 </Link>
+                             )}
                          </div>
                     </Link>
                 </div>
@@ -750,7 +764,13 @@ export async function getServerSideProps(context) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const pmUser = await User.findById(decoded.userId).select('-password').lean();
 
-        if (!pmUser || pmUser.role !== 'Project Manager') {
+        if (!pmUser) {
+            context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
+            return { redirect: { destination: '/login', permanent: false } };
+        }
+
+        const allUserRoles = [pmUser.role, ...(pmUser.accessRoles || [])];
+        if (!allUserRoles.some(r => ['Project Manager', 'Superadmin'].includes(r))) {
             return { redirect: { destination: '/dashboard', permanent: false } };
         }
         
@@ -758,24 +778,42 @@ export async function getServerSideProps(context) {
         
         const teamMemberIds = allUsers.filter(u => u.role !== 'HR' && u.role !== 'Project Manager' && u.role !== 'Finance').map(u => u._id);
 
-        const assignedTasks = await Task.find({
+        let assignedTasksQuery = {
             $or: [
                 { assignedBy: pmUser._id },
                 { assignedTo: { $in: teamMemberIds }, assignedBy: { $in: teamMemberIds } }
             ]
-        })
+        };
+
+        if (pmUser.role === 'Superadmin') {
+            assignedTasksQuery = {}; // Superadmins see the entire ledger
+        }
+
+        const assignedTasks = await Task.find(assignedTasksQuery)
         .populate('assignedTo', 'name avatar')
         .populate('assignedBy', 'name avatar')
         .populate('assistedBy', 'name avatar')
+        .populate('updatedBy', 'name avatar')
         .populate({ path: 'attachments.uploadedBy', select: 'name' })
         .populate({ path: 'comments.author', select: 'name avatar' })
         .sort({ 'createdAt': -1 }).lean();
+
+        const hasAccess = (requiredRoles) => allUserRoles.some(r => requiredRoles.includes(r));
+        let allowedRoutes = [];
+        if (hasAccess(['Staff', 'Intern', 'Manager', 'Superadmin'])) allowedRoutes.push('/workspace');
+        if (hasAccess(['HR', 'Superadmin'])) allowedRoutes.push('/hr/dashboard');
+        if (hasAccess(['Project Manager', 'Superadmin'])) allowedRoutes.push('/pm/dashboard');
+        if (hasAccess(['Finance', 'Superadmin'])) allowedRoutes.push('/finance/dashboard');
+        if (hasAccess(['Superadmin'])) allowedRoutes.push('/superadmin/dashboard');
+        allowedRoutes = [...new Set(allowedRoutes)];
+        const canAccessHub = allowedRoutes.length > 1;
         
         return { 
             props: { 
                 pmUser: JSON.parse(JSON.stringify(pmUser)), 
                 allUsers: JSON.parse(JSON.stringify(allUsers)), 
-                initialTasks: JSON.parse(JSON.stringify(assignedTasks)) 
+                initialTasks: JSON.parse(JSON.stringify(assignedTasks)),
+                canAccessHub
             } 
         };
     } catch (error) {

@@ -16,7 +16,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'WorkOS Enterprise',
+  title: 'GeckoWorks',
   description: 'Smart Office Management Platform',
   manifest: '/manifest.json',
   icons: {
@@ -27,9 +27,9 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'WorkOS',
+    title: 'GeckoOms',
   },
-  applicationName: 'WorkOS',
+  applicationName: 'GeckoOms',
   formatDetection: {
     telephone: false,
   },

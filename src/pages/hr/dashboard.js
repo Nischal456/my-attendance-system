@@ -25,6 +25,7 @@ import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
 import Attendance from '../../../models/Attendance';
 import LeaveRequest from '../../../models/LeaveRequest';
+import HRAuditLog from '../../../models/HRAuditLog';
 
 // --- Lazy Load Charts ---
 const Bar = dynamic(() => import('react-chartjs-2').then((mod) => mod.Bar), { ssr: false });
@@ -196,28 +197,66 @@ const DashboardEntryLoader = ({ userName }) => (
     </motion.div>
 );
 
-// 2. Employee Detail Modal
-const EmployeeDetailModal = ({ user, onClose, onToggleStatus }) => (
+const EmployeeDetailModal = ({ user, onClose, onToggleStatus, onUpdateRole }) => {
+    const availableRoles = ['Staff', 'Intern', 'Trainee', 'Manager', 'Project Manager', 'Finance', 'HR', 'Superadmin'];
+    const [pendingRole, setPendingRole] = useState(null);
+
+    const confirmRoleChange = () => {
+        if (pendingRole) {
+            onUpdateRole(user._id, pendingRole);
+            setPendingRole(null);
+        }
+    };
+
+    return (
     <motion.div variants={modalBackdrop} initial="initial" animate="animate" exit="exit" className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex justify-center items-center p-4">
-        <motion.div variants={modalContent} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-white/40 relative">
+        <motion.div variants={modalContent} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-white/40 relative max-h-[90vh] overflow-y-auto">
             <div className={`absolute top-0 left-0 w-full h-32 ${user.isActive !== false ? 'bg-gradient-to-br from-emerald-500 to-teal-700' : 'bg-gradient-to-br from-slate-500 to-slate-700'}`}></div>
             <button onClick={onClose} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-md transition-all z-10"><XIcon size={20}/></button>
             
-            <div className="pt-16 px-8 pb-8 text-center relative z-0">
+            <div className="pt-16 px-6 sm:px-8 pb-8 text-center relative z-0">
                 <div className="relative w-28 h-28 mx-auto mb-4">
                     <div className="absolute inset-0 bg-white rounded-full p-1 shadow-lg">
-                        <Image src={user.avatar || '/default-avatar.png'} layout="fill" objectFit="cover" className={`rounded-full ${user.isActive === false ? 'grayscale' : ''}`} alt={user.name} />
+                        <img src={user.avatar || '/default-avatar.png'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} className={`rounded-full ${user.isActive === false ? 'grayscale' : ''}`} alt={user.name} />
                     </div>
                     <div className={`absolute bottom-1 right-1 w-6 h-6 border-4 border-white rounded-full ${user.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
                 </div>
                 
                 <h2 className="text-2xl font-black text-slate-800">{user.name}</h2>
-                <div className="flex items-center justify-center gap-2 mt-1 mb-6">
-                    <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-200">{user.role}</span>
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-2 mb-6">
                     <span className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-lg border ${user.isActive !== false ? 'bg-emerald-100 text-emerald-700 border-emerald-100' : 'bg-rose-100 text-rose-700 border-rose-100'}`}>
                         {user.isActive !== false ? 'Active' : 'Alumni'}
                     </span>
+                    <select 
+                        value={pendingRole || user.role} 
+                        onChange={(e) => {
+                            if (e.target.value !== user.role) {
+                                setPendingRole(e.target.value);
+                            }
+                        }}
+                        className="bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-lg border border-slate-200 px-3 py-1 outline-none cursor-pointer hover:bg-slate-200 transition-colors"
+                    >
+                        {availableRoles.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
                 </div>
+
+                <AnimatePresence>
+                    {pendingRole && (
+                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-left shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <div className="bg-emerald-100 p-2 rounded-full text-emerald-600 mt-0.5"><AlertTriangle size={16}/></div>
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-800">Confirm Promotion</h4>
+                                    <p className="text-xs text-slate-600 mt-1">Are you sure you want to change {user.name.split(' ')[0]}'s role to <span className="font-bold text-emerald-700">{pendingRole}</span>?</p>
+                                    <div className="flex gap-2 mt-3">
+                                        <button onClick={confirmRoleChange} className="px-4 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors shadow-md">Yes, Confirm</button>
+                                        <button onClick={() => setPendingRole(null)} className="px-4 py-1.5 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 <div className="space-y-4 text-left">
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
@@ -228,6 +267,18 @@ const EmployeeDetailModal = ({ user, onClose, onToggleStatus }) => (
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
                         <div className="bg-white p-2.5 rounded-xl shadow-sm text-amber-500"><Calendar size={18}/></div>
                         <div><p className="text-xs font-bold text-slate-400 uppercase">Joined On</p><p className="text-sm font-bold text-slate-700">{formatEnglishDate(user.createdAt)}</p></div>
+                    </div>
+
+                    {/* Premium Tracking Cards */}
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Created By</span>
+                            <span className="text-xs font-bold text-slate-700">{user.createdBy?.name || 'System Auto'}</span>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Promoted By</span>
+                            <span className="text-xs font-bold text-slate-700">{user.promotedBy?.name || 'N/A'}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -244,7 +295,8 @@ const EmployeeDetailModal = ({ user, onClose, onToggleStatus }) => (
             </div>
         </motion.div>
     </motion.div>
-);
+    );
+};
 
 const StatCard = memo(({ title, value, icon, color }) => (
   <motion.div variants={fadeInUp} className="bg-white/80 backdrop-blur-sm p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex items-start gap-4 transition-all duration-300 hover:shadow-lg hover:border-emerald-100 group cursor-default">
@@ -368,7 +420,7 @@ const ManageLeaveModal = ({ item, comments, setComments, error, onClose, onSubmi
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden relative flex-shrink-0">
                   {item.user?.avatar ? (
-                     <Image src={item.user.avatar} layout="fill" objectFit="cover" alt="User" />
+                     <img src={item.user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="User" />
                   ) : (
                      <div className="w-full h-full flex items-center justify-center bg-emerald-50 text-emerald-600 font-bold text-xl">{item.user?.name?.charAt(0)}</div>
                   )}
@@ -448,7 +500,7 @@ const AdjustCheckoutModal = ({ record, onClose, onUpdate, isSubmitting }) => {
           <h3 className="text-xl font-extrabold mb-6 text-slate-800 border-b border-slate-100 pb-4">Modify Time Log</h3>
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6 flex items-center gap-4 shadow-sm">
              <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden relative flex-shrink-0">
-               <Image src={record.user.avatar || '/default-avatar.png'} layout="fill" objectFit="cover" alt="avatar"/>
+               <img src={record.user.avatar || '/default-avatar.png'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="avatar"/>
              </div>
              <div>
                 <p className="text-slate-800 font-bold">{record.user.name}</p>
@@ -523,10 +575,33 @@ const StaffView = ({ allUsers, onUpdateUser }) => {
         }
     };
 
+    const handleUpdateRole = async (userId, newRole) => {
+        const toastId = toast.loading("Updating role...");
+        try {
+            const res = await fetch('/api/hr/update-role', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, newRole })
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                toast.success(data.message, { id: toastId });
+                // Note: The API returns the fully populated user, so we update the local state with it
+                onUpdateUser(userId, data.data); 
+                setSelectedUser(data.data); // Update modal view
+            } else {
+                toast.error(data.message || "Failed to update role", { id: toastId });
+            }
+        } catch (e) { 
+            toast.error("Server error", { id: toastId }); 
+        }
+    };
+
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
             <AnimatePresence>
-                {selectedUser && <EmployeeDetailModal key="modal" user={selectedUser} onClose={()=>setSelectedUser(null)} onToggleStatus={handleToggleStatus} />}
+                {selectedUser && <EmployeeDetailModal key="modal" user={selectedUser} onClose={()=>setSelectedUser(null)} onToggleStatus={handleToggleStatus} onUpdateRole={handleUpdateRole} />}
             </AnimatePresence>
 
             <div className="flex flex-col xl:flex-row justify-between xl:items-center gap-6">
@@ -591,7 +666,7 @@ const StaffView = ({ allUsers, onUpdateUser }) => {
 
                                 <div className="w-24 h-24 rounded-full p-1.5 bg-white mb-4 shadow-lg relative z-10">
                                     <div className="w-full h-full rounded-full overflow-hidden relative">
-                                        <Image src={user.avatar || '/default-avatar.png'} layout="fill" objectFit="cover" alt={user.name} className="transition-transform duration-500 group-hover:scale-110"/>
+                                        <img src={user.avatar || '/default-avatar.png'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={user.name} className="transition-transform duration-500 group-hover:scale-110"/>
                                     </div>
                                     <div className={`absolute bottom-1 right-1 w-5 h-5 border-4 border-white rounded-full ${user.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
                                 </div>
@@ -634,20 +709,16 @@ const StaffView = ({ allUsers, onUpdateUser }) => {
     );
 };
 
-const AnalyticsView = ({ kpis, taskDistribution, leaveBreakdown, todayLocation }) => {
+const AnalyticsView = () => {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Note: We use the passed props if available, otherwise fetch. 
-  // However, since the main component fetches specific analytics on mount for 'analytics' view,
-  // we can use the fetch approach consistent with the previous logic.
-  
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/hr/analytics');
+        const res = await fetch(`/api/hr/analytics?_t=${Date.now()}`);
         const result = await res.json();
-        if (!result.success) throw new Error("Could not load analytics.");
+        if (!result.success) throw new Error(result.message || "Could not load analytics.");
         setData(result.data);
       } catch (error) { toast.error(error.message); } finally { setIsLoading(false); }
     };
@@ -657,55 +728,138 @@ const AnalyticsView = ({ kpis, taskDistribution, leaveBreakdown, todayLocation }
   const chartOptions = useMemo(() => ({ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, font: {family: "'Inter', sans-serif", weight: '500'} } } }, layout: { padding: 10 } }), []);
 
   if (isLoading) return <div className="space-y-6 animate-pulse"><div className="h-10 w-48 bg-slate-200 rounded-xl mb-8"></div><div className="grid grid-cols-4 gap-6">{[1,2,3,4].map(i => <div key={i} className="h-32 bg-slate-200 rounded-3xl"></div>)}</div><div className="h-96 bg-slate-200 rounded-3xl mt-8"></div></div>;
-  if (!data) return <div className="text-center p-10 text-slate-500">Failed to load data.</div>;
+  if (!data) return <div className="text-center p-10 text-slate-500 font-bold">Failed to load analytics data.</div>;
 
   return (
     <motion.div variants={pageTransition} initial="initial" animate="animate" exit="exit" className="space-y-8">
-      <div className="flex justify-between items-center">
-         <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Analytics Overview</h1>
-         <span className="text-sm font-bold text-slate-500 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm flex items-center gap-2"><Calendar size={14} className="text-emerald-500"/> {new Date().toLocaleDateString()}</span>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+         <div>
+            <h1 className="text-3xl font-black text-slate-800 tracking-tight">Analytics <span className="text-emerald-500">Overview</span></h1>
+            <p className="text-sm text-slate-500 mt-1 font-medium">Real-time HR statistics and leave tracking.</p>
+         </div>
+         <span className="text-xs font-bold text-slate-500 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2"><Calendar size={16} className="text-emerald-500"/> {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatCard title="Total Staff" value={data.kpis.totalEmployees} icon={<Users size={24}/>} color={{ bg: 'bg-indigo-50 text-indigo-600', text: 'text-indigo-900' }} />
         <StatCard title="On Leave" value={data.kpis.onLeaveToday} icon={<Briefcase size={24}/>} color={{ bg: 'bg-rose-50 text-rose-600', text: 'text-rose-900' }} />
         <StatCard title="Active Tasks" value={data.kpis.tasksInProgress} icon={<TrendingUp size={24}/>} color={{ bg: 'bg-amber-50 text-amber-600', text: 'text-amber-900' }} />
         <StatCard title="In Office" value={data.todayLocation.find(l=>l._id==='Office')?.count||0} icon={<Home size={24}/>} color={{ bg: 'bg-emerald-50 text-emerald-600', text: 'text-emerald-900' }} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
-          <h3 className="text-xl font-bold text-slate-800 mb-8 flex items-center gap-3"><Activity size={20} className="text-indigo-500"/> Task Distribution</h3>
-          <div className="flex-1 min-h-[320px] relative">
-            <Bar 
-              data={{ 
-                labels: data.taskDistribution.map(d => d.name), 
-                datasets: [{ label: 'Tasks', data: data.taskDistribution.map(d => d.count), backgroundColor: '#6366f1', borderRadius: 8, barPercentage: 0.5 }] 
-              }} 
-              options={{ ...chartOptions, indexAxis: 'y', scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} 
-            />
-          </div>
-        </div>
-        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
-          <h3 className="text-xl font-bold text-slate-800 mb-8 flex items-center gap-3"><PieChart size={20} className="text-emerald-500"/> Leave Breakdown</h3>
-          <div className="flex-1 min-h-[320px] relative flex justify-center items-center">
-            <div className="w-full max-w-xs">
-              <Doughnut 
-                data={{ 
-                  labels: data.leaveBreakdown.map(d => d._id), 
-                  datasets: [{ data: data.leaveBreakdown.map(d => d.count), backgroundColor: ['#f43f5e', '#3b82f6', '#f59e0b', '#10b981'], borderWidth: 0, hoverOffset: 4 }] 
-                }} 
-                options={{ ...chartOptions, cutout: '75%' }} 
-              />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Live Leave Tracker */}
+        <div className="lg:col-span-1 bg-white rounded-[2rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-rose-400 to-orange-400"></div>
+            <div className="p-8 pb-4 flex justify-between items-center border-b border-slate-50">
+                <div>
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Coffee size={20} className="text-rose-500"/> Out of Office</h3>
+                    <p className="text-xs text-slate-400 font-medium mt-1">Staff currently on leave today</p>
+                </div>
+                <div className="bg-rose-50 text-rose-600 font-black text-lg w-10 h-10 rounded-full flex items-center justify-center shadow-sm">{data.onLeaveUsers?.length || 0}</div>
             </div>
-          </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar max-h-[350px]">
+                {data.onLeaveUsers && data.onLeaveUsers.length > 0 ? data.onLeaveUsers.map(leave => (
+                    <motion.div key={leave._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 group hover:border-rose-200 hover:bg-rose-50/30 transition-all">
+                        <div className="relative">
+                            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm relative z-10 bg-white">
+                                <img src={leave.user?.avatar || '/default-avatar.png'} className="w-full h-full object-cover" alt={leave.user?.name} />
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-rose-500 border-2 border-white rounded-full z-20"></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-slate-800 truncate">{leave.user?.name}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{leave.user?.role}</p>
+                            <p className="text-xs font-medium text-rose-500 mt-0.5 truncate flex items-center gap-1">Back {new Date(leave.endDate).toLocaleDateString()}</p>
+                        </div>
+                    </motion.div>
+                )) : (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400 py-10">
+                        <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-4">
+                            <Check size={32}/>
+                        </div>
+                        <p className="font-bold text-emerald-600">Full House Today!</p>
+                        <p className="text-xs font-medium text-slate-400 mt-1">No one is currently on leave.</p>
+                    </div>
+                )}
+            </div>
+        </div>
+
+        {/* Charts Container */}
+        <div className="lg:col-span-2 flex flex-col gap-8">
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
+            <h3 className="text-xl font-bold text-slate-800 mb-8 flex items-center gap-3"><Activity size={20} className="text-indigo-500"/> Task Distribution</h3>
+            <div className="flex-1 min-h-[300px] relative">
+                <Bar 
+                data={{ 
+                    labels: data.taskDistribution.map(d => d.name), 
+                    datasets: [{ label: 'Tasks', data: data.taskDistribution.map(d => d.count), backgroundColor: '#6366f1', borderRadius: 8, barPercentage: 0.5 }] 
+                }} 
+                options={{ ...chartOptions, indexAxis: 'x', scales: { x: { grid: { display: false } }, y: { grid: { borderDash: [4, 4] } } } }} 
+                />
+            </div>
+            </div>
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
+            <h3 className="text-xl font-bold text-slate-800 mb-8 flex items-center gap-3"><PieChart size={20} className="text-emerald-500"/> Leave Breakdown</h3>
+            <div className="flex-1 min-h-[250px] relative flex justify-center items-center">
+                <div className="w-full max-w-sm">
+                <Doughnut 
+                    data={{ 
+                    labels: data.leaveBreakdown.map(d => d._id), 
+                    datasets: [{ data: data.leaveBreakdown.map(d => d.count), backgroundColor: ['#f43f5e', '#3b82f6', '#f59e0b', '#10b981'], borderWidth: 0, hoverOffset: 4 }] 
+                    }} 
+                    options={{ ...chartOptions, cutout: '75%' }} 
+                />
+                </div>
+            </div>
+            </div>
         </div>
       </div>
     </motion.div>
   );
 };
 
-const DashboardView = ({ workHoursData, targetHours, selectedMonth, handleMonthChange, isLoadingChart }) => (
+// 6. Audit History Box Component
+const AuditHistoryBox = ({ auditLogs, unreadCount, onMarkRead }) => {
+    return (
+        <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col h-80 overflow-hidden">
+            <div className="flex justify-between items-center mb-4 px-1 flex-shrink-0">
+                <h3 className="font-extrabold text-slate-800 flex items-center gap-2 text-lg">
+                    <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span className="hidden sm:flex items-center gap-2">History {unreadCount > 0 && <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full leading-none">{unreadCount}</span>}</span>
+                    <span className="sm:hidden flex items-center gap-2">Audit {unreadCount > 0 && <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full leading-none">{unreadCount}</span>}</span>
+                </h3>
+                {unreadCount > 0 && (
+                    <button onClick={onMarkRead} className="text-[10px] font-bold text-slate-400 hover:text-emerald-600 transition-colors uppercase tracking-wider flex items-center gap-1">Mark as read</button>
+                )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar">
+                {auditLogs && auditLogs.length > 0 ? auditLogs.map((log, i) => (
+                    <div key={log._id || i} className={`flex gap-3 items-start p-3 rounded-2xl border ${log.isRead ? 'bg-slate-50/50 border-slate-100' : 'bg-emerald-50/30 border-emerald-100/50 relative'}`}>
+                        {!log.isRead && <div className="absolute top-3 right-3 w-1.5 h-1.5 bg-rose-500 rounded-full"></div>}
+                        <img src={log.user?.avatar || '/default-avatar.png'} style={{ width: 28, height: 28 }} className="rounded-full shadow-sm mt-0.5 border border-slate-200" alt="avatar" />
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-600 leading-tight">
+                                <span className="font-bold text-slate-800">{log.user?.name?.split(' ')[0]}</span>{' '}
+                                <span className={`font-bold ${log.action === 'Approved' ? 'text-emerald-600' : log.action === 'Edited' ? 'text-blue-600' : 'text-rose-600'}`}>
+                                    {log.action.toLowerCase()}
+                                </span>{' '}
+                                <span className="text-slate-500">{log.details.substring(log.details.indexOf(':') + 1)}</span>
+                            </p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-1">
+                                <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'Approved' ? 'bg-emerald-400' : log.action === 'Edited' ? 'bg-blue-400' : 'bg-rose-400'}`}></span>
+                                {new Date(log.date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                            </p>
+                        </div>
+                    </div>
+                )) : <div className="h-full flex flex-col items-center justify-center text-slate-400"><svg className="w-6 h-6 mb-2 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span className="text-xs font-bold uppercase tracking-wide opacity-50">System Clear</span></div>}
+            </div>
+        </div>
+    );
+};
+
+const DashboardView = ({ workHoursData, targetHours, selectedMonth, handleMonthChange, isLoadingChart, auditLogs, unreadAuditCount, handleMarkAuditRead }) => (
   <motion.div variants={pageTransition} initial="initial" animate="animate" exit="exit" className="space-y-8">
     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
       <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Dashboard</h1>
@@ -716,20 +870,26 @@ const DashboardView = ({ workHoursData, targetHours, selectedMonth, handleMonthC
       </div>
     </div>
 
-    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:shadow-lg transition-shadow duration-300 relative overflow-hidden">
-      <div className="flex justify-between items-center mb-8 relative z-10">
-        <div>
-           <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3"><Clock size={22} className="text-emerald-500"/> Team Work Hours</h2>
-           <p className="text-slate-400 text-sm mt-1 font-medium">Performance vs Target ({targetHours}h/month)</p>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:shadow-lg transition-shadow duration-300 relative overflow-hidden">
+        <div className="flex justify-between items-center mb-8 relative z-10">
+          <div>
+             <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3"><Clock size={22} className="text-emerald-500"/> Team Work Hours</h2>
+             <p className="text-slate-400 text-sm mt-1 font-medium">Performance vs Target ({targetHours}h/month)</p>
+          </div>
+          {isLoadingChart && <RefreshCw size={20} className="animate-spin text-slate-300" />}
         </div>
-        {isLoadingChart && <RefreshCw size={20} className="animate-spin text-slate-300" />}
+        <div className="h-[450px] relative w-full z-10">
+          {isLoadingChart ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-10"><div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>
+          ) : (
+            workHoursData.length > 0 ? <WorkHoursChart data={workHoursData} targetHours={targetHours} /> : <div className="h-full flex flex-col items-center justify-center text-slate-400"><BarChart2 size={64} className="mb-4 opacity-10"/><p>No attendance data recorded.</p></div>
+          )}
+        </div>
       </div>
-      <div className="h-[450px] relative w-full z-10">
-        {isLoadingChart ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-10"><div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>
-        ) : (
-          workHoursData.length > 0 ? <WorkHoursChart data={workHoursData} targetHours={targetHours} /> : <div className="h-full flex flex-col items-center justify-center text-slate-400"><BarChart2 size={64} className="mb-4 opacity-10"/><p>No attendance data recorded.</p></div>
-        )}
+      
+      <div className="lg:col-span-1 h-[450px] sm:h-auto">
+          <AuditHistoryBox auditLogs={auditLogs} unreadCount={unreadAuditCount} onMarkRead={handleMarkAuditRead} />
       </div>
     </div>
   </motion.div>
@@ -824,7 +984,7 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden relative border border-slate-200 flex-shrink-0">
-                           <Image src={att.user?.avatar || '/default-avatar.png'} layout="fill" objectFit="cover" alt="avatar"/>
+                           <img src={att.user?.avatar || '/default-avatar.png'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="avatar"/>
                         </div>
                         <div><p className="font-bold text-slate-800">{att.user?.name}</p><p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{att.user?.role}</p></div>
                     </div>
@@ -937,7 +1097,7 @@ const LeaveManagementView = ({ pending, approved, history, onManage }) => {
                        <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex-shrink-0 relative overflow-hidden">
                            {/* Display Avatar if present, else initials */}
                            {req.user?.avatar ? (
-                             <Image src={req.user.avatar} layout="fill" objectFit="cover" alt={req.user.name} />
+                             <img src={req.user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={req.user.name} />
                            ) : (
                              <div className="w-full h-full flex items-center justify-center text-emerald-600 font-bold bg-emerald-50">{req.user?.name?.charAt(0)}</div>
                            )}
@@ -957,8 +1117,20 @@ const LeaveManagementView = ({ pending, approved, history, onManage }) => {
                  {activeTab === 'pending' && (
                    <button onClick={()=>onManage(req)} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 active:scale-95">Review Request <ChevronRight size={16}/></button>
                  )}
-                 {activeTab !== 'pending' && req.hrComments && (
-                   <div className="text-xs text-slate-500 mt-2 border-t border-slate-100 pt-3"><span className="font-bold text-slate-700">HR Note:</span> {req.hrComments}</div>
+                 {activeTab !== 'pending' && (
+                    <div className="mt-4 pt-3 border-t border-slate-100/80">
+                        {req.hrComments && (
+                            <div className="text-xs text-slate-500 mb-2"><span className="font-bold text-slate-700">HR Note:</span> {req.hrComments}</div>
+                        )}
+                        {req.updatedBy && (
+                            <div className="flex items-center gap-2 bg-slate-50 px-2 py-1.5 rounded-lg w-fit border border-slate-100">
+                                <img src={req.updatedBy.avatar || '/default-avatar.png'} style={{ width: 16, height: 16 }} className="rounded-full" alt="HR" />
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                    Action By: <span className="text-emerald-600">{req.updatedBy.name}</span>
+                                </span>
+                            </div>
+                        )}
+                    </div>
                  )}
               </motion.div>
             )) : (
@@ -975,7 +1147,8 @@ const LeaveManagementView = ({ pending, approved, history, onManage }) => {
 
 // --- MAIN LAYOUT COMPONENT ---
 
-export default function HRDashboard({ user, initialAttendance, initialLeaveRequests, allUsers, initialConcludedLeaves, initialApprovedLeaves }) {
+export default function HRDashboard({ user, errorMsg, initialAttendance, initialLeaveRequests, allUsers, initialConcludedLeaves, initialApprovedLeaves, initialAuditLogs, initialUnreadAuditCount, canAccessHub }) {
+  if (errorMsg) return <div className="p-10 text-red-500 font-bold bg-white h-screen">SERVER ERROR: {errorMsg}</div>;
   const router = useRouter();
   
   // State
@@ -995,7 +1168,19 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   const [attendanceRecords, setAttendanceRecords] = useState(initialAttendance);
   const [leaveRequests, setLeaveRequests] = useState(initialLeaveRequests);
   const [concludedLeaves, setConcludedLeaves] = useState(initialConcludedLeaves);
-  const [approvedLeaves, setApprovedLeaves] = useState(initialApprovedLeaves);
+  const [approvedLeaves, setApprovedLeaves] = useState(initialApprovedLeaves || []);
+  const [auditLogs, setAuditLogs] = useState(initialAuditLogs || []);
+  const [unreadAuditCount, setUnreadAuditCount] = useState(initialUnreadAuditCount || 0);
+  
+  const handleMarkAuditRead = async () => {
+      try {
+          const res = await fetch('/api/hr/mark-audit-read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+          if(res.ok) {
+              setAuditLogs(prev => prev.map(log => ({...log, isRead: true})));
+              setUnreadAuditCount(0);
+          }
+      } catch (err) { console.error(err); }
+  };
   const [workHoursData, setWorkHoursData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   
@@ -1028,11 +1213,14 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
     const fetchChartData = async () => {
        setIsLoadingChart(true);
        try {
-         const res = await fetch(`/api/hr/work-hours?year=${selectedMonth.getFullYear()}&month=${selectedMonth.getMonth() + 1}`);
-         if (!res.ok) throw new Error('Failed to fetch chart');
+         const res = await fetch(`/api/hr/work-hours?year=${selectedMonth.getFullYear()}&month=${selectedMonth.getMonth() + 1}&_t=${Date.now()}`);
+         if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.message || 'Failed to fetch chart');
+         }
          const data = await res.json();
          setWorkHoursData(data.data);
-       } catch (err) { toast.error("Could not update chart."); } finally { setIsLoadingChart(false); }
+       } catch (err) { toast.error(err.message || "Could not update chart."); } finally { setIsLoadingChart(false); }
     };
     if(activeView === 'dashboard') fetchChartData();
   }, [selectedMonth, activeView]);
@@ -1112,12 +1300,11 @@ export default function HRDashboard({ user, initialAttendance, initialLeaveReque
   // Render View Switcher
   const renderContent = () => {
     switch(activeView) {
-        case 'dashboard': return <DashboardView workHoursData={workHoursData} targetHours={120} selectedMonth={selectedMonth} handleMonthChange={handleMonthChange} isLoadingChart={isLoadingChart} />;
+        case 'dashboard': return <DashboardView workHoursData={workHoursData} targetHours={120} selectedMonth={selectedMonth} handleMonthChange={handleMonthChange} isLoadingChart={isLoadingChart} auditLogs={auditLogs} unreadAuditCount={unreadAuditCount} handleMarkAuditRead={handleMarkAuditRead} />;
         case 'analytics': return <AnalyticsView />;
         case 'attendance': return <AttendanceView attendanceData={attendanceRecords} allUsers={allUsers} openDeleteModal={(id)=>{setRecordToDelete(id);setIsDeleteModalOpen(true)}} openEditModal={(r)=>{setEditingRecord(r);setIsEditModalOpen(true)}} />;
         case 'leaves': return <LeaveManagementView pending={leaveRequests} approved={approvedLeaves} history={concludedLeaves} onManage={openLeaveModal} />;
         case 'notifications': return <NotificationSender allUsers={allUsers} targetType={targetType} setTargetType={setTargetType} targetUser={targetUser} setTargetUser={setTargetUser} notificationContent={notificationContent} setNotificationContent={setNotificationContent} handleSendNotification={handleSendNotification} isSending={isSending} />;
-        // UPDATED: Using new StaffView with state management
         case 'staff': return <StaffView allUsers={usersState} onUpdateUser={handleUpdateUser} />;
         default: return null;
     }
@@ -1128,27 +1315,32 @@ const Sidebar = ({ isMobile }) => (
 
     {/* Sidebar Brand Header */}
     <div className="px-6 pt-6 pb-8 border-b border-slate-100 relative z-10">
-      <Link href="/dashboard" className="flex items-center gap-3 group">
-        <div className="relative">
+      <div className="flex items-center gap-3 group">
+        <Link href="/dashboard" className="relative cursor-pointer">
           <div className="absolute inset-0 bg-green-200 blur-md rounded-full opacity-0 group-hover:opacity-50 transition-opacity" />
           <Image
             src="/hr.png"
             alt="Gecko HR"
             width={55}
             height={55}
+            style={{ width: 'auto', height: 'auto' }}
             className="relative z-10"
           />
-        </div>
+        </Link>
 
         <div className="leading-tight">
-          <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
-            Gecko<span className="text-green-600"> HR</span>
-          </h1>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-            HR Management
-          </p>
+          <Link href="/dashboard" className="cursor-pointer">
+            <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">
+              Gecko<span className="text-green-600"> HR</span>
+            </h1>
+          </Link>
+          {canAccessHub && (
+            <Link href="/dashboard" className="hidden sm:flex items-center gap-1.5 mt-1 px-3 py-1 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-lg text-xs font-bold transition-colors w-fit">
+              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Return to Hub
+            </Link>
+          )}
         </div>
-      </Link>
+      </div>
     </div>
 
     {/* Navigation */}
@@ -1231,7 +1423,7 @@ const Sidebar = ({ isMobile }) => (
             <Sidebar />
          </aside>
 
-         <main className="flex-1 lg:ml-72 flex flex-col min-h-screen relative">
+         <main className="flex-1 min-w-0 lg:ml-72 flex flex-col min-h-screen relative">
             <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-6 py-4 flex justify-between items-center transition-all">
                <div className="flex items-center gap-4">
                   <button onClick={()=>setIsMobileMenuOpen(true)} className="lg:hidden p-2 hover:bg-slate-100 rounded-xl text-slate-600 transition-colors"><Menu size={24}/></button>
@@ -1243,7 +1435,7 @@ const Sidebar = ({ isMobile }) => (
                   <button onClick={()=>setIsDropdownOpen(!isDropdownOpen)} className="group flex items-center gap-3 pl-1 pr-1.5 py-1 rounded-full transition-all duration-300 hover:bg-slate-50 focus:outline-none">
                      <div className="relative">
                         <div className={`absolute inset-0 rounded-full bg-emerald-400 blur-md opacity-0 group-hover:opacity-40 transition-opacity ${isDropdownOpen ? 'opacity-40' : ''}`}></div>
-                        <Image src={user.avatar || '/default-avatar.png'} layout="fixed" width={42} height={42} objectFit="cover" className="rounded-full border-2 border-white relative z-10 shadow-sm" alt="User"/>
+                        <img src={user.avatar || '/default-avatar.png'} style={{ width: 42, height: 42, objectFit: 'cover' }} className="rounded-full border-2 border-white relative z-10 shadow-sm" alt="User"/>
                         <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full z-20"></div>
                      </div>
                      <div className="hidden md:flex flex-col items-start text-left">
@@ -1258,7 +1450,7 @@ const Sidebar = ({ isMobile }) => (
                      {isDropdownOpen && (
                         <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 top-full mt-4 w-60 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden origin-top-right z-50">
                            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center space-x-3">
-                               <Image src={user.avatar || '/default-avatar.png'} width={40} height={40} className="rounded-full object-cover border border-white shadow-sm" alt="User" />
+                               <img src={user.avatar || '/default-avatar.png'} style={{ width: 40, height: 40 }} className="rounded-full object-cover border border-white shadow-sm" alt="User" />
                                <div className="overflow-hidden"><p className="font-bold text-slate-800 truncate text-sm">{user.name}</p><p className="text-xs text-slate-500 truncate">{user.role}</p></div>
                            </div>
                            <div className="p-2 space-y-1">
@@ -1275,7 +1467,7 @@ const Sidebar = ({ isMobile }) => (
                </div>
             </header>
 
-            <div className="flex-1 p-4 sm:p-8 lg:p-10 overflow-y-auto">
+            <div className="flex-1 min-w-0 p-4 sm:p-8 lg:p-10 overflow-y-auto">
                <AnimatePresence mode="wait">
                   {renderContent()}
                </AnimatePresence>
@@ -1306,22 +1498,40 @@ export async function getServerSideProps(context) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId).select("-password");
-    if (!user || user.role !== "HR") {
+    
+    if (!user) {
+        context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
+        return { redirect: { destination: '/login', permanent: false } };
+    }
+
+    const allUserRoles = [user.role, ...(user.accessRoles || [])];
+    if (!allUserRoles.some(r => ['HR', 'Superadmin'].includes(r))) {
       return { redirect: { destination: "/dashboard", permanent: false } };
     }
     
-    // UPDATED: Fetches extra fields (email, phone, createdAt, isActive) for the detailed profile modal
-    const [allAttendance, allLeaveRequests, allUsers] = await Promise.all([
+    const [allAttendance, allLeaveRequests, allUsers, hrAuditLogs] = await Promise.all([
         Attendance.find({}).populate("user", "name role avatar").sort({ checkInTime: -1 }).lean(), 
-        LeaveRequest.find({}).populate('user', 'name role avatar').sort({ createdAt: -1 }).lean(), 
-        // Modified query to include necessary details for Employee Detail Modal
-        User.find({ role: { $ne: 'HR' } }).select('name role avatar email phone createdAt isActive').sort({ name: 1 }).lean()
+        LeaveRequest.find({}).populate('user', 'name role avatar').populate('updatedBy', 'name avatar').sort({ createdAt: -1 }).lean(), 
+        User.find({}).select('-password -__v').populate('createdBy', 'name').populate('promotedBy', 'name').sort({ name: 1 }).lean(),
+        HRAuditLog.find({}).populate('user', 'name avatar role').sort({ date: -1 }).lean()
     ]);
+    
+    const unreadAuditCount = hrAuditLogs.filter(log => !log.isRead).length;
     
     const now = new Date();
     const pendingLeaveRequests = allLeaveRequests.filter(l => l.status === 'Pending');
     const concludedLeaveRequests = allLeaveRequests.filter(l => l.status === 'Approved' || l.status === 'Rejected').sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
     const approvedLeaves = allLeaveRequests.filter(l => l.status === 'Approved' && new Date(l.endDate) >= now).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+    const hasAccess = (requiredRoles) => allUserRoles.some(r => requiredRoles.includes(r));
+    let allowedRoutes = [];
+    if (hasAccess(['Staff', 'Intern', 'Trainee', 'Manager', 'Superadmin'])) allowedRoutes.push('/workspace');
+    if (hasAccess(['HR', 'Superadmin'])) allowedRoutes.push('/hr/dashboard');
+    if (hasAccess(['Project Manager', 'Superadmin'])) allowedRoutes.push('/pm/dashboard');
+    if (hasAccess(['Finance', 'Superadmin'])) allowedRoutes.push('/finance/dashboard');
+    if (hasAccess(['Superadmin'])) allowedRoutes.push('/superadmin/dashboard');
+    allowedRoutes = [...new Set(allowedRoutes)];
+    const canAccessHub = allowedRoutes.length > 1;
 
     return {
       props: {
@@ -1331,11 +1541,14 @@ export async function getServerSideProps(context) {
         initialConcludedLeaves: JSON.parse(JSON.stringify(concludedLeaveRequests)),
         initialApprovedLeaves: JSON.parse(JSON.stringify(approvedLeaves)),
         allUsers: JSON.parse(JSON.stringify(allUsers)),
+        initialAuditLogs: JSON.parse(JSON.stringify(hrAuditLogs)),
+        initialUnreadAuditCount: unreadAuditCount,
+        canAccessHub
       },
     };
   } catch (error) {
     console.error("HR Dashboard Error:", error);
-    context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
-    return { redirect: { destination: "/login", permanent: false } };
+    // TEMPORARY: Return error string to client so we can debug it
+    return { props: { errorMsg: error.message || "Unknown error" } };
   }
 }

@@ -1,5 +1,6 @@
 import dbConnect from '../../../../lib/dbConnect';
 import DollarSpend from '../../../../models/DollarSpend';
+import FinanceLog from '../../../../models/FinanceLog';
 import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
@@ -11,7 +12,7 @@ export default async function handler(req, res) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
         if (req.method === 'GET') {
-            const spends = await DollarSpend.find({}).sort({ date: -1 }).limit(100);
+            const spends = await DollarSpend.find({}).populate('addedBy', 'name avatar').sort({ date: -1 }).limit(100);
             
             // 100% Accurate Balance Calculation
             const totalLoaded = spends.filter(s => s.type === 'Load').reduce((acc, s) => acc + s.amount, 0);
@@ -35,6 +36,14 @@ export default async function handler(req, res) {
                 addedBy: decoded.userId
             });
             
+            // Audit Log
+            await FinanceLog.create({
+                action: 'Added',
+                entity: 'Dollar Fund',
+                details: `Added ${type}: $${amount} to ${platform || 'Wallet'}`,
+                user: decoded.userId
+            });
+            
             res.status(201).json({ success: true, message: 'Success!', data: newRecord });
         }
         // ✅ NEW: DELETE Method
@@ -42,7 +51,19 @@ export default async function handler(req, res) {
             const { id } = req.query;
             if (!id) return res.status(400).json({ message: 'ID required' });
             
+            const record = await DollarSpend.findById(id);
+            if (!record) return res.status(404).json({ message: 'Record not found' });
+            
             await DollarSpend.findByIdAndDelete(id);
+            
+            // Audit Log
+            await FinanceLog.create({
+                action: 'Deleted',
+                entity: 'Dollar Fund',
+                details: `Deleted ${record.type}: $${record.amount} (${record.platform || 'Wallet'})`,
+                user: decoded.userId
+            });
+
             res.status(200).json({ success: true, message: 'Record deleted successfully' });
         }
         else {

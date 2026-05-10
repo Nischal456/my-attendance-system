@@ -66,7 +66,7 @@ const RoleCard = ({ label, icon, value, selectedValue, onSelect }) => {
     );
 };
 
-export default function AddUserPage() {
+export default function AddUserPage({ user }) {
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',
@@ -187,10 +187,14 @@ export default function AddUserPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <RoleCard label="Staff" icon={<UserIcon size={20} />} value="Staff" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
                             <RoleCard label="Intern" icon={<UserIcon size={20} />} value="Intern" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
+                            <RoleCard label="Trainee" icon={<UserIcon size={20} />} value="Trainee" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
                             <RoleCard label="Manager" icon={<Briefcase size={20} />} value="Manager" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
                             <RoleCard label="Project Manager" icon={<Briefcase size={20} />} value="Project Manager" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
                             <RoleCard label="Finance" icon={<DollarSign size={20} />} value="Finance" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
                             <RoleCard label="HR Admin" icon={<Shield size={20} />} value="HR" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
+                            {user?.role === 'Superadmin' && (
+                                <RoleCard label="Superadmin" icon={<Shield size={20} className="text-rose-500" />} value="Superadmin" selectedValue={formData.role} onSelect={(v) => setFormData({...formData, role: v})} />
+                            )}
                         </div>
                     </div>
 
@@ -242,7 +246,8 @@ export async function getServerSideProps(context) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.userId).select('-password');
         
-        if (!user || user.role !== 'HR') {
+        const allUserRoles = [user.role, ...(user.accessRoles || [])];
+        if (!user || !allUserRoles.some(r => ['HR', 'Superadmin'].includes(r))) {
             return { redirect: { destination: '/dashboard', permanent: false } };
         }
         

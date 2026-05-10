@@ -41,6 +41,10 @@ const TaskSchema = new mongoose.Schema(
       type: Date,
       required: false,
     },
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    },
     // --- NEW FIELDS ---
     startTime: {
       type: String, // Storing as a string like "10:30"

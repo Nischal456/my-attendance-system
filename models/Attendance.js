@@ -37,6 +37,11 @@ const AttendanceSchema = new mongoose.Schema({
   totalBreakDuration: {
     type: Number,
     default: 0,
+  },
+  // --- NEW: Flag to track if the user was already notified about overtime (e.g. 7+ hours) ---
+  overtimeNotified: {
+    type: Boolean,
+    default: false,
   }
 }, { timestamps: true });
 

@@ -3,6 +3,7 @@ import dbConnect from '../../../../lib/dbConnect';
 import User from '../../../../models/User';
 import LeaveRequest from '../../../../models/LeaveRequest';
 import Notification from '../../../../models/Notification'; // Import Notification model
+import HRAuditLog from '../../../../models/HRAuditLog';
 import { sendPushNotification } from '../../../../lib/webPush';
 
 export default async function handler(req, res) {
@@ -16,7 +17,7 @@ export default async function handler(req, res) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const hrUser = await User.findById(decoded.userId);
-    if (!hrUser || hrUser.role !== 'HR') {
+    if (!hrUser || ![hrUser.role, ...(hrUser.accessRoles || [])].some(r => ['HR', 'Superadmin'].includes(r))) {
       return res.status(403).json({ message: 'Forbidden: Access denied.' });
     }
 
@@ -27,9 +28,9 @@ export default async function handler(req, res) {
 
     const updatedLeaveRequest = await LeaveRequest.findByIdAndUpdate(
         leaveId,
-        { status, hrComments: hrComments || '' },
+        { status, hrComments: hrComments || '', updatedBy: hrUser._id },
         { new: true }
-    ).populate('user', 'name role email');
+    ).populate('user', 'name role email').populate('updatedBy', 'name avatar');
 
     if (!updatedLeaveRequest) {
         return res.status(404).json({ message: 'Leave request not found.' });
@@ -43,6 +44,13 @@ export default async function handler(req, res) {
       author: 'HR Department',
       recipient: updatedLeaveRequest.user._id, // Assign the notification to the specific user
       link: '/leaves/report' // Link them to their leave report page
+    });
+
+    await HRAuditLog.create({
+        action: status, // 'Approved' or 'Rejected'
+        entity: 'Leave Request',
+        details: `${status} leave request for ${updatedLeaveRequest.user.name} (${updatedLeaveRequest.leaveType})`,
+        user: hrUser._id
     });
 
     // Send the Native Web Push Alert

@@ -16,9 +16,15 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-     enum: ['Staff', 'Intern', 'Manager', 'Project Manager', 'HR', 'Finance'], 
+    enum: ['Staff', 'Intern', 'Trainee', 'Manager', 'Project Manager', 'HR', 'Finance', 'Superadmin'],
     default: 'Staff',
   },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  promotedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  accessRoles: [{
+    type: String,
+    enum: ['Project Manager', 'HR', 'Finance', 'Superadmin'],
+  }],
   phoneNumber: {
     type: String,
     required: false,
@@ -30,7 +36,7 @@ const UserSchema = new mongoose.Schema({
   },
   isActive: {
     type: Boolean,
-    default: true, 
+    default: true,
   },
   readNotifications: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -47,9 +53,22 @@ const UserSchema = new mongoose.Schema({
   passwordResetExpires: {
     type: Date,
   },
-}, { 
+  // --- NEW FIELDS FOR WEBAUTHN / BIOMETRICS ---
+  passkeys: {
+    type: Array,
+    default: [],
+  },
+  currentChallenge: {
+    type: String,
+  },
+}, {
   // This is a professional enhancement that automatically adds `createdAt` and `updatedAt` fields
-  timestamps: true 
+  timestamps: true
 });
 
-export default mongoose.models.User || mongoose.model('User', UserSchema);
+// Delete the model if it already exists to ensure schema updates are applied during Next.js Hot Reload
+if (mongoose.models.User) {
+  delete mongoose.models.User;
+}
+
+export default mongoose.model('User', UserSchema);

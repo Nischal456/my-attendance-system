@@ -29,44 +29,44 @@ export default function ClientLoginPage() {
     setIsMounted(true);
   }, []);
 
-const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
-  try {
-    const res = await fetch("/api/auth/client-login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      toast.success("Client login successful! Redirecting...", {
-        duration: 2000,
-        position: "top-center",
-        style: {
-          background: "#F0FFF4",
-          color: "#2F855A",
-          border: "1px solid #9AE6B4",
-          boxShadow: "0 4px 14px 0 rgba(0, 0, 0, 0.1)",
-        },
+    try {
+      const res = await fetch("/api/auth/client-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
-      setTimeout(() => {
-        router.push("/client/dashboard");
-      }, 1500);
-    } else {
-      setError(data.message || "Login failed. Please check your credentials.");
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success("Client login successful! Redirecting...", {
+          duration: 2000,
+          position: "top-center",
+          style: {
+            background: "#F0FFF4",
+            color: "#2F855A",
+            border: "1px solid #9AE6B4",
+            boxShadow: "0 4px 14px 0 rgba(0, 0, 0, 0.1)",
+          },
+        });
+
+        setTimeout(() => {
+          router.push("/client/dashboard");
+        }, 1500);
+      } else {
+        setError(data.message || "Login failed. Please check your credentials.");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    setError("An unexpected error occurred. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
 
   return (
@@ -86,7 +86,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
           <Link href="/" className="block mb-6">
             <div className="bg-white shadow-lg rounded-xl px-4 py-3 inline-block hover:scale-105 transition-transform">
               <Image
-                src="/geckoworks.png"
+                src="/logo.png"
                 alt="Company Logo"
                 width={160}
                 height={80}
@@ -97,7 +97,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
           </Link>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Client Portal</h1>
           <p className="mt-4 text-base sm:text-lg text-blue-100 max-w-sm mx-auto">
-            Welcome back to Gecko Works Client Access 
+            Welcome back to Gecko Works Client Access
           </p>
         </div>
         <div className="absolute bottom-4 text-xs sm:text-sm text-blue-200/80">

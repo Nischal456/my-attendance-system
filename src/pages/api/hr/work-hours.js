@@ -16,7 +16,7 @@ export default async function handler(req, res) {
         
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const hrUser = await User.findById(decoded.userId);
-        if (!hrUser || hrUser.role !== 'HR') {
+        if (!hrUser || ![hrUser.role, ...(hrUser.accessRoles || [])].some(r => ['HR', 'Superadmin'].includes(r))) {
             return res.status(403).json({ message: 'Forbidden: Access denied.' });
         }
 
@@ -39,6 +39,6 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error("Work Hours API Error:", error);
-        res.status(500).json({ message: "Internal Server Error" });
+        res.status(500).json({ message: error.message, stack: error.stack });
     }
 }

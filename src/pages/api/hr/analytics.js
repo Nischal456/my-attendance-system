@@ -15,8 +15,8 @@ export default async function handler(req, res) {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const hrUser = await User.findById(decoded.userId);
-        if (!hrUser || hrUser.role !== 'HR') {
-            return res.status(403).json({ message: 'Forbidden' });
+        if (!hrUser || ![hrUser.role, ...(hrUser.accessRoles || [])].some(r => ['HR', 'Superadmin'].includes(r))) {
+            return res.status(403).json({ message: 'Forbidden: Access denied.' });
         }
 
         const now = new Date();
@@ -30,7 +30,8 @@ export default async function handler(req, res) {
             onLeaveTodayCount,
             monthlyLeaveStats,
             taskDistribution,
-            locationStats
+            locationStats,
+            onLeaveUsers
         ] = await Promise.all([
             User.countDocuments({ role: { $ne: 'HR' } }),
             LeaveRequest.countDocuments({ status: 'Approved', startDate: { $lte: now }, endDate: { $gte: now } }),
@@ -49,7 +50,10 @@ export default async function handler(req, res) {
             Attendance.aggregate([
                 { $match: { checkInTime: { $gte: todayStart, $lte: todayEnd } } },
                 { $group: { _id: '$workLocation', count: { $sum: 1 } } }
-            ])
+            ]),
+            LeaveRequest.find({ status: 'Approved', startDate: { $lte: now }, endDate: { $gte: now } })
+                .populate('user', 'name role avatar')
+                .lean()
         ]);
 
         const totalTasks = taskDistribution.reduce((acc, item) => acc + item.count, 0);
@@ -63,13 +67,14 @@ export default async function handler(req, res) {
             },
             leaveBreakdown: monthlyLeaveStats,
             taskDistribution: taskDistribution.slice(0, 10), // Top 10 employees
-            todayLocation: locationStats
+            todayLocation: locationStats,
+            onLeaveUsers: onLeaveUsers
         };
 
         res.status(200).json({ success: true, data: analyticsData });
 
     } catch (error) {
         console.error("HR Analytics API Error:", error);
-        res.status(500).json({ message: 'Internal Server Error' });
+        res.status(500).json({ message: error.message, stack: error.stack });
     }
 }

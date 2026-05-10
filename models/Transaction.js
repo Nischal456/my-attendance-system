@@ -33,6 +33,15 @@ const TransactionSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  // --- ENTERPRISE AUDIT TRAIL ---
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
+  updatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }
 }, { timestamps: true });
 
 export default mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema);

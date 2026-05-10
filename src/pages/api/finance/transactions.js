@@ -1,6 +1,7 @@
 import dbConnect from '../../../../lib/dbConnect';
 import Transaction from '../../../../models/Transaction';
 import BankAccount from '../../../../models/BankAccount';
+import FinanceLog from '../../../../models/FinanceLog';
 import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
@@ -31,7 +32,7 @@ export default async function handler(req, res) {
                 await BankAccount.create({ accountName: 'Main Account', balance: initialBalance });
             }
 
-            // 2. Create the Transaction
+            // 2. Create the Transaction (The Ledger)
             const transaction = await Transaction.create({
                 title,
                 amount: numAmount,
@@ -39,7 +40,16 @@ export default async function handler(req, res) {
                 type,
                 date,
                 description,
-                loggedBy: decoded.userId // ✅ FIX: Added the required User ID
+                loggedBy: decoded.userId, // Legacy support
+                createdBy: decoded.userId // THE DIGITAL FINGERPRINT
+            });
+
+            // 3. Audit Log
+            await FinanceLog.create({
+                action: 'Added',
+                entity: 'Transaction',
+                details: `Added transaction: ${title} (${type} - Rs. ${numAmount})`,
+                user: decoded.userId
             });
 
             res.status(201).json({ success: true, data: transaction });
@@ -62,6 +72,15 @@ export default async function handler(req, res) {
             }
 
             await Transaction.findByIdAndDelete(id);
+            
+            // Audit Log
+            await FinanceLog.create({
+                action: 'Deleted',
+                entity: 'Transaction',
+                details: `Deleted transaction: ${transaction.title} (${transaction.type} - Rs. ${transaction.amount})`,
+                user: decoded.userId
+            });
+
             res.status(200).json({ success: true, message: "Transaction deleted" });
         }
         else {

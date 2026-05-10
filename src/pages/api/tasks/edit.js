@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const pmUser = await User.findById(decoded.userId);
-    if (!pmUser || (pmUser.role !== 'Project Manager' && pmUser.role !== 'HR')) {
+    if (!pmUser || !['Project Manager', 'HR', 'Superadmin'].includes(pmUser.role)) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
@@ -48,6 +48,8 @@ export default async function handler(req, res) {
     task.assignedTo = assignedTo || task.assignedTo;
     task.deadline = deadline || null;
     task.assistedBy = assistedBy || []; // Update assistants
+    task.updatedBy = pmUser._id; // Audit trail stamp
+    
     
     await task.save();
 

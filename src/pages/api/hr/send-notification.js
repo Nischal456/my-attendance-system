@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const hrUser = await User.findById(decoded.userId);
-        if (!hrUser || hrUser.role !== 'HR') {
+        if (!hrUser || ![hrUser.role, ...(hrUser.accessRoles || [])].some(r => ['HR', 'Superadmin'].includes(r))) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to perform this action.' });
         }
         

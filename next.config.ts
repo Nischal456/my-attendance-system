@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**', // This allows any image path from the Cloudinary domain
       },
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
+        port: '',
+        pathname: '/**', // This allows dicebear avatar images
+      },
     ],
   },
 };

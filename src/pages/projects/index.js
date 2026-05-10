@@ -154,7 +154,7 @@ export default function ProjectsGallery() {
 
             {/* Back Button */}
             <div className="mb-8">
-                <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors group">
+                <Link href="/workspace" className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors group">
                     <div className="p-1.5 rounded-full bg-slate-50 group-hover:bg-slate-100 transition-colors"><ArrowLeft size={16} /></div>
                     Back to Dashboard
                 </Link>
