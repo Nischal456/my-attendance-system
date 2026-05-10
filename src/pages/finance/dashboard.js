@@ -763,13 +763,13 @@ export default function FinanceDashboard({ financeUser, allUsers, initialTransac
                     </div>
                     <div className="hidden sm:block leading-tight">
                         <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Finance <span className="text-emerald-600">Dashboard</span></h1>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
                             {canAccessHub && (
-                                <Link href="/dashboard" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-lg text-xs font-bold transition-colors mt-1">
+                                <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-lg text-xs font-bold transition-colors mt-1">
                                     <ArrowLeft size={10} className="text-emerald-500" /> Return to Hub
-                                </Link>
+                                </span>
                             )}
-                        </p>
+                        </div>
                     </div>
                 </Link>
 

@@ -30,6 +30,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [greeting, setGreeting] = useState("Welcome");
   const [isWarping, setIsWarping] = useState(false);
   const router = useRouter();
@@ -37,6 +38,14 @@ export default function LoginPage() {
   // Mouse Spotlight Logic
   const { x, y } = useMousePosition();
   const cardRef = useRef(null);
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberedEmail");
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -80,6 +89,11 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok) {
+        if (rememberMe) {
+          localStorage.setItem("rememberedEmail", email);
+        } else {
+          localStorage.removeItem("rememberedEmail");
+        }
         showSuccessToast();
         setTimeout(() => setIsWarping(true), 150);
         setTimeout(() => {
@@ -119,7 +133,7 @@ export default function LoginPage() {
         return;
       }
 
-      const asseResp = await startAuthentication(options);
+      const asseResp = await startAuthentication({ optionsJSON: options });
 
       const verificationRes = await fetch("/api/auth/webauthn/verify-authentication", {
         method: "POST",
@@ -129,6 +143,11 @@ export default function LoginPage() {
       const verificationBody = await verificationRes.json();
 
       if (verificationRes.ok && verificationBody.verified) {
+        if (rememberMe) {
+          localStorage.setItem("rememberedEmail", email);
+        } else {
+          localStorage.removeItem("rememberedEmail");
+        }
         showSuccessToast();
         setTimeout(() => setIsWarping(true), 150);
         setTimeout(() => router.push("/dashboard"), 1200);
@@ -311,6 +330,21 @@ export default function LoginPage() {
                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
                     </div>
+                  </div>
+
+                  {/* Premium Remember Me Toggle */}
+                  <div className="flex items-center mt-2 ml-2">
+                    <label className="flex items-center gap-3 cursor-pointer group/toggle" onClick={() => setRememberMe(!rememberMe)}>
+                      <div className={`relative flex h-6 w-11 items-center rounded-full transition-colors duration-300 shadow-inner ${rememberMe ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                        <div className={`h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${rememberMe ? 'translate-x-[22px]' : 'translate-x-[4px]'}`} />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className={`text-[13px] font-bold transition-colors duration-300 ${rememberMe ? 'text-slate-800' : 'text-slate-500 group-hover/toggle:text-slate-600'}`}>
+                          Remember Email
+                        </span>
+                        <span className="text-[10px] font-medium text-slate-400">Save for 1-click Face ID login</span>
+                      </div>
+                    </label>
                   </div>
 
                   <button

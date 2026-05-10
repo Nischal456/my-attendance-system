@@ -12,7 +12,8 @@ export default async function handler(req, res) {
         if (!token) return res.status(401).json({ message: 'Not authenticated' });
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const financeUser = await User.findById(decoded.userId);
-        if (!financeUser || financeUser.role !== 'Finance') {
+        const allUserRoles = [financeUser?.role, ...(financeUser?.accessRoles || [])];
+        if (!financeUser || !allUserRoles.some(r => ['Finance', 'Superadmin'].includes(r))) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission.' });
         }
 
