@@ -70,9 +70,11 @@ const formatDuration = (totalSeconds) => {
     return parts.join(' ') || '0m';
 };
 
+let timeOffset = 0;
+
 const formatElapsedTime = (startTime) => {
     if (!startTime) return '00:00:00';
-    const now = new Date();
+    const now = new Date(Date.now() + timeOffset);
     const start = new Date(startTime);
     const s = Math.floor((now - start) / 1000);
     if (s < 0) return '00:00:00';
@@ -1883,6 +1885,10 @@ export default function Workspace({ user, canAccessHub }) {
             const res = await fetch('/api/dashboard/data');
             if (!res.ok) throw new Error('Failed to fetch dashboard data');
             const data = await res.json();
+
+            if (data.serverTime) {
+                timeOffset = new Date(data.serverTime).getTime() - Date.now();
+            }
 
             // Batch updates to reduce re-renders
             setAttendance(data.initialAttendance || []);

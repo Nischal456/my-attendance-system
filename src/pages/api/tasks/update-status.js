@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import dbConnect from '../../../../lib/dbConnect';
 import Task from '../../../../models/Task';
+import User from '../../../../models/User';
 
 export default async function handler(req, res) {
   // 1. This endpoint only accepts PUT requests for updates.

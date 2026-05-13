@@ -46,7 +46,8 @@ export default async function handler(req, res) {
             initialNotifications: userNotifications,
             activeCheckIn: activeCheckIn,
             initialIsOnBreak: initialIsOnBreak,
-            activeBreakStartTime: activeBreakStartTime, // ✅ Send it to the frontend
+            activeBreakStartTime: activeBreakStartTime,
+            serverTime: new Date().toISOString()
         });
 
     } catch (error) {
