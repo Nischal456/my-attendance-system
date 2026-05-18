@@ -122,6 +122,33 @@ export default async function handler(req, res) {
                  return res.status(403).json({ message: 'Only the project leader can assign members.' });
              }
              updateQuery = { $addToSet: { assignedTo: userIdToAdd } };
+
+             // Notify the new user
+             try {
+                const leaderUser = await User.findById(currentUserId);
+                const leaderName = leaderUser ? leaderUser.name : 'The project leader';
+                await Notification.create({
+                    recipient: userIdToAdd,
+                    author: leaderName,
+                    content: `added you to this canvas: ${project.title}`,
+                    link: `/projects/${id}`,
+                    isRead: false
+                });
+
+                const member = await User.findById(userIdToAdd);
+                if (member && member.pushSubscriptions) {
+                    const payload = JSON.stringify({
+                        title: 'Added to Canvas',
+                        body: `${leaderName} added you to ${project.title}`,
+                        url: `/projects/${id}`
+                    });
+                    for (let sub of member.pushSubscriptions) {
+                        try { await sendPushNotification(sub, payload); } catch (err) {}
+                    }
+                }
+             } catch (e) {
+                console.error("Assign User Notification Error:", e);
+             }
         }
 
         // 5. UPDATE STATUS
@@ -132,6 +159,42 @@ export default async function handler(req, res) {
         // 6. ADD COMMENT
         else if (action === 'addComment') {
             updateQuery = { $push: { comments: { content: comment, author: currentUserId } } };
+
+            // Notify all participants
+            try {
+                const project = await Project.findById(id);
+                const commenter = await User.findById(currentUserId);
+                const commenterName = commenter ? commenter.name : 'A team member';
+                
+                // Get all users to notify (assignedTo + leader)
+                const participants = new Set(project.assignedTo.map(pId => pId.toString()));
+                participants.add(project.leader.toString());
+                participants.delete(currentUserId); // Don't notify the commenter
+
+                for (let memberId of Array.from(participants)) {
+                    await Notification.create({
+                        recipient: memberId,
+                        author: commenterName,
+                        content: `added a new discussion on canvas: ${project.title}`,
+                        link: `/projects/${id}`,
+                        isRead: false
+                    });
+
+                    const member = await User.findById(memberId);
+                    if (member && member.pushSubscriptions) {
+                        const payload = JSON.stringify({
+                            title: 'New Canvas Discussion',
+                            body: `${commenterName} commented on ${project.title}`,
+                            url: `/projects/${id}`
+                        });
+                        for (let sub of member.pushSubscriptions) {
+                            try { await sendPushNotification(sub, payload); } catch (err) {}
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Add Comment Notification Error:", e);
+            }
         }
 
         // 7. TOGGLE TASK COMPLETION

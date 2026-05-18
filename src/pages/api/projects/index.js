@@ -1,7 +1,9 @@
 import dbConnect from '../../../../lib/dbConnect';
 import Project from '../../../../models/Project';
-import User from '../../../../models/User'; // Imported User model to ensure population works
+import User from '../../../../models/User';
+import Notification from '../../../../models/Notification';
 import jwt from 'jsonwebtoken';
+import { sendPushNotification } from '../../../../lib/webPush';
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -22,8 +24,16 @@ export default async function handler(req, res) {
         .populate('assignedTo', 'name avatar')
         .sort({ updatedAt: -1 });
 
-        // ✅ Return userId so frontend can sort pinned projects correctly
-        return res.status(200).json({ success: true, data: projects, userId });
+        // Calculate unread canvases
+        const unreadNotifs = await Notification.find({
+            recipient: userId,
+            isRead: false,
+            link: { $regex: '^/projects/' }
+        }).select('link');
+        
+        const unreadCanvasIds = [...new Set(unreadNotifs.map(n => n.link.split('/').pop()))];
+
+        return res.status(200).json({ success: true, data: projects, userId, unreadCanvasIds });
       } 
       
       // POST: Create Project
@@ -41,6 +51,41 @@ export default async function handler(req, res) {
         const populatedProject = await Project.findById(project._id)
             .populate('leader', 'name avatar')
             .populate('assignedTo', 'name avatar');
+            
+        // Dispatch notifications and pushes to all assigned members
+        if (assignedTo && assignedTo.length > 0) {
+            const leaderUser = await User.findById(userId);
+            const leaderName = leaderUser ? leaderUser.name : 'A team leader';
+            
+            for (let memberId of assignedTo) {
+                if (memberId.toString() === userId.toString()) continue;
+                
+                await Notification.create({
+                    recipient: memberId,
+                    author: leaderName,
+                    content: `invited you to a new canvas: ${title}`,
+                    link: `/projects/${project._id}`,
+                    isRead: false
+                });
+
+                const member = await User.findById(memberId);
+                if (member && member.pushSubscriptions) {
+                    const payload = JSON.stringify({
+                        title: 'New Canvas Invitation',
+                        body: `${leaderName} invited you to ${title}`,
+                        url: `/projects/${project._id}`
+                    });
+                    
+                    for (let sub of member.pushSubscriptions) {
+                        try {
+                            await sendPushNotification(sub, payload);
+                        } catch (err) {
+                            console.error('Failed to send push to member:', err);
+                        }
+                    }
+                }
+            }
+        }
 
         return res.status(201).json({ success: true, data: populatedProject });
       }

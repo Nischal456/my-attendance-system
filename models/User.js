@@ -23,7 +23,7 @@ const UserSchema = new mongoose.Schema({
   promotedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   accessRoles: [{
     type: String,
-    enum: ['Project Manager', 'HR', 'Finance', 'Superadmin'],
+    enum: ['Project Manager', 'HR', 'Finance', 'Superadmin', 'Expense Manager'],
   }],
   phoneNumber: {
     type: String,
@@ -60,6 +60,15 @@ const UserSchema = new mongoose.Schema({
   },
   currentChallenge: {
     type: String,
+  },
+  // --- NEW FIELDS FOR PROMOTION CELEBRATION ---
+  hasUnseenPromotion: {
+    type: Boolean,
+    default: false,
+  },
+  promotionDetails: {
+    type: Object,
+    default: null,
   },
 }, {
   // This is a professional enhancement that automatically adds `createdAt` and `updatedAt` fields

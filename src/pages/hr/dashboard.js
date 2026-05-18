@@ -18,6 +18,7 @@ import {
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import confetti from 'canvas-confetti';
 
 // Imports
 import jwt from 'jsonwebtoken';
@@ -586,7 +587,42 @@ const StaffView = ({ allUsers, onUpdateUser }) => {
             const data = await res.json();
             
             if(data.success) {
-                toast.success(data.message, { id: toastId });
+                toast.dismiss(toastId);
+                
+                // Trigger Party Popper Celebration!
+                const duration = 3 * 1000;
+                const animationEnd = Date.now() + duration;
+                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+                const interval = setInterval(function() {
+                    const timeLeft = animationEnd - Date.now();
+                    if (timeLeft <= 0) return clearInterval(interval);
+                    const particleCount = 50 * (timeLeft / duration);
+                    confetti({ ...defaults, particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } });
+                }, 250);
+
+                // Premium Success Toast
+                toast.custom((t) => (
+                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-[1.5rem] pointer-events-auto flex ring-1 ring-black ring-opacity-5 overflow-hidden border border-emerald-100`}>
+                        <div className="flex-1 w-0 p-4">
+                            <div className="flex items-start">
+                                <div className="flex-shrink-0 pt-0.5">
+                                    <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                                        <span className="text-emerald-600 text-xl">🎉</span>
+                                    </div>
+                                </div>
+                                <div className="ml-3 flex-1">
+                                    <p className="text-sm font-extrabold text-slate-900">Promotion Successful!</p>
+                                    <p className="mt-1 text-sm text-slate-500 font-medium">You have successfully promoted <span className="font-bold text-emerald-600">{data.data.name}</span> to <span className="font-bold text-emerald-600">{data.data.role}</span>. They will be notified.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex border-l border-slate-100">
+                            <button onClick={() => toast.dismiss(t.id)} className="w-full border border-transparent rounded-none rounded-r-[1.5rem] p-4 flex items-center justify-center text-sm font-bold text-emerald-600 hover:text-emerald-500 hover:bg-emerald-50 focus:outline-none transition-colors">Close</button>
+                        </div>
+                    </div>
+                ), { duration: 5000 });
+
                 // Note: The API returns the fully populated user, so we update the local state with it
                 onUpdateUser(userId, data.data); 
                 setSelectedUser(data.data); // Update modal view

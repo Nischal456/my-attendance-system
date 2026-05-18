@@ -76,6 +76,7 @@ export default function SuperAdminDashboard({ superAdminUser, allUsers }) {
             case 'Project Manager': return base + "bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-500/20 " + cursor;
             case 'Finance': return base + "bg-amber-50 text-amber-700 border-amber-200 ring-1 ring-amber-500/20 " + cursor;
             case 'Superadmin': return base + "bg-rose-50 text-rose-700 border-rose-200 ring-1 ring-rose-500/20 " + cursor;
+            case 'Expense Manager': return base + "bg-teal-50 text-teal-700 border-teal-200 ring-1 ring-teal-500/20 " + cursor;
             default: return base;
         }
     };
@@ -84,6 +85,7 @@ export default function SuperAdminDashboard({ superAdminUser, allUsers }) {
         { id: 'HR', label: 'HR' },
         { id: 'Project Manager', label: 'PM' },
         { id: 'Finance', label: 'FIN' },
+        { id: 'Expense Manager', label: 'EXP' },
         { id: 'Superadmin', label: 'SUPER' }
     ];
 

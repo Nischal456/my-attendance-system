@@ -37,7 +37,12 @@ export default async function handler(req, res) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const pmUser = await User.findById(decoded.userId);
 
-    if (!pmUser || (pmUser.role !== 'Project Manager' && pmUser.role !== 'HR')) {
+    const role = pmUser.role;
+    const accessRoles = pmUser.accessRoles || [];
+    const allUserRoles = [role, ...accessRoles];
+    const hasAccess = (requiredRoles) => allUserRoles.some(r => requiredRoles.includes(r));
+
+    if (!hasAccess(['Project Manager', 'Superadmin', 'Manager', 'HR'])) {
       return res.status(403).json({ message: 'Forbidden: You do not have permission to assign tasks.' });
     }
 

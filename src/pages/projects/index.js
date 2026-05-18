@@ -53,6 +53,7 @@ const GalleryLoader = () => (
 export default function ProjectsGallery() {
     const [projects, setProjects] = useState([]);
     const [currentUserId, setCurrentUserId] = useState(null);
+    const [unreadCanvasIds, setUnreadCanvasIds] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(true); // Loading state
 
@@ -75,6 +76,7 @@ export default function ProjectsGallery() {
                 if (data.success) {
                     setProjects(data.data);
                     setCurrentUserId(data.userId);
+                    setUnreadCanvasIds(data.unreadCanvasIds || []);
                 }
             }
         } catch (error) {
@@ -205,6 +207,7 @@ export default function ProjectsGallery() {
                 <AnimatePresence mode='popLayout'>
                     {sortedProjects.map((project) => {
                         const isPinned = project.pinnedBy?.includes(currentUserId);
+                        const hasUnread = unreadCanvasIds.includes(project._id);
 
                         return (
                             <motion.div
@@ -218,9 +221,17 @@ export default function ProjectsGallery() {
                             >
                                 <Link href={`/projects/${project._id}`} className="block h-full">
                                     <div
-                                        className={`group h-64 bg-white rounded-[2rem] p-6 relative overflow-hidden border ${isPinned ? 'border-emerald-400 shadow-emerald-100/50 ring-2 ring-emerald-500/20' : 'border-slate-200'} shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer`}
+                                        className={`group h-64 bg-white rounded-[2rem] p-6 relative overflow-hidden border ${isPinned ? 'border-emerald-400 shadow-emerald-100/50 ring-2 ring-emerald-500/20' : hasUnread ? 'border-rose-400 shadow-rose-100/50 ring-2 ring-rose-500/20' : 'border-slate-200'} shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer`}
                                     >
                                         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white opacity-100 group-hover:from-emerald-50/30 group-hover:to-white transition-colors duration-500"></div>
+
+                                        {/* UNREAD INDICATOR */}
+                                        {hasUnread && (
+                                            <div className="absolute top-0 left-0 w-16 h-16 overflow-hidden z-20">
+                                                <div className="absolute top-[-1.5rem] left-[-1.5rem] w-12 h-12 bg-rose-500 rotate-45 transform origin-bottom-right shadow-lg"></div>
+                                                <div className="absolute top-2 left-2 w-2.5 h-2.5 bg-white rounded-full animate-pulse shadow-sm z-30"></div>
+                                            </div>
+                                        )}
 
                                         {/* PIN BUTTON - Stopped propagation to prevent Link click */}
                                         <button

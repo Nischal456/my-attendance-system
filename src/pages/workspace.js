@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
-import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home, Send, Search, ArrowLeft, AlertTriangle, AlertCircle } from 'react-feather';
+import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home, Send, Search, ArrowLeft, ArrowRight, AlertTriangle, AlertCircle } from 'react-feather';
 import { Wallet } from 'lucide-react';
 import { ChevronDown, MessageSquarePlus, Fingerprint, Loader2 as LucideLoader2 } from 'lucide-react';
 import { startRegistration } from '@simplewebauthn/browser';
@@ -22,6 +22,7 @@ import {
     Legend
 } from 'chart.js';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { DndContext, closestCorners, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -504,7 +505,7 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <motion.div initial={{ y: 40, opacity: 0, scale: 0.9 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 40, opacity: 0, scale: 0.9 }} transition={{ type: "spring", bounce: 0.3 }} className="bg-white rounded-[2rem] shadow-2xl overflow-hidden w-full max-w-4xl max-h-[85vh] flex flex-col border border-white/40" onClick={(e) => e.stopPropagation()}>
+            <motion.div initial={{ y: 40, opacity: 0, scale: 0.9 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 40, opacity: 0, scale: 0.9 }} transition={{ type: "spring", bounce: 0.3 }} className="bg-white rounded-[2rem] shadow-2xl overflow-hidden w-full max-w-3xl max-h-[85vh] flex flex-col border border-white/40" onClick={(e) => e.stopPropagation()}>
                 <header className="flex justify-between items-start p-8 pb-6 border-b border-slate-100 bg-white sticky top-0 z-10">
                     <div>
                         <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">{task.title}</h2>
@@ -582,59 +583,55 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
 
                         {/* Right Column: Meta Info */}
                         <div className="space-y-6">
-                            <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
-                                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide"><Users size={16} className="text-emerald-500" /> The Team</h4>
-                                <div className="space-y-4">
-                                    {/* Assigned By */}
-                                    {task.assignedBy && (
+                            <div className="space-y-3">
+                                {/* Assigned By */}
+                                {task.assignedBy && (
+                                    <div className="bg-white p-4 rounded-[1.25rem] border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow group">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h4 className="font-bold text-slate-400 text-[10px] uppercase tracking-widest flex items-center gap-1.5"><Briefcase size={12} className="text-purple-500" /> Assigned By</h4>
+                                        </div>
                                         <div className="flex items-center gap-3">
-                                            <div className="relative">
-                                                <Image src={task.assignedBy.avatar || '/default-avatar.png'} width={44} height={44} className="rounded-2xl object-cover shadow-sm" alt={task.assignedBy.name} />
-                                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5"><div className="bg-purple-500 p-1 rounded-full"><Briefcase size={8} className="text-white" /></div></div>
-                                            </div>
+                                            <Image src={task.assignedBy.avatar || '/default-avatar.png'} width={38} height={38} className="rounded-full object-cover shadow-sm ring-2 ring-purple-50" alt={task.assignedBy.name} />
                                             <div>
-                                                <p className="font-bold text-sm text-slate-800">{task.assignedBy.name}</p>
-                                                <p className="text-xs text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded-full inline-block mt-0.5">Manager</p>
+                                                <p className="font-bold text-sm text-slate-800 group-hover:text-purple-700 transition-colors">{task.assignedBy.name}</p>
+                                                <p className="text-[10px] text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded-md inline-block mt-0.5 shadow-sm">Manager</p>
                                             </div>
                                         </div>
-                                    )}
-                                    <div className="w-full h-px bg-slate-200/50"></div>
-                                    {/* Assigned To */}
-                                    {task.assignedTo && (
+                                    </div>
+                                )}
+
+                                {/* Assigned To */}
+                                {task.assignedTo && (
+                                    <div className="bg-white p-4 rounded-[1.25rem] border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow group">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h4 className="font-bold text-slate-400 text-[10px] uppercase tracking-widest flex items-center gap-1.5"><UserIcon size={12} className="text-emerald-500" /> Assigned To</h4>
+                                        </div>
                                         <div className="flex items-center gap-3">
-                                            <div className="relative">
-                                                <Image src={task.assignedTo.avatar || '/default-avatar.png'} width={44} height={44} className="rounded-2xl object-cover shadow-sm" alt={task.assignedTo.name} />
-                                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5"><div className="bg-emerald-500 p-1 rounded-full"><UserIcon size={8} className="text-white" /></div></div>
-                                            </div>
+                                            <Image src={task.assignedTo.avatar || '/default-avatar.png'} width={38} height={38} className="rounded-full object-cover shadow-sm ring-2 ring-emerald-50" alt={task.assignedTo.name} />
                                             <div>
-                                                <p className="font-bold text-sm text-slate-800">{task.assignedTo.name}</p>
-                                                <p className="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-0.5">Assigned To</p>
+                                                <p className="font-bold text-sm text-slate-800 group-hover:text-emerald-700 transition-colors">{task.assignedTo.name}</p>
+                                                <p className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-0.5 shadow-sm">Assignee</p>
                                             </div>
                                         </div>
-                                    )}
-                                    {/* [FIX] Collaborators Section Added Here */}
-                                    {task.assistedBy && task.assistedBy.length > 0 && (
-                                        <>
-                                            <div className="w-full h-px bg-slate-200/50"></div>
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Collaborators</p>
-                                                <div className="flex flex-col gap-3">
-                                                    {task.assistedBy.map(assistant => (
-                                                        <div key={assistant._id} className="flex items-center gap-3">
-                                                            <div className="relative">
-                                                                <Image src={assistant.avatar || '/default-avatar.png'} width={36} height={36} className="rounded-xl object-cover shadow-sm" alt={assistant.name} />
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-bold text-sm text-slate-700">{assistant.name}</p>
-                                                                <p className="text-[10px] text-blue-500 font-semibold bg-blue-50 px-1.5 py-0.5 rounded-full inline-block">Assistant</p>
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                    </div>
+                                )}
+
+                                {/* Collaborators Section Added Here */}
+                                {task.assistedBy && task.assistedBy.length > 0 && (
+                                    <div className="bg-slate-50/50 p-4 rounded-[1.25rem] border border-slate-100/50 shadow-sm">
+                                        <h4 className="font-bold text-slate-400 text-[10px] uppercase tracking-widest flex items-center gap-1.5 mb-3"><Users size={12} className="text-blue-500" /> Collaborators</h4>
+                                        <div className="flex flex-col gap-3">
+                                            {task.assistedBy.map(assistant => (
+                                                <div key={assistant._id} className="flex items-center gap-3">
+                                                    <Image src={assistant.avatar || '/default-avatar.png'} width={32} height={32} className="rounded-full object-cover shadow-sm ring-2 ring-white" alt={assistant.name} />
+                                                    <div>
+                                                        <p className="font-bold text-xs text-slate-700">{assistant.name}</p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 space-y-4">
@@ -970,49 +967,71 @@ const DailyStandupReport = () => {
         return () => clearInterval(interval);
     }, [fetchReports]);
 
+    const filteredReports = useMemo(() => {
+        const excludedRoles = ['pm', 'project manager', 'hr', 'manager', 'system', 'superadmin'];
+        return reports.filter(r => {
+            const role = (r.user?.role || '').toLowerCase();
+            return !excludedRoles.some(ex => role.includes(ex));
+        });
+    }, [reports]);
+
     return (
-        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
-            <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/30">
-                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-3">
-                    <div className="bg-green-100 p-2 rounded-xl text-green-600"><Calendar size={18} /></div>
+        <div className="bg-white rounded-[2rem] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-slate-100 overflow-hidden flex flex-col">
+            <div className="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                <h2 className="text-base font-extrabold text-slate-800 flex items-center gap-2.5">
+                    <div className="bg-emerald-500 p-2 rounded-xl text-white shadow-sm"><Calendar size={16} /></div>
                     Team Daily Updates
                 </h2>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">
+                    {filteredReports.length} Updates
+                </div>
             </div>
-            <div className="p-6 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
+            <div className="p-5 max-h-[500px] overflow-y-auto custom-scrollbar bg-slate-50/30">
                 {isLoading ? (
-                    <div className="flex justify-center py-10"><ButtonLoader /></div>
-                ) : reports.length > 0 ? (
-                    reports.map((report, idx) => (
-                        <motion.div
-                            key={report._id}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.1 }}
-                            className="flex gap-3 p-3 hover:bg-slate-50 rounded-2xl transition-colors border border-transparent hover:border-slate-100"
-                        >
-                            <div className="flex-shrink-0">
-                                <Image src={report.user.avatar} alt={report.user.name} width={40} height={40} className="rounded-xl object-cover shadow-sm" />
-                            </div>
-                            <div className="flex-1">
-                                <div className="flex items-center justify-between mb-1">
-                                    <h4 className="font-bold text-sm text-slate-800">{report.user.name}</h4>
-                                    <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
+                    <div className="flex justify-center items-center h-40"><ButtonLoader /></div>
+                ) : filteredReports.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredReports.map((report, idx) => (
+                            <motion.div
+                                key={report._id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full"
+                            >
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="relative">
+                                        <Image src={report.user.avatar || '/default-avatar.png'} alt={report.user.name} width={42} height={42} className="rounded-full object-cover ring-2 ring-emerald-50 shadow-sm" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-bold text-sm text-slate-800 truncate group-hover:text-emerald-700 transition-colors">{report.user.name}</h4>
+                                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-0.5 truncate uppercase tracking-widest">
+                                            {report.user.role || 'Team Member'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="bg-slate-50/80 p-4 rounded-2xl text-xs text-slate-600 leading-relaxed border border-slate-100 line-clamp-3 mb-4 flex-grow">
+                                    {report.description}
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 mt-auto pt-3 border-t border-slate-50">
+                                    <div className="flex items-center gap-1.5">
+                                        <Clock size={12} className="text-emerald-400" />
+                                        <span>Check-out</span>
+                                    </div>
+                                    <span className="text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
                                         {new Date(report.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                 </div>
-                                <div className="bg-slate-50 p-2.5 rounded-xl rounded-tl-none text-xs text-slate-600 leading-relaxed border border-slate-100">
-                                    {report.description}
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))
+                            </motion.div>
+                        ))}
+                    </div>
                 ) : (
-                    <div className="text-center py-10">
-                        <div className="bg-slate-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <div className="flex flex-col items-center justify-center h-48 opacity-60">
+                        <div className="bg-white w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
                             <Clock className="text-slate-300" size={24} />
                         </div>
-                        <p className="font-semibold text-sm text-slate-600">No updates yet.</p>
-                        <p className="text-xs text-slate-400">Updates appear when team members check out.</p>
+                        <p className="font-bold text-sm text-slate-500 mb-1">No updates yet.</p>
+                        <p className="text-[11px] font-medium text-slate-400">Updates appear when members check out.</p>
                     </div>
                 )}
             </div>
@@ -1781,6 +1800,38 @@ export default function Workspace({ user, canAccessHub }) {
     const [isSubmittingNote, setIsSubmittingNote] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+    const unreadNotifications = useMemo(() => notifications.filter(n => !n.isRead), [notifications]);
+
+    // Promotion Celebration State
+    const [showPromotionModal, setShowPromotionModal] = useState(user?.hasUnseenPromotion || false);
+    const [isAcknowledgingPromotion, setIsAcknowledgingPromotion] = useState(false);
+
+    useEffect(() => {
+        if (showPromotionModal) {
+            const duration = 3 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+                const particleCount = 50 * (timeLeft / duration);
+                confetti({ ...defaults, particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } });
+            }, 250);
+        }
+    }, [showPromotionModal]);
+
+    const handleAcknowledgePromotion = async () => {
+        setIsAcknowledgingPromotion(true);
+        try {
+            await fetch('/api/users/acknowledge-promotion', { method: 'POST' });
+            setShowPromotionModal(false);
+        } catch (e) {
+            console.error(e);
+            setShowPromotionModal(false);
+        }
+    };
+
     const [taskToSubmit, setTaskToSubmit] = useState(null);
     const [isPersonalTaskModalOpen, setIsPersonalTaskModalOpen] = useState(false);
     const [selectedTaskDetails, setSelectedTaskDetails] = useState(null);
@@ -1925,8 +1976,6 @@ export default function Workspace({ user, canAccessHub }) {
         const timer = setTimeout(() => setShowSplash(false), 1200);
         return () => clearTimeout(timer);
     }, [fetchDashboardData]);
-
-    const unreadNotifications = useMemo(() => notifications.filter(n => !n.isRead), [notifications]);
 
     const taskColumns = useMemo(() => {
         const columns = { 'To Do': [], 'In Progress': [], 'Completed': [] };
@@ -2159,9 +2208,9 @@ export default function Workspace({ user, canAccessHub }) {
 
                                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider hidden sm:flex items-center gap-1 mt-1">
                                                 {canAccessHub && (
-                                                    <Link href="/dashboard" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-lg text-xs font-bold transition-colors">
+                                                    <span className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-lg text-xs font-bold transition-colors">
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Return to Hub
-                                                    </Link>
+                                                    </span>
                                                 )}
                                             </p>
                                         </div>
@@ -2628,6 +2677,62 @@ export default function Workspace({ user, canAccessHub }) {
                     </main>
                 </div>
             </motion.div>
+
+            {/* Premium Promotion Celebration Modal */}
+            <AnimatePresence>
+                {showPromotionModal && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }} 
+                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex justify-center items-center p-4"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.9, y: 20, opacity: 0 }} 
+                            animate={{ scale: 1, y: 0, opacity: 1 }} 
+                            exit={{ scale: 0.9, y: 20, opacity: 0 }} 
+                            transition={{ type: "spring", bounce: 0.5 }}
+                            className="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-md w-full text-center relative overflow-hidden border border-white/50"
+                        >
+                            {/* Decorative Background */}
+                            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-emerald-400 to-teal-600 z-0"></div>
+                            
+                            <div className="relative z-10 pt-12">
+                                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl border-4 border-white">
+                                    <span className="text-5xl">🎉</span>
+                                </div>
+                                
+                                <h3 className="text-3xl font-black text-slate-800 tracking-tight mb-2">Congratulations!</h3>
+                                
+                                <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 my-6">
+                                    <p className="text-sm font-medium text-slate-500 mb-3">You have been officially promoted</p>
+                                    <div className="flex items-center justify-center gap-3">
+                                        <span className="px-3 py-1.5 bg-slate-200 text-slate-600 text-xs font-bold uppercase tracking-widest rounded-lg">
+                                            {user.promotionDetails?.oldRole || 'Previous Role'}
+                                        </span>
+                                        <ArrowRight size={16} className="text-emerald-500" />
+                                        <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-widest rounded-lg shadow-sm border border-emerald-200">
+                                            {user.promotionDetails?.newRole || user.role}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <p className="text-sm text-slate-600 font-medium mb-8">
+                                    Continue the journey with Gecko OMS. Your hard work has paid off, and we're excited to see what you'll achieve next.
+                                </p>
+                                
+                                <button 
+                                    onClick={handleAcknowledgePromotion} 
+                                    disabled={isAcknowledgingPromotion}
+                                    className="w-full py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {isAcknowledgingPromotion ? 'Loading...' : 'Awesome! Let\'s go 🚀'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </>
     );
 }

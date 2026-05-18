@@ -42,6 +42,14 @@ export default async function handler(req, res) {
     const oldRole = targetUser.role;
     targetUser.role = newRole;
     targetUser.promotedBy = hrUser._id;
+    
+    // Set promotion notification fields
+    targetUser.hasUnseenPromotion = true;
+    targetUser.promotionDetails = {
+      oldRole: oldRole,
+      newRole: newRole
+    };
+    
     await targetUser.save();
 
     // 1. Audit Log for HR Dashboard

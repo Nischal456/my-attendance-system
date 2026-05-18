@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Layers, Briefcase, Users, DollarSign, Command, ArrowRight, LogOut, Settings, CreditCard } from 'react-feather';
+import { Layers, Briefcase, Users, DollarSign, Command, ArrowRight, LogOut, Settings, CreditCard, TrendingDown } from 'react-feather';
 import jwt from 'jsonwebtoken';
 import { Bank } from "lucide-react";
 import dbConnect from '../../lib/dbConnect';
@@ -85,6 +85,16 @@ export default function SmartLobby({ user }) {
             gradient: 'from-rose-400/20 to-pink-400/20',
             border: 'border-rose-200/50',
             rolesAllowed: ['Superadmin']
+        },
+        {
+            id: 'expense',
+            title: 'Expense Tracker',
+            description: 'Log and track daily expenses, Fooding bills, and budgets.',
+            icon: <TrendingDown className="w-8 h-8 text-teal-500" />,
+            href: '/expenses/dashboard',
+            gradient: 'from-teal-400/20 to-emerald-400/20',
+            border: 'border-teal-200/50',
+            rolesAllowed: ['Staff', 'Intern', 'Trainee', 'Manager', 'Project Manager', 'HR', 'Finance', 'Superadmin']
         }
     ];
 
@@ -97,13 +107,13 @@ export default function SmartLobby({ user }) {
         hidden: { opacity: 0 },
         show: {
             opacity: 1,
-            transition: { staggerChildren: 0.1 }
+            transition: { staggerChildren: 0.08 }
         }
     };
 
     const itemVariants = {
-        hidden: { opacity: 0, y: 20 },
-        show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+        hidden: { opacity: 0, scale: 0.95, y: 15 },
+        show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 400, damping: 25 } }
     };
 
     return (
@@ -112,17 +122,17 @@ export default function SmartLobby({ user }) {
                 <title>Gecko OMS</title>
             </Head>
 
-            {/* Premium Background Orbs */}
+            {/* Premium Background Orbs (Live Animation) */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-emerald-200/40 rounded-full filter blur-[150px] opacity-70 animate-pulse-slow"></div>
-                <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-200/40 rounded-full filter blur-[150px] opacity-70 animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-300/30 rounded-full filter blur-[120px] opacity-60 animate-pulse" style={{ animationDuration: '4s' }}></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-300/30 rounded-full filter blur-[120px] opacity-60 animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }}></div>
             </div>
 
             {/* Minimal Header */}
             <header className="relative z-10 px-6 py-6 md:px-12 md:py-8 flex justify-between items-center w-full max-w-[1400px] mx-auto">
                 <div className="flex items-center gap-3">
                     <div className="relative h-10 w-10 sm:h-12 sm:w-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
-                        <Image src="/logo.png" alt="Logo" width={42} height={42} className="object-contain" />
+                        <Image src="/logo.png" alt="Logo" width={128} height={128} className="object-contain" />
                     </div>
                     <span className="font-extrabold text-xl tracking-tight text-slate-900">Gecko<span className="text-emerald-600">OMS</span></span>
                 </div>
@@ -134,23 +144,23 @@ export default function SmartLobby({ user }) {
             </header>
 
             {/* Main Content - The Hub */}
-            <main className="flex-1 relative z-10 flex flex-col items-center justify-center px-4 py-12 md:py-0 w-full max-w-[1400px] mx-auto">
+            <main className="flex-1 relative z-10 flex flex-col items-center justify-center px-4 py-8 md:py-0 w-full max-w-[1400px] mx-auto">
 
-                <div className="text-center mb-12 sm:mb-16">
-                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-                        <div className="inline-block relative mb-6">
+                <div className="text-center mb-8 sm:mb-16">
+                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4, type: "spring", stiffness: 300 }}>
+                        <div className="inline-block relative mb-5 sm:mb-6">
                             <div className="absolute inset-0 bg-emerald-400 blur-xl opacity-20 rounded-full"></div>
-                            <Image src={user.avatar || '/default-avatar.png'} alt="Avatar" width={80} height={80} className="rounded-full shadow-xl border-[4px] border-white relative z-10" />
-                            <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-full shadow-md z-20 border-2 border-white">
+                            <Image src={user.avatar || '/default-avatar.png'} alt="Avatar" width={80} height={80} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-xl border-[3px] sm:border-[4px] border-white relative z-10" />
+                            <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-emerald-500 text-white text-[8px] sm:text-[10px] uppercase font-bold tracking-widest px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-md z-20 border-2 border-white">
                                 {user.role}
                             </div>
                         </div>
                     </motion.div>
 
-                    <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-2">
+                    <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }} className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-2">
                         {getGreeting()}, {user.name.split(' ')[0]}
                     </motion.h1>
-                    <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="text-slate-500 font-medium text-lg">
+                    <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }} className="text-sm sm:text-lg text-slate-500 font-medium">
                         Select a portal to access your workspaces.
                     </motion.p>
                 </div>
@@ -160,27 +170,32 @@ export default function SmartLobby({ user }) {
                     variants={containerVariants}
                     initial="hidden"
                     animate="show"
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl"
+                    className="flex flex-wrap justify-center items-stretch gap-3 sm:gap-5 w-full max-w-[1400px]"
                 >
                     {accessiblePortals.map((portal) => (
-                        <motion.div key={portal.id} variants={itemVariants}>
-                            <Link href={portal.href} className="block group h-full">
-                                <div className={`relative h-full bg-white/70 backdrop-blur-xl rounded-[2rem] p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border ${portal.border} hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 hover:-translate-y-1 overflow-hidden flex flex-col`}>
+                        <motion.div 
+                            key={portal.id} 
+                            variants={itemVariants}
+                            className="w-[calc(50%-0.375rem)] sm:w-[calc(33.333%-0.833rem)] lg:w-[260px] xl:w-[270px] flex-shrink-0"
+                        >
+                            <Link href={portal.href} prefetch={true} className="block group h-full focus:outline-none">
+                                <div className={`relative h-full bg-white/80 backdrop-blur-2xl rounded-[1.25rem] sm:rounded-[1.5rem] p-4 sm:p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border ${portal.border} hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-1.5 overflow-hidden flex flex-col transform origin-center`}>
 
                                     {/* Subtle Gradient Splash inside card */}
-                                    <div className={`absolute -top-24 -right-24 w-48 h-48 bg-gradient-to-br ${portal.gradient} rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+                                    <div className={`absolute -top-16 -right-16 w-32 h-32 bg-gradient-to-br ${portal.gradient} rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`}></div>
 
-                                    <div className="mb-6 bg-slate-50 p-4 rounded-2xl inline-flex shadow-inner border border-slate-100/50 relative z-10 group-hover:scale-110 group-hover:bg-white transition-all duration-300">
-                                        {portal.icon}
+                                    <div className="mb-3 sm:mb-5 bg-slate-50/80 p-2.5 sm:p-3 rounded-xl inline-flex shadow-inner border border-slate-100/50 relative z-10 group-hover:scale-[1.15] group-hover:bg-white transition-all duration-300 transform-gpu">
+                                        {React.cloneElement(portal.icon, { className: portal.icon.props.className.replace('w-8 h-8', 'w-5 h-5 sm:w-6 sm:h-6') })}
                                     </div>
 
-                                    <h2 className="text-xl font-extrabold text-slate-800 mb-2 relative z-10 group-hover:text-slate-900">{portal.title}</h2>
-                                    <p className="text-sm text-slate-500 leading-relaxed relative z-10 flex-1">{portal.description}</p>
+                                    <h2 className="text-sm sm:text-lg font-extrabold text-slate-800 mb-1 relative z-10 group-hover:text-slate-900 transition-colors">{portal.title}</h2>
+                                    <p className="text-[9px] sm:text-[11px] text-slate-500 leading-relaxed relative z-10 flex-1 hidden sm:block line-clamp-2">{portal.description}</p>
 
-                                    <div className="mt-8 flex items-center justify-between text-slate-400 group-hover:text-slate-700 font-bold text-sm transition-colors relative z-10">
-                                        <span>Enter Portal</span>
-                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition-all duration-300 shadow-sm group-hover:shadow-md">
-                                            <ArrowRight size={14} />
+                                    <div className="mt-3 sm:mt-5 flex items-center justify-between text-slate-400 group-hover:text-slate-700 font-bold text-[9px] sm:text-[10px] uppercase tracking-widest transition-colors relative z-10">
+                                        <span className="hidden sm:inline">Enter Portal</span>
+                                        <span className="sm:hidden">Enter</span>
+                                        <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition-all duration-300 shadow-sm group-hover:shadow-md transform-gpu group-hover:translate-x-1">
+                                            <ArrowRight size={12} className="sm:w-[14px] sm:h-[14px]" />
                                         </div>
                                     </div>
                                 </div>
@@ -200,8 +215,12 @@ export default function SmartLobby({ user }) {
             </main>
 
             {/* Footer */}
-            <footer className="relative z-10 py-6 text-center">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Powered by Gecko OMS Engine</p>
+            <footer className="relative z-10 py-6 flex justify-center items-center">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    <span>Powered by</span>
+                    <Image src="/new.png" alt="Gecko" width={16} height={16} className="object-contain opacity-75" />
+                    <span>Gecko OMS</span>
+                </div>
             </footer>
         </div>
     );
@@ -247,6 +266,9 @@ export async function getServerSideProps(context) {
         }
         if (hasAccess(['Superadmin'])) {
             allowedRoutes.push('/superadmin/dashboard');
+        }
+        if (hasAccess(['Staff', 'Intern', 'Trainee', 'Manager', 'Project Manager', 'HR', 'Finance', 'Superadmin'])) {
+            allowedRoutes.push('/expenses/dashboard');
         }
 
         // De-duplicate allowed routes just in case
