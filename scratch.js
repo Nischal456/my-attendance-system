@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 mongoose.connect(process.env.MONGODB_URI).then(async () => {
     const db = mongoose.connection;
-    const nischal = await db.collection('users').findOne({ email: 'nischal@geckoworksnepal.com' });
-    console.log("Nischal accessRoles:", nischal.accessRoles);
+    const users = await db.collection('users').find({}).toArray();
+    console.log("Users:", users.map(u => ({ name: u.name, email: u.email, role: u.role })));
     process.exit(0);
 }).catch(console.error);

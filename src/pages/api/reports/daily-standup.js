@@ -36,10 +36,15 @@ export default async function handler(req, res) {
             },
             // Stage 3: Deconstruct the userDetails array
             { $unwind: "$userDetails" },
-            // Stage 4: Filter for only 'Staff' and 'Intern' roles
+            // Stage 4: Exclude manager/admin roles
             {
                 $match: {
-                    "userDetails.role": { $in: ['Staff', 'Intern'] }
+                    "userDetails.role": { 
+                        $nin: [
+                            'Manager', 'Project Manager', 'HR', 'Finance', 'Superadmin',
+                            'manager', 'project manager', 'hr', 'finance', 'superadmin', 'system'
+                        ]
+                    }
                 }
             },
             // Stage 5: Sort by most recent checkout

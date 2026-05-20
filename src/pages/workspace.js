@@ -85,6 +85,14 @@ const formatElapsedTime = (startTime) => {
     return `${hh}:${mm}:${ss}`;
 };
 
+const formatSeconds = (totalSeconds) => {
+    if (totalSeconds == null || totalSeconds < 0) return '00:00:00';
+    const hh = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+    const mm = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+    const ss = (totalSeconds % 60).toString().padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
+};
+
 const formatDeadline = (dateString) => {
     if (!dateString) return 'No deadline';
     return new Date(dateString).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
@@ -661,15 +669,24 @@ const TaskDetailsModal = ({ task, onClose, onCommentAdded, currentUser }) => {
 };
 
 const CompletedTaskCard = ({ task, onOpenDetails }) => {
-    const userAttachments = task.attachments?.filter(att => att.uploadedBy?._id?.toString() === task.assignedTo?._id?.toString()) || [];
     return (
-        <motion.div whileHover={{ scale: 1.01, y: -2 }} className="p-3 bg-white rounded-2xl cursor-pointer shadow-sm hover:shadow-lg border border-slate-100 transition-all duration-200 group" onClick={() => onOpenDetails(task)}>
-            <div className="flex justify-between items-start gap-3">
-                <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm text-slate-700 group-hover:text-emerald-700 transition-colors line-through decoration-emerald-500/50 truncate">{task.title}</h4>
-                    <p className="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1"><CheckCircle size={10} /> {formatEnglishDate(task.completedAt)}</p>
-                </div>
-                <div className="bg-emerald-100 text-emerald-600 p-1 rounded-lg flex-shrink-0"><CheckCircle size={14} /></div>
+        <motion.div
+            whileHover={{ scale: 1.015, y: -1, boxShadow: "0 12px 20px -8px rgba(16, 185, 129, 0.04)" }}
+            whileTap={{ scale: 0.98 }}
+            className="p-3.5 bg-white border border-slate-100 rounded-xl cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:border-emerald-500 hover:shadow-[0_8px_20px_rgba(16,185,129,0.05)] transition-all duration-300 group flex items-center justify-between gap-3 select-none transform-gpu will-change-transform"
+            onClick={() => onOpenDetails(task)}
+        >
+            <div className="flex-1 min-w-0">
+                <h4 className="font-black text-xs text-slate-700 group-hover:text-emerald-800 transition-colors line-through decoration-emerald-500/30 truncate">
+                    {task.title}
+                </h4>
+                <p className="text-[9px] text-emerald-600/85 font-extrabold mt-0.5 flex items-center gap-1">
+                    <CheckCircle size={9} className="stroke-[2.5]" />
+                    {formatEnglishDate(task.completedAt)}
+                </p>
+            </div>
+            <div className="bg-emerald-50 text-emerald-600 p-1.5 rounded-lg border border-emerald-100/30 flex-shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+                <CheckCircle size={11} className="stroke-[2.5]" />
             </div>
         </motion.div>
     );
@@ -677,45 +694,110 @@ const CompletedTaskCard = ({ task, onOpenDetails }) => {
 
 const DraggableTaskCard = ({ task, onUpdateTaskStatus, onOpenSubmitModal, onOpenDetails }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task._id });
+
+    // Hardware accelerated styling with absolute will-change hints for zero-lag dragging
     const style = {
-        transform: CSS.Transform.toString(transform),
+        transform: transform ? CSS.Translate.toString(transform) : undefined,
         transition,
         zIndex: isDragging ? 50 : 'auto',
-        opacity: isDragging ? 0.9 : 1,
-        scale: isDragging ? 1.05 : 1,
-        touchAction: 'none' // CRITICAL: Allows dragging on mobile without scrolling page
+        opacity: isDragging ? 0.85 : 1,
+        scale: isDragging ? 1.02 : 1,
+        touchAction: 'none',
+        willChange: 'transform, opacity'
     };
+
     const isSelfAssigned = task.assignedBy?._id === task.assignedTo?._id;
+    const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'Completed';
 
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={`p-3 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 touch-none cursor-grab active:cursor-grabbing group will-change-transform ${isDragging ? 'shadow-2xl ring-2 ring-emerald-400 rotate-2' : ''}`} onClick={() => onOpenDetails(task)}>
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            className={`p-3.5 bg-white border border-slate-200/70 rounded-[1.25rem] shadow-[0_3px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_16px_36px_-6px_rgba(0,0,0,0.05)] hover:border-slate-300 transition-all duration-300 touch-none cursor-grab active:cursor-grabbing group select-none transform-gpu will-change-transform ${isDragging ? 'shadow-2xl ring-2 ring-emerald-400 rotate-1 border-transparent' : ''
+                }`}
+            onClick={() => onOpenDetails(task)}
+        >
             <div className="flex justify-between items-start gap-2 mb-1.5">
-                <h4 className="font-bold text-slate-800 text-sm leading-tight line-clamp-2">{task.title}</h4>
-                {isSelfAssigned && <span className="flex-shrink-0 text-[9px] uppercase font-bold bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md border border-indigo-100">Personal</span>}
+                <h4 className="font-extrabold text-slate-800 text-xs sm:text-[13px] leading-snug line-clamp-2 group-hover:text-slate-950 transition-colors">
+                    {task.title}
+                </h4>
+                {isSelfAssigned && (
+                    <span className="flex-shrink-0 text-[8px] uppercase tracking-wider font-black bg-indigo-50/70 text-indigo-600 px-1.5 py-0.5 rounded-md border border-indigo-200/35 shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
+                        Personal
+                    </span>
+                )}
             </div>
 
-            {task.description && <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed">{task.description}</p>}
+            {task.description && (
+                <p className="text-[10px] text-slate-400 line-clamp-2 mb-3 leading-relaxed">
+                    {task.description}
+                </p>
+            )}
 
-            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-50">
-                <div className={`flex items-center gap-1 text-[10px] font-semibold ${getDeadlineInfo(task).classes}`}>
-                    <Clock size={12} />
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                <div
+                    className={`flex items-center gap-1 text-[9px] font-black tracking-wide uppercase px-2 py-0.5 rounded-lg border ${isOverdue
+                            ? 'bg-rose-50 text-rose-600 border-rose-200/30'
+                            : 'bg-slate-50 text-slate-500 border-slate-200/30'
+                        }`}
+                >
+                    <Clock size={9} className="stroke-[2.5]" />
                     <span>{formatDeadline(task.deadline)}</span>
                 </div>
+
                 <div className="flex items-center -space-x-1.5 pl-2">
-                    <div className="relative z-10 hover:z-20 transition-all hover:scale-110">
-                        <Image src={task.assignedTo?.avatar || '/default-avatar.png'} width={22} height={22} className="rounded-full object-cover aspect-square border-2 border-white shadow-sm" alt={task.assignedTo?.name || ''} title={`Lead: ${task.assignedTo?.name}`} />
-                    </div>
-                    {task.assistedBy?.map(assistant => (<div key={assistant._id} className="relative hover:z-20 transition-all hover:scale-110"><Image src={assistant.avatar || '/default-avatar.png'} width={22} height={22} className="rounded-full object-cover aspect-square border-2 border-white shadow-sm" alt={assistant.name} title={`Assist: ${assistant.name}`} /></div>))}
+                    {task.assignedTo && (
+                        <div className="relative z-10 hover:z-20 transition-all hover:scale-110">
+                            <Image
+                                src={task.assignedTo?.avatar || '/default-avatar.png'}
+                                width={18}
+                                height={18}
+                                className="rounded-full object-cover aspect-square border-2 border-white shadow-sm ring-1 ring-slate-100/30"
+                                alt={task.assignedTo?.name || ''}
+                                title={`Lead: ${task.assignedTo?.name}`}
+                            />
+                        </div>
+                    )}
+                    {task.assistedBy?.map(assistant => (
+                        <div key={assistant._id} className="relative hover:z-20 transition-all hover:scale-110">
+                            <Image
+                                src={assistant.avatar || '/default-avatar.png'}
+                                width={18}
+                                height={18}
+                                className="rounded-full object-cover aspect-square border-2 border-white shadow-sm ring-1 ring-slate-100/30"
+                                alt={assistant.name}
+                                title={`Assist: ${assistant.name}`}
+                            />
+                        </div>
+                    ))}
                 </div>
             </div>
 
             {(task.status === 'To Do' || task.status === 'In Progress') && (
                 <div className="mt-3 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     {task.status === 'To Do' && (
-                        <button onClick={(e) => { e.stopPropagation(); onUpdateTaskStatus(task._id, 'In Progress'); }} className="w-full flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold py-1.5 px-2 rounded-lg text-[10px] transition-all shadow-lg shadow-slate-200"><Play size={10} fill="currentColor" /> Start</button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onUpdateTaskStatus(task._id, 'In Progress');
+                            }}
+                            className="w-full flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white font-extrabold py-1.5 px-3 rounded-xl text-[9px] tracking-wider uppercase transition-all shadow-sm border border-black/10 hover:-translate-y-0.5"
+                        >
+                            <Play size={10} fill="currentColor" className="stroke-[2.5] shrink-0" /> Start
+                        </button>
                     )}
                     {task.status === 'In Progress' && (
-                        <button onClick={(e) => { e.stopPropagation(); onOpenSubmitModal(task); }} className="w-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-1.5 px-2 rounded-lg text-[10px] transition-all shadow-lg shadow-emerald-200"><Upload size={10} /> Submit</button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenSubmitModal(task);
+                            }}
+                            className="w-full flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-1.5 px-3 rounded-xl text-[9px] tracking-wider uppercase transition-all shadow-sm border border-emerald-500/20 hover:-translate-y-0.5"
+                        >
+                            <Upload size={10} className="stroke-[2.5] shrink-0" /> Submit
+                        </button>
                     )}
                 </div>
             )}
@@ -724,35 +806,60 @@ const DraggableTaskCard = ({ task, onUpdateTaskStatus, onOpenSubmitModal, onOpen
 };
 
 const TaskColumn = ({ title, tasks, onUpdateTaskStatus, onOpenSubmitModal, onOpenDetails }) => {
-    // [FIX] Enable drop on empty column
     const { setNodeRef } = useDroppable({ id: title });
 
     let titleColor, icon, bgGradient;
     switch (title) {
         case 'In Progress':
-            titleColor = 'text-amber-700';
-            icon = <div className="bg-amber-100 p-1.5 rounded-lg"><Play size={14} className="text-amber-600 fill-amber-600" /></div>;
-            bgGradient = 'from-amber-50/50 to-transparent';
+            titleColor = 'text-amber-900';
+            icon = (
+                <div className="bg-amber-50 p-1.5 rounded-xl border border-amber-100/50 shadow-sm">
+                    <Play size={12} className="text-amber-600 fill-amber-500 stroke-[2.5] shrink-0" />
+                </div>
+            );
+            bgGradient = 'bg-amber-50/20';
             break;
         default:
-            titleColor = 'text-slate-700';
-            icon = <div className="bg-slate-200 p-1.5 rounded-lg"><List size={14} className="text-slate-600" /></div>;
-            bgGradient = 'from-slate-50/50 to-transparent';
+            titleColor = 'text-indigo-900';
+            icon = (
+                <div className="bg-indigo-50 p-1.5 rounded-xl border border-indigo-100/50 shadow-sm">
+                    <List size={12} className="text-indigo-600 stroke-[2.5] shrink-0" />
+                </div>
+            );
+            bgGradient = 'bg-indigo-50/20';
             break;
     }
     return (
-        // [FIX] Added ref={setNodeRef} here
-        <div ref={setNodeRef} className={`bg-white/40 p-1 rounded-3xl h-full flex flex-col min-h-[150px]`}>
-            <div className={`flex items-center justify-between mb-3 p-3 rounded-2xl bg-gradient-to-b ${bgGradient}`}>
-                <h2 className={`font-bold text-sm flex items-center gap-2 ${titleColor}`}>{icon}{title}</h2>
-                <span className="text-[10px] font-bold bg-white shadow-sm text-slate-600 px-2 py-0.5 rounded-lg border border-slate-100">{tasks.length}</span>
+        <div
+            ref={setNodeRef}
+            className="bg-white/60 backdrop-blur-md p-4 rounded-[2.2rem] border border-slate-200/65 shadow-[0_4px_25px_-12px_rgba(0,0,0,0.02)] h-full flex flex-col min-h-[480px] transition-all duration-300 hover:shadow-md hover:bg-white/85 transform-gpu"
+        >
+            <div className={`flex items-center justify-between mb-4 p-3 rounded-2xl ${bgGradient} border border-slate-100`}>
+                <h2 className={`font-black text-xs sm:text-sm flex items-center gap-2 tracking-tight ${titleColor}`}>
+                    {icon}
+                    {title}
+                </h2>
+                <span className="text-[10px] font-black bg-white text-slate-700 px-2.5 py-0.5 rounded-lg border border-slate-200/60 shadow-sm">
+                    {tasks.length}
+                </span>
             </div>
-            <div className="space-y-3 h-full overflow-y-auto px-1 pb-4 custom-scrollbar">
+            <div className="space-y-3 h-full overflow-y-auto px-0.5 pb-4 custom-scrollbar">
                 <SortableContext items={tasks.map(t => t._id)} strategy={verticalListSortingStrategy}>
                     {tasks.length > 0 ? (
-                        tasks.map(task => <DraggableTaskCard key={task._id} task={task} onUpdateTaskStatus={onUpdateTaskStatus} onOpenSubmitModal={onOpenSubmitModal} onOpenDetails={onOpenDetails} />)
+                        tasks.map(task => (
+                            <DraggableTaskCard
+                                key={task._id}
+                                task={task}
+                                onUpdateTaskStatus={onUpdateTaskStatus}
+                                onOpenSubmitModal={onOpenSubmitModal}
+                                onOpenDetails={onOpenDetails}
+                            />
+                        ))
                     ) : (
-                        <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50"><Inbox className="mx-auto h-8 w-8 text-slate-300 mb-1" /><p className="text-[10px] font-semibold text-slate-400">Empty</p></div>
+                        <div className="text-center py-10 border-2 border-dashed border-slate-200/80 rounded-[1.5rem] bg-slate-50/30 flex flex-col items-center justify-center gap-2 group hover:border-emerald-300 hover:bg-emerald-50/10 transition-all duration-300">
+                            <Inbox className="mx-auto h-7 w-7 text-slate-400 mb-1 group-hover:scale-110 group-hover:text-emerald-500 transition-all duration-300" />
+                            <p className="text-[10px] font-extrabold text-slate-400">Empty Column</p>
+                        </div>
                     )}
                 </SortableContext>
             </div>
@@ -968,70 +1075,142 @@ const DailyStandupReport = () => {
     }, [fetchReports]);
 
     const filteredReports = useMemo(() => {
-        const excludedRoles = ['pm', 'project manager', 'hr', 'manager', 'system', 'superadmin'];
+        const excludedRoles = ['pm', 'project manager', 'hr', 'manager', 'system', 'superadmin', 'finance'];
         return reports.filter(r => {
             const role = (r.user?.role || '').toLowerCase();
             return !excludedRoles.some(ex => role.includes(ex));
         });
     }, [reports]);
 
+    // Dynamic, high-fidelity styles for role badges
+    const getRoleBadgeStyles = (role) => {
+        const r = (role || '').toLowerCase();
+        if (r.includes('intern')) {
+            return {
+                text: 'INTERN',
+                classes: 'bg-emerald-50/90 text-emerald-700 border border-emerald-100/60 shadow-[0_2px_8px_-3px_rgba(16,185,129,0.15)]'
+            };
+        }
+        if (r.includes('trainee')) {
+            return {
+                text: 'TRAINEE',
+                classes: 'bg-amber-50/90 text-amber-700 border border-amber-100/60 shadow-[0_2px_8px_-3px_rgba(245,158,11,0.15)]'
+            };
+        }
+        if (r.includes('staff')) {
+            return {
+                text: 'STAFF',
+                classes: 'bg-indigo-50/90 text-indigo-700 border border-indigo-100/60 shadow-[0_2px_8px_-3px_rgba(99,102,241,0.15)]'
+            };
+        }
+        return {
+            text: (role || 'Team Member').toUpperCase(),
+            classes: 'bg-violet-50/90 text-violet-700 border border-violet-100/60 shadow-[0_2px_8px_-3px_rgba(139,92,246,0.15)]'
+        };
+    };
+
     return (
-        <div className="bg-white rounded-[2rem] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-slate-100 overflow-hidden flex flex-col">
-            <div className="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
-                <h2 className="text-base font-extrabold text-slate-800 flex items-center gap-2.5">
-                    <div className="bg-emerald-500 p-2 rounded-xl text-white shadow-sm"><Calendar size={16} /></div>
+        <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-slate-100 overflow-hidden flex flex-col transition-all duration-300">
+            {/* Header Area with Soft Premium Gradient & Blur */}
+            <div className="px-7 py-6 border-b border-slate-100 bg-gradient-to-r from-slate-50/50 to-white flex justify-between items-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.02),transparent_50%)]"></div>
+                <h2 className="text-base font-extrabold text-slate-800 flex items-center gap-3 relative z-10">
+                    <div className="bg-emerald-500 p-2.5 rounded-2xl text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)]"><Calendar size={15} /></div>
                     Team Daily Updates
                 </h2>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">
-                    {filteredReports.length} Updates
+                <div className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-widest bg-emerald-50/80 px-4 py-1.5 rounded-full border border-emerald-100/40 shadow-sm relative z-10">
+                    {filteredReports.length} {filteredReports.length === 1 ? 'Update' : 'Updates'}
                 </div>
             </div>
-            <div className="p-5 max-h-[500px] overflow-y-auto custom-scrollbar bg-slate-50/30">
+
+            {/* Content Area */}
+            <div className="p-6 max-h-[750px] overflow-y-auto custom-scrollbar bg-gradient-to-b from-slate-50/10 to-slate-50/40">
                 {isLoading ? (
-                    <div className="flex justify-center items-center h-40"><ButtonLoader /></div>
+                    <div className="flex justify-center items-center h-48"><ButtonLoader /></div>
                 ) : filteredReports.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {filteredReports.map((report, idx) => (
-                            <motion.div
-                                key={report._id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.05 }}
-                                className="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full"
-                            >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="relative">
-                                        <Image src={report.user.avatar || '/default-avatar.png'} alt={report.user.name} width={42} height={42} className="rounded-full object-cover ring-2 ring-emerald-50 shadow-sm" />
+                    <div className={`grid ${filteredReports.length === 1 ? 'grid-cols-1' :
+                            filteredReports.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                                filteredReports.length === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
+                                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                        } gap-5`}>
+                        {filteredReports.map((report, idx) => {
+                            const badge = getRoleBadgeStyles(report.user.role);
+                            return (
+                                <motion.div
+                                    key={report._id}
+                                    initial={{ opacity: 0, y: 15 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{
+                                        type: 'spring',
+                                        stiffness: 260,
+                                        damping: 22,
+                                        delay: idx * 0.04
+                                    }}
+                                    whileHover={{
+                                        y: -5,
+                                        scale: 1.015,
+                                        boxShadow: "0 20px 30px -10px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(16, 185, 129, 0.08)"
+                                    }}
+                                    className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)] transition-all duration-350 group flex flex-col h-full relative overflow-hidden"
+                                >
+                                    {/* Card Radial Subtle Glow */}
+                                    <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/0 via-emerald-500/[0.003] to-emerald-500/[0.01] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                                    {/* User Avatar + Name Info */}
+                                    <div className="flex items-center gap-4 mb-4 relative z-10">
+                                        <div className="relative w-[46px] h-[46px] flex-shrink-0">
+                                            <Image
+                                                src={report.user.avatar || '/default-avatar.png'}
+                                                alt={report.user.name}
+                                                fill
+                                                sizes="46px"
+                                                className="rounded-full object-cover ring-4 ring-slate-50 group-hover:ring-emerald-50/50 shadow-sm transition-all duration-300"
+                                            />
+                                            {/* Pulse Active Checkout Spot */}
+                                            <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white bg-emerald-500 shadow-sm z-20">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                            </span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-extrabold text-sm text-slate-800 tracking-tight truncate group-hover:text-emerald-700 transition-colors duration-300">
+                                                {report.user.name}
+                                            </h4>
+                                            <span className={`text-[8.5px] font-bold px-2.5 py-0.5 rounded-md inline-block mt-1 truncate uppercase tracking-widest font-sans transition-all duration-300 ${badge.classes}`}>
+                                                {badge.text}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-sm text-slate-800 truncate group-hover:text-emerald-700 transition-colors">{report.user.name}</h4>
-                                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-0.5 truncate uppercase tracking-widest">
-                                            {report.user.role || 'Team Member'}
+
+                                    {/* Checked-out Daily Standup Description */}
+                                    <div className="bg-slate-50/50 backdrop-blur-sm p-4 rounded-2xl text-[11px] text-slate-600 leading-relaxed border border-slate-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.005)] line-clamp-3 mb-4 flex-grow group-hover:bg-white/80 group-hover:border-emerald-500/10 transition-all duration-300 relative z-10">
+                                        {report.description}
+                                    </div>
+
+                                    {/* Footer Row */}
+                                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 mt-auto pt-3 border-t border-slate-100 relative z-10">
+                                        <div className="flex items-center gap-1.5 text-slate-400">
+                                            <div className="relative flex h-1.5 w-1.5">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                                            </div>
+                                            <span className="uppercase tracking-widest text-[8px] font-extrabold text-slate-400">Checkout Complete</span>
+                                        </div>
+                                        <span className="font-mono text-[9px] font-extrabold text-slate-600 bg-gradient-to-br from-slate-50 to-slate-100/80 px-2.5 py-1 rounded-xl border border-slate-200/40 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                            {new Date(report.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                                         </span>
                                     </div>
-                                </div>
-                                <div className="bg-slate-50/80 p-4 rounded-2xl text-xs text-slate-600 leading-relaxed border border-slate-100 line-clamp-3 mb-4 flex-grow">
-                                    {report.description}
-                                </div>
-                                <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 mt-auto pt-3 border-t border-slate-50">
-                                    <div className="flex items-center gap-1.5">
-                                        <Clock size={12} className="text-emerald-400" />
-                                        <span>Check-out</span>
-                                    </div>
-                                    <span className="text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                                        {new Date(report.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                </div>
-                            </motion.div>
-                        ))}
+                                </motion.div>
+                            );
+                        })}
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-48 opacity-60">
-                        <div className="bg-white w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
+                    <div className="flex flex-col items-center justify-center h-52 bg-white rounded-[2rem] border border-slate-100 border-dashed p-8 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.015),transparent_70%)]"></div>
+                        <div className="bg-slate-50/50 p-5 rounded-full mb-4 shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)] border border-slate-100 relative z-10">
                             <Clock className="text-slate-300" size={24} />
                         </div>
-                        <p className="font-bold text-sm text-slate-500 mb-1">No updates yet.</p>
-                        <p className="text-[11px] font-medium text-slate-400">Updates appear when members check out.</p>
+                        <p className="font-extrabold text-sm text-slate-700 mb-1 relative z-10">No daily updates yet</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider relative z-10">Updates arrive automatically upon checkout</p>
                     </div>
                 )}
             </div>
@@ -1806,13 +1985,21 @@ export default function Workspace({ user, canAccessHub }) {
     const [showPromotionModal, setShowPromotionModal] = useState(user?.hasUnseenPromotion || false);
     const [isAcknowledgingPromotion, setIsAcknowledgingPromotion] = useState(false);
 
+    // Overtime Check-out Reminder State
+    const [showOvertimeNotification, setShowOvertimeNotification] = useState(false);
+    const [hasDismissedOvertime, setHasDismissedOvertime] = useState(false);
+    const [highlightDescription, setHighlightDescription] = useState(false);
+
+    const breakTimerRef = useRef(null);
+    const checkInTimerRef = useRef(null);
+
     useEffect(() => {
         if (showPromotionModal) {
             const duration = 3 * 1000;
             const animationEnd = Date.now() + duration;
             const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
 
-            const interval = setInterval(function() {
+            const interval = setInterval(function () {
                 const timeLeft = animationEnd - Date.now();
                 if (timeLeft <= 0) return clearInterval(interval);
                 const particleCount = 50 * (timeLeft / duration);
@@ -1985,19 +2172,100 @@ export default function Workspace({ user, canAccessHub }) {
     }, [tasks]);
 
     useEffect(() => { const handleScroll = () => setIsScrolled(window.scrollY > 10); window.addEventListener('scroll', handleScroll); return () => window.removeEventListener('scroll', handleScroll); }, []);
-    useEffect(() => { if (checkInTime) { const timer = setInterval(() => setElapsedTime(formatElapsedTime(checkInTime)), 1000); return () => clearInterval(timer); } else { setElapsedTime(''); } }, [checkInTime]);
+    useEffect(() => {
+        if (checkInTimerRef.current) {
+            clearInterval(checkInTimerRef.current);
+            checkInTimerRef.current = null;
+        }
+        if (checkInTime) {
+            setElapsedTime(formatElapsedTime(checkInTime));
+            checkInTimerRef.current = setInterval(() => setElapsedTime(formatElapsedTime(checkInTime)), 1000);
+        } else {
+            setElapsedTime('');
+        }
+        return () => {
+            if (checkInTimerRef.current) {
+                clearInterval(checkInTimerRef.current);
+                checkInTimerRef.current = null;
+            }
+        };
+    }, [checkInTime]);
     useEffect(() => { const timer = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(timer); }, []);
 
+    // Monitor for check-in duration exceeding 7 hours (25,200 seconds)
     useEffect(() => {
+        if (checkInTime && !hasDismissedOvertime) {
+            const checkOvertime = () => {
+                const now = new Date(Date.now() + timeOffset);
+                const start = new Date(checkInTime);
+                const elapsedSeconds = Math.floor((now - start) / 1000);
+                if (elapsedSeconds >= 25200) {
+                    setShowOvertimeNotification(true);
+                }
+            };
+            checkOvertime();
+            const interval = setInterval(checkOvertime, 10000); // Check every 10 seconds
+            return () => clearInterval(interval);
+        } else {
+            setShowOvertimeNotification(false);
+        }
+    }, [checkInTime, hasDismissedOvertime]);
+
+    // Reset overtime notification state on check out
+    useEffect(() => {
+        if (!checkInTime) {
+            setHasDismissedOvertime(false);
+            setShowOvertimeNotification(false);
+        }
+    }, [checkInTime]);
+
+    useEffect(() => {
+        if (breakTimerRef.current) {
+            clearInterval(breakTimerRef.current);
+            breakTimerRef.current = null;
+        }
+
+        const updateBreakTimer = () => {
+            let completedSeconds = 0;
+            if (activeAttendance && activeAttendance.breaks) {
+                activeAttendance.breaks.forEach(b => {
+                    if (b.breakInTime && b.breakOutTime) {
+                        const start = new Date(b.breakInTime);
+                        const end = new Date(b.breakOutTime);
+                        const diff = Math.floor((end - start) / 1000);
+                        if (diff > 0) {
+                            completedSeconds += diff;
+                        }
+                    }
+                });
+            }
+
+            let activeSeconds = 0;
+            if (isOnBreak && activeBreakStartTime) {
+                const now = new Date(Date.now() + timeOffset);
+                const start = new Date(activeBreakStartTime);
+                activeSeconds = Math.floor((now - start) / 1000);
+                if (activeSeconds < 0) activeSeconds = 0;
+            }
+
+            const totalSeconds = completedSeconds + activeSeconds;
+            setElapsedBreakTime(formatSeconds(totalSeconds));
+        };
+
         if (isOnBreak && activeBreakStartTime) {
-            const timer = setInterval(() => {
-                setElapsedBreakTime(formatElapsedTime(activeBreakStartTime));
-            }, 1000);
-            return () => clearInterval(timer);
+            updateBreakTimer();
+            breakTimerRef.current = setInterval(updateBreakTimer, 1000);
         } else {
             setElapsedBreakTime('');
         }
-    }, [isOnBreak, activeBreakStartTime]);
+
+        return () => {
+            if (breakTimerRef.current) {
+                clearInterval(breakTimerRef.current);
+                breakTimerRef.current = null;
+            }
+        };
+    }, [isOnBreak, activeBreakStartTime, activeAttendance]);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -2039,6 +2307,26 @@ export default function Workspace({ user, canAccessHub }) {
         setAttendance(prev => [result.data, ...prev]);
     }, `Checked in from ${location}!`);
 
+    const handleOvertimeCheckout = () => {
+        setShowOvertimeNotification(false);
+        setHasDismissedOvertime(true);
+        const descEl = document.getElementById('description');
+        if (descEl) {
+            descEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                descEl.focus();
+                setHighlightDescription(true);
+                setTimeout(() => {
+                    setHighlightDescription(false);
+                }, 4000);
+            }, 800);
+        }
+        toast('Please enter your work description and click Check Out.', {
+            icon: '⏳',
+            duration: 5000
+        });
+    };
+
     const handleCheckOut = () => handleAction('checkout', async () => {
         if (!description.trim()) throw new Error('Work description is required.');
         const res = await fetch('/api/attendance/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description, attendanceId: activeAttendance._id }) });
@@ -2051,15 +2339,47 @@ export default function Workspace({ user, canAccessHub }) {
     const handleBreakIn = () => handleAction('break-in', async () => {
         const res = await fetch('/api/attendance/break-in', { method: 'POST' });
         if (!res.ok) throw new Error(await handleApiError(res));
+        const { data } = await res.json();
+
+        // Find the active break
+        const activeBreak = data.breaks.find(b => !b.breakOutTime);
+        const startTime = activeBreak ? activeBreak.breakInTime : new Date().toISOString();
+
+        // Calculate cumulative duration of completed breaks to avoid render gap
+        let completedSeconds = 0;
+        data.breaks.forEach(b => {
+            if (b.breakInTime && b.breakOutTime) {
+                const start = new Date(b.breakInTime);
+                const end = new Date(b.breakOutTime);
+                const diff = Math.floor((end - start) / 1000);
+                if (diff > 0) completedSeconds += diff;
+            }
+        });
+
+        // Set states synchronously to avoid render gap
+        setActiveBreakStartTime(startTime);
+        setElapsedBreakTime(formatSeconds(completedSeconds));
         setIsOnBreak(true);
-        await fetchDashboardData();
+        setActiveAttendance(data);
+
+        // Update in background
+        fetchDashboardData();
     }, 'Break started.');
 
     const handleBreakOut = () => handleAction('break-out', async () => {
         const res = await fetch('/api/attendance/break-out', { method: 'POST' });
         if (!res.ok) throw new Error(await handleApiError(res));
+        const { data } = await res.json();
+
+        // Reset states synchronously
         setIsOnBreak(false);
         setActiveBreakStartTime(null);
+        setElapsedBreakTime('');
+        setActiveAttendance(data);
+        setAttendance(prev => prev.map(att => att._id === data._id ? data : att));
+
+        // Update in background
+        fetchDashboardData();
     }, 'Resumed work.');
 
     const handleLogout = async () => {
@@ -2448,85 +2768,243 @@ export default function Workspace({ user, canAccessHub }) {
                             <motion.div className="xl:col-span-4 space-y-6 sm:space-y-8" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
 
                                 {/* Profile & Actions Card */}
-                                <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden relative">
-                                    <div className="absolute top-0 w-full h-24 bg-gradient-to-r from-emerald-100 to-blue-50 opacity-50"></div>
-                                    <div className="p-6 sm:p-8 pt-8 sm:pt-10 relative">
+                                <div className="bg-white/90 backdrop-blur-xl rounded-[2.2rem] border border-slate-200 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.03)] overflow-hidden relative group/profile">
+                                    {/* Dynamic, clean solid header panel that follows the card's curves and provides a professional SaaS backdrop */}
+                                    <div className={`absolute top-0 left-0 right-0 h-24 transition-all duration-500 border-b ${isOnBreak
+                                            ? 'bg-amber-50/40 border-amber-100'
+                                            : checkInTime
+                                                ? 'bg-emerald-50/30 border-emerald-100/50'
+                                                : 'bg-slate-50/50 border-slate-100'
+                                        }`}></div>
+                                    <div className="p-5 sm:p-6 pt-7 sm:pt-8 relative">
                                         <div className="flex flex-col items-center">
-                                            <div className="relative mb-4 group">
-                                                <div className="absolute inset-0 bg-emerald-300 rounded-3xl blur-md opacity-30 group-hover:opacity-50 transition-opacity"></div>
-                                                <Image src={profileUser.avatar} alt="Profile Picture" width={110} height={110} className="rounded-[2rem] object-cover aspect-square shadow-lg border-4 border-white relative z-10" priority style={{ width: 'auto', height: 'auto' }} />
-                                                <label htmlFor="avatar-upload" className="absolute -bottom-2 -right-2 z-20 bg-white text-slate-700 p-2.5 rounded-2xl cursor-pointer hover:bg-emerald-50 hover:text-emerald-600 transition shadow-lg border border-slate-100 transform hover:scale-110 active:scale-95">
+                                            <div className="relative mb-3.5 group/avatar">
+                                                {/* Beautiful, clear breathing status halo using solid color with soft blur */}
+                                                <motion.div
+                                                    animate={{
+                                                        scale: [1, 1.04, 1],
+                                                        opacity: [0.15, 0.35, 0.15]
+                                                    }}
+                                                    transition={{
+                                                        duration: 3,
+                                                        repeat: Infinity,
+                                                        ease: "easeInOut"
+                                                    }}
+                                                    className={`absolute -inset-2 rounded-[2.2rem] blur transition-all duration-500 ${isOnBreak
+                                                            ? 'bg-amber-400'
+                                                            : checkInTime
+                                                                ? 'bg-emerald-400'
+                                                                : 'bg-slate-300'
+                                                        }`}
+                                                />
+                                                <div className={`relative z-10 p-1 rounded-[2.1rem] bg-white shadow-sm border transition-all duration-500 ${isOnBreak
+                                                        ? 'border-amber-300'
+                                                        : checkInTime
+                                                            ? 'border-emerald-300'
+                                                            : 'border-slate-200'
+                                                    }`}>
+                                                    <Image
+                                                        src={profileUser.avatar}
+                                                        alt="Profile Picture"
+                                                        width={96}
+                                                        height={96}
+                                                        className="rounded-[2rem] object-cover aspect-square border border-slate-100 relative"
+                                                        priority
+                                                        style={{ width: '96px', height: '96px' }}
+                                                    />
+                                                </div>
+                                                <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 z-20 bg-white text-slate-700 hover:text-emerald-600 p-2 rounded-xl cursor-pointer hover:bg-emerald-50 transition shadow-md border border-slate-200 transform hover:scale-110 active:scale-95">
                                                     <input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
-                                                    <>{isUploading ? <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div> : <Edit size={16} />}</>
+                                                    {isUploading ? (
+                                                        <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                                                    ) : (
+                                                        <Edit size={13} className="stroke-[2.5]" />
+                                                    )}
                                                 </label>
                                             </div>
-                                            <h2 className="text-2xl font-extrabold text-slate-800">{profileUser.name}</h2>
-                                            <p className="text-slate-500 font-medium">{profileUser.role}</p>
+                                            <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">{profileUser.name}</h2>
+
+                                            <div className="mt-1 flex items-center gap-1.5">
+                                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide uppercase border ${isOnBreak
+                                                        ? 'bg-amber-50 text-amber-600 border-amber-200/35'
+                                                        : checkInTime
+                                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200/35'
+                                                            : 'bg-slate-50 text-slate-500 border-slate-200/35'
+                                                    }`}>
+                                                    <span className={`h-1.5 w-1.5 rounded-full ${isOnBreak
+                                                            ? 'bg-amber-500 animate-pulse'
+                                                            : checkInTime
+                                                                ? 'bg-emerald-500 animate-pulse'
+                                                                : 'bg-slate-400'
+                                                        }`}></span>
+                                                    {profileUser.role}
+                                                </span>
+                                            </div>
 
                                             {/* Push Notification Toggle Button */}
                                             {!isSubscribed && permission !== 'denied' && (
                                                 <motion.button
                                                     onClick={requestPermissionAndSubscribe}
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    className="mt-4 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[11px] uppercase tracking-wider font-extrabold py-2 px-5 rounded-full shadow-xl shadow-emerald-200/50 hover:shadow-emerald-300 transition-all border border-emerald-400"
+                                                    whileHover={{ scale: 1.02, y: -0.5 }}
+                                                    whileTap={{ scale: 0.97 }}
+                                                    className="mt-3 flex items-center justify-center gap-1.5 bg-emerald-600 text-white text-[10px] uppercase tracking-wider font-extrabold py-1.5 px-4 rounded-xl shadow-sm hover:bg-emerald-700 border border-emerald-500 transition-all duration-300"
                                                 >
-                                                    <Bell size={14} className="animate-pulse" />
-                                                    Enable Alerts
+                                                    <Bell size={11} className="animate-pulse" />
+                                                    Enable Notifications
                                                 </motion.button>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="px-6 sm:px-8 pb-8">
+                                    <div className="px-5 sm:px-6 pb-6 sm:pb-8 pt-0">
                                         {!checkInTime ? (
-                                            <div className="text-center py-2 space-y-6">
-                                                <div className="bg-slate-50 p-6 rounded-3xl border border-dashed border-slate-200">
-                                                    <h3 className="font-bold text-slate-700 text-lg mb-4">Start your day</h3>
+                                            <div className="text-center space-y-4">
+                                                <div className="bg-slate-50/50 p-5 sm:p-6 rounded-[1.8rem] border border-slate-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.015)]">
+                                                    <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 mb-4 text-center">Ready to begin your session?</h3>
                                                     <div className="grid grid-cols-2 gap-4">
-                                                        <motion.button whileHover={{ y: -3 }} whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Office')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-3 p-5 bg-white shadow-sm border border-slate-100 hover:border-emerald-200 hover:shadow-emerald-100/50 rounded-2xl transition-all disabled:opacity-70 group">
-                                                            <div className="bg-emerald-50 p-3 rounded-xl text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors"><Briefcase size={24} /></div>
-                                                            <span className="font-bold text-slate-700 text-sm">Office</span>
+                                                        <motion.button
+                                                            whileHover={{ y: -2, scale: 1.02 }}
+                                                            whileTap={{ scale: 0.97 }}
+                                                            onClick={() => handleCheckIn('Office')}
+                                                            disabled={loadingStates['check-in']}
+                                                            className="flex flex-col items-center justify-center gap-2.5 p-4 sm:p-5 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] border border-slate-100 hover:border-emerald-500 rounded-[1.5rem] transition-all duration-300 disabled:opacity-70 group"
+                                                        >
+                                                            <div className="bg-emerald-50 text-emerald-600 p-3 rounded-xl border border-emerald-100/55 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300 shadow-sm"><Briefcase size={18} className="stroke-[2.5]" /></div>
+                                                            <span className="font-extrabold text-slate-700 text-xs sm:text-[13px] tracking-tight group-hover:text-slate-900 transition-colors">At Office</span>
                                                         </motion.button>
-                                                        <motion.button whileHover={{ y: -3 }} whileTap={{ scale: 0.95 }} onClick={() => handleCheckIn('Home')} disabled={loadingStates['check-in']} className="flex flex-col items-center justify-center gap-3 p-5 bg-white shadow-sm border border-slate-100 hover:border-indigo-200 hover:shadow-indigo-100/50 rounded-2xl transition-all disabled:opacity-70 group">
-                                                            <div className="bg-indigo-50 p-3 rounded-xl text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white transition-colors"><Home size={24} /></div>
-                                                            <span className="font-bold text-slate-700 text-sm">Remote</span>
+                                                        <motion.button
+                                                            whileHover={{ y: -2, scale: 1.02 }}
+                                                            whileTap={{ scale: 0.97 }}
+                                                            onClick={() => handleCheckIn('Home')}
+                                                            disabled={loadingStates['check-in']}
+                                                            className="flex flex-col items-center justify-center gap-2.5 p-4 sm:p-5 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] border border-slate-100 hover:border-indigo-500 rounded-[1.5rem] transition-all duration-300 disabled:opacity-70 group"
+                                                        >
+                                                            <div className="bg-indigo-50 text-indigo-600 p-3 rounded-xl border border-indigo-100/55 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300 shadow-sm"><Home size={18} className="stroke-[2.5]" /></div>
+                                                            <span className="font-extrabold text-slate-700 text-xs sm:text-[13px] tracking-tight group-hover:text-slate-900 transition-colors">Work Remote</span>
                                                         </motion.button>
                                                     </div>
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="space-y-6">
-                                                <div className={`text-center rounded-3xl p-6 border shadow-sm relative overflow-hidden transition-all duration-500 ${isOnBreak ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'}`}>
-                                                    <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${isOnBreak ? 'text-amber-600' : 'text-emerald-600'}`}>{isOnBreak ? 'On Break' : 'Currently Working'}</p>
-                                                    <div className={`text-5xl font-extrabold tracking-tighter my-2 tabular-nums ${isOnBreak ? 'text-amber-700' : 'text-emerald-700'}`}>{elapsedTime}</div>
-                                                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${isOnBreak ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                                        {isOnBreak ? <Coffee size={12} /> : <Clock size={12} />}
+                                            <div className="space-y-5">
+                                                <div className={`text-center rounded-2xl p-5 border relative overflow-hidden transition-all duration-500 shadow-sm ${isOnBreak
+                                                        ? 'bg-amber-50/40 border-amber-200'
+                                                        : 'bg-emerald-50/30 border-emerald-200'
+                                                    }`}>
+                                                    {/* Clear view: subtle single-color glowing light instead of muddy gradient radial blur */}
+                                                    <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-28 h-28 blur-3xl rounded-full opacity-15 pointer-events-none ${isOnBreak ? 'bg-amber-400' : 'bg-emerald-400'}`}></div>
+
+                                                    <div className="flex items-center justify-center gap-1.5 mb-1.5 relative z-10">
+                                                        <span className="relative flex h-2 w-2">
+                                                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isOnBreak ? 'bg-amber-400' : 'bg-emerald-400'}`}></span>
+                                                            <span className={`relative inline-flex rounded-full h-2 w-2 ${isOnBreak ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                                                        </span>
+                                                        <p className={`text-[10px] font-extrabold uppercase tracking-widest ${isOnBreak ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                                            {isOnBreak ? 'On Break' : 'Session Active'}
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Premium solid-color text and scale-pulse animation on time change */}
+                                                    <motion.div
+                                                        key={elapsedTime}
+                                                        initial={{ scale: 0.98, opacity: 0.95 }}
+                                                        animate={{ scale: 1, opacity: 1 }}
+                                                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                                        className={`text-[2.6rem] sm:text-[2.85rem] font-black font-mono tracking-tight my-1.5 tabular-nums leading-none relative z-10 transition-colors duration-500 ${isOnBreak ? 'text-amber-700' : 'text-emerald-700'
+                                                            }`}
+                                                    >
+                                                        {elapsedTime}
+                                                    </motion.div>
+
+                                                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold tracking-wide uppercase border relative z-10 transition-colors duration-500 ${isOnBreak
+                                                            ? 'bg-amber-100/50 text-amber-800 border-amber-200'
+                                                            : 'bg-emerald-100/50 text-emerald-800 border-emerald-200'
+                                                        }`}>
+                                                        {isOnBreak ? <Coffee size={10} className="stroke-[2.5]" /> : <Clock size={10} className="stroke-[2.5]" />}
                                                         Checked in: {new Date(checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </div>
 
                                                     <AnimatePresence>
                                                         {isOnBreak && (
-                                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-4 pt-4 border-t border-amber-200/50">
-                                                                <p className="text-xs font-bold text-amber-600/70 mb-1">BREAK DURATION</p>
-                                                                <p className="text-2xl font-bold text-amber-800">{elapsedBreakTime}</p>
+                                                            <motion.div
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: 'auto', opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                className="mt-3 pt-3 border-t border-dashed border-amber-200 relative z-10"
+                                                            >
+                                                                <div className="bg-white rounded-xl p-3 border border-amber-200 shadow-sm">
+                                                                    <p className="text-[9px] font-extrabold text-amber-600 tracking-widest mb-1 uppercase">Break Taken</p>
+                                                                    <p className="font-mono text-2xl font-black tracking-tight text-amber-700">{elapsedBreakTime}</p>
+                                                                </div>
                                                             </motion.div>
                                                         )}
                                                     </AnimatePresence>
                                                 </div>
 
-                                                <div className="bg-white p-1 rounded-2xl border border-slate-100 shadow-sm">
-                                                    <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What are you working on today?" rows={3} className="w-full px-4 py-3 border-none bg-transparent rounded-xl focus:ring-0 text-slate-700 placeholder-slate-400 text-sm resize-none" disabled={isOnBreak} />
+                                                <div>
+                                                    <div className="flex items-center justify-between px-1.5 mb-2 select-none">
+                                                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                                            <Edit size={13} className="text-emerald-500 stroke-[2.5]" />
+                                                            <span>Current Activity Log</span>
+                                                        </div>
+                                                        {description.trim().length > 0 && (
+                                                            <motion.span
+                                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                                animate={{ opacity: 1, scale: 1 }}
+                                                                className="text-[9px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-600 px-2.5 py-0.5 rounded-md border border-emerald-100/50"
+                                                            >
+                                                                Active
+                                                            </motion.span>
+                                                        )}
+                                                    </div>
+                                                    <div className={`transition-all duration-300 rounded-[1.4rem] border overflow-hidden ${highlightDescription
+                                                            ? 'border-emerald-500 ring-4 ring-emerald-500/5 shadow-md shadow-emerald-500/5 bg-white'
+                                                            : 'border-slate-200/80 shadow-sm hover:border-slate-300 bg-slate-50/45 hover:bg-slate-50 focus-within:bg-white focus-within:border-emerald-500/80 focus-within:ring-4 focus-within:ring-emerald-500/5 focus-within:shadow-[0_12px_24px_rgba(0,0,0,0.02)]'
+                                                        }`}>
+                                                        <textarea
+                                                            id="description"
+                                                            value={description}
+                                                            onChange={(e) => setDescription(e.target.value)}
+                                                            placeholder="What are you working on today?"
+                                                            rows={2}
+                                                            className="w-full px-5 py-4 border-none bg-transparent focus:ring-0 text-slate-700 placeholder-slate-400/80 text-xs sm:text-sm resize-none leading-relaxed font-semibold transition-all"
+                                                            disabled={isOnBreak}
+                                                        />
+                                                    </div>
                                                 </div>
 
                                                 <div className="grid grid-cols-2 gap-3">
                                                     {!isOnBreak ? (
                                                         <>
-                                                            <motion.button whileTap={{ scale: 0.95 }} onClick={handleBreakIn} disabled={loadingStates['break-in']} className="flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70">{loadingStates['break-in'] ? <ButtonLoader /> : <Coffee size={18} />} Break</motion.button>
-                                                            <motion.button whileTap={{ scale: 0.95 }} onClick={handleCheckOut} disabled={loadingStates['checkout']} className="flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70 shadow-lg shadow-rose-200">{loadingStates['checkout'] ? <ButtonLoader /> : <LogOut size={18} />} Check Out</motion.button>
+                                                            <motion.button
+                                                                whileHover={{ y: -1, scale: 1.02 }}
+                                                                whileTap={{ scale: 0.97 }}
+                                                                onClick={handleBreakIn}
+                                                                disabled={loadingStates['break-in']}
+                                                                className="flex items-center justify-center gap-2 bg-amber-500 text-white font-extrabold py-2.5 px-4 rounded-xl transition-all disabled:opacity-70 shadow-sm hover:bg-amber-600 border border-amber-600/10 text-xs sm:text-sm active:scale-95"
+                                                            >
+                                                                {loadingStates['break-in'] ? <ButtonLoader /> : <Coffee size={16} className="stroke-[2.5] shrink-0" />} Break
+                                                            </motion.button>
+                                                            <motion.button
+                                                                whileHover={{ y: -1, scale: 1.02 }}
+                                                                whileTap={{ scale: 0.97 }}
+                                                                onClick={handleCheckOut}
+                                                                disabled={loadingStates['checkout']}
+                                                                className="flex items-center justify-center gap-2 bg-rose-500 text-white font-extrabold py-2.5 px-4 rounded-xl transition-all disabled:opacity-70 shadow-sm hover:bg-rose-600 border border-rose-600/10 text-xs sm:text-sm active:scale-95"
+                                                            >
+                                                                {loadingStates['checkout'] ? <ButtonLoader /> : <LogOut size={16} className="stroke-[2.5] shrink-0" />} Check Out
+                                                            </motion.button>
                                                         </>
                                                     ) : (
-                                                        <motion.button whileTap={{ scale: 0.95 }} onClick={handleBreakOut} disabled={loadingStates['break-out']} className="col-span-2 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 px-4 rounded-2xl transition-all disabled:opacity-70 shadow-lg shadow-emerald-200">{loadingStates['break-out'] ? <ButtonLoader /> : <Play size={18} />} Resume Work</motion.button>
+                                                        <motion.button
+                                                            whileHover={{ y: -1, scale: 1.02 }}
+                                                            whileTap={{ scale: 0.97 }}
+                                                            onClick={handleBreakOut}
+                                                            disabled={loadingStates['break-out']}
+                                                            className="col-span-2 flex items-center justify-center gap-2 bg-emerald-500 text-white font-extrabold py-2.5 px-4 rounded-xl transition-all disabled:opacity-70 shadow-sm hover:bg-emerald-600 border border-emerald-600/10 text-xs sm:text-sm active:scale-95"
+                                                        >
+                                                            {loadingStates['break-out'] ? <ButtonLoader /> : <Play size={16} className="stroke-[2.5] fill-current shrink-0" />} Resume Work
+                                                        </motion.button>
                                                     )}
                                                 </div>
                                             </div>
@@ -2586,43 +3064,78 @@ export default function Workspace({ user, canAccessHub }) {
                             <motion.div className="xl:col-span-8 space-y-6 sm:space-y-8" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
 
                                 {/* Task Board */}
-                                <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-                                    <div className="px-6 sm:px-8 py-5 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/30">
-                                        <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-3">
-                                            <div className="bg-green-600 text-white p-2 rounded-xl"><Briefcase size={20} /></div>
+                                <div className="bg-white/90 backdrop-blur-xl rounded-[2.2rem] border border-slate-200/60 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.03)] overflow-hidden relative group/board">
+                                    <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200/50 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/40 relative z-10">
+                                        <h2 className="text-base sm:text-lg font-black text-slate-800 flex items-center gap-3 tracking-tight">
+                                            <motion.div
+                                                animate={{
+                                                    rotate: [0, -10, 10, -5, 5, 0],
+                                                    y: [0, -1, 0]
+                                                }}
+                                                transition={{
+                                                    duration: 2.5,
+                                                    ease: "easeInOut",
+                                                    repeat: Infinity,
+                                                    repeatDelay: 4.5
+                                                }}
+                                                className="bg-emerald-50 text-emerald-600 p-2.5 rounded-xl border border-emerald-100 shadow-sm"
+                                            >
+                                                <Briefcase size={16} className="stroke-[2.5]" />
+                                            </motion.div>
                                             Task Board
                                         </h2>
-                                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={() => setIsPersonalTaskModalOpen(true)} className="flex items-center gap-2 text-sm font-bold bg-emerald-50 text-emerald-600 px-5 py-2.5 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-colors shadow-sm">
-                                            <Plus size={18} strokeWidth={3} /> Add Personal Task
+                                        <motion.button
+                                            whileHover={{ y: -1.5, scale: 1.02 }}
+                                            whileTap={{ scale: 0.97 }}
+                                            onClick={() => setIsPersonalTaskModalOpen(true)}
+                                            className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white px-4 py-2.5 rounded-xl border border-emerald-200/50 hover:border-emerald-500 transition-all duration-300 shadow-sm active:scale-95"
+                                        >
+                                            <Plus size={13} strokeWidth={3} /> Add Personal Task
                                         </motion.button>
                                     </div>
 
                                     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 p-6 min-h-[500px] bg-slate-50/30">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 p-5 min-h-[480px] bg-slate-50/20 relative z-10">
                                             <TaskColumn title="To Do" tasks={taskColumns['To Do']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} onOpenDetails={setSelectedTaskDetails} />
                                             <TaskColumn title="In Progress" tasks={taskColumns['In Progress']} onUpdateTaskStatus={handleUpdateTaskStatus} onOpenSubmitModal={setTaskToSubmit} onOpenDetails={setSelectedTaskDetails} />
 
-                                            {/* Completed Column (Compact & Limited) */}
-                                            <div className="bg-white/40 p-1 rounded-3xl h-full flex flex-col">
-                                                <div className="flex items-center justify-between mb-3 p-3 rounded-2xl bg-gradient-to-b from-emerald-50/50 to-transparent">
-                                                    <h2 className="font-bold text-sm flex items-center gap-2 text-emerald-800">
-                                                        <div className="bg-emerald-100 p-1.5 rounded-lg"><CheckCircle size={14} className="text-emerald-600" /></div>
+                                            {/* Completed Column (Compact & Symmetrical) */}
+                                            <div className="bg-white/60 backdrop-blur-md p-4 rounded-[2.2rem] border border-slate-200/65 shadow-[0_4px_25px_-12px_rgba(0,0,0,0.02)] h-full flex flex-col min-h-[480px] transition-all duration-300 hover:shadow-md hover:bg-white/85">
+                                                <div className="flex items-center justify-between mb-4 p-3 rounded-2xl bg-emerald-50/20 border border-slate-100">
+                                                    <h2 className="font-black text-xs sm:text-sm flex items-center gap-2 tracking-tight text-emerald-900">
+                                                        <div className="bg-emerald-50 p-1.5 rounded-xl border border-emerald-100/50 shadow-sm">
+                                                            <CheckCircle size={12} className="text-emerald-600 stroke-[2.5] shrink-0" />
+                                                        </div>
                                                         Done
                                                     </h2>
-                                                    <span className="text-[10px] font-bold bg-white shadow-sm text-emerald-600 px-2 py-0.5 rounded-lg border border-emerald-100">{taskColumns['Completed'].length}</span>
+                                                    <span className="text-[10px] font-extrabold bg-white text-emerald-600 px-2.5 py-0.5 rounded-lg border border-emerald-100 shadow-sm">
+                                                        {taskColumns['Completed'].length}
+                                                    </span>
                                                 </div>
-                                                <div className="space-y-3 h-full overflow-y-auto px-1 pb-4 custom-scrollbar">
+                                                <div className="space-y-3 h-full overflow-y-auto px-0.5 pb-4 custom-scrollbar">
                                                     {taskColumns['Completed'].length > 0 ? (
                                                         <>
-                                                            {taskColumns['Completed'].slice(0, 2).map(task => <CompletedTaskCard key={task._id} task={task} onOpenDetails={setSelectedTaskDetails} />)}
+                                                            {taskColumns['Completed'].slice(0, 2).map(task => (
+                                                                <CompletedTaskCard
+                                                                    key={task._id}
+                                                                    task={task}
+                                                                    onOpenDetails={setSelectedTaskDetails}
+                                                                />
+                                                            ))}
                                                             {taskColumns['Completed'].length > 2 && (
-                                                                <Link href="/tasks/completed" className="block text-center mt-4 py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
+                                                                <Link
+                                                                    href="/tasks/completed"
+                                                                    className="block text-center mt-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100/70 rounded-xl transition-all border border-emerald-250/20 active:scale-[0.98]"
+                                                                >
                                                                     View All {taskColumns['Completed'].length} Tasks
                                                                 </Link>
                                                             )}
                                                         </>
                                                     ) : (
-                                                        <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50"><Star className="mx-auto h-8 w-8 text-slate-300 mb-1" /><p className="text-[10px] font-semibold text-slate-400">Empty</p></div>
+                                                        <div className="text-center py-10 border-2 border-dashed border-slate-200/80 rounded-[1.5rem] bg-slate-50/30 flex flex-col items-center justify-center gap-2 group hover:border-emerald-300 hover:bg-emerald-50/10 transition-all duration-300">
+                                                            <Star className="mx-auto h-7 w-7 text-slate-400 mb-1 group-hover:scale-110 group-hover:text-emerald-500 transition-all duration-300" />
+                                                            <p className="text-[10px] font-extrabold text-slate-400">Empty Column</p>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
@@ -2681,29 +3194,29 @@ export default function Workspace({ user, canAccessHub }) {
             {/* Premium Promotion Celebration Modal */}
             <AnimatePresence>
                 {showPromotionModal && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }} 
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                         className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex justify-center items-center p-4"
                     >
-                        <motion.div 
-                            initial={{ scale: 0.9, y: 20, opacity: 0 }} 
-                            animate={{ scale: 1, y: 0, opacity: 1 }} 
-                            exit={{ scale: 0.9, y: 20, opacity: 0 }} 
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.9, y: 20, opacity: 0 }}
                             transition={{ type: "spring", bounce: 0.5 }}
                             className="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-md w-full text-center relative overflow-hidden border border-white/50"
                         >
                             {/* Decorative Background */}
-                            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-emerald-400 to-teal-600 z-0"></div>
-                            
+                            <div className="absolute top-0 left-0 w-full h-32 bg-emerald-600 z-0"></div>
+
                             <div className="relative z-10 pt-12">
                                 <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl border-4 border-white">
                                     <span className="text-5xl">🎉</span>
                                 </div>
-                                
+
                                 <h3 className="text-3xl font-black text-slate-800 tracking-tight mb-2">Congratulations!</h3>
-                                
+
                                 <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 my-6">
                                     <p className="text-sm font-medium text-slate-500 mb-3">You have been officially promoted</p>
                                     <div className="flex items-center justify-center gap-3">
@@ -2720,9 +3233,9 @@ export default function Workspace({ user, canAccessHub }) {
                                 <p className="text-sm text-slate-600 font-medium mb-8">
                                     Continue the journey with Gecko OMS. Your hard work has paid off, and we're excited to see what you'll achieve next.
                                 </p>
-                                
-                                <button 
-                                    onClick={handleAcknowledgePromotion} 
+
+                                <button
+                                    onClick={handleAcknowledgePromotion}
                                     disabled={isAcknowledgingPromotion}
                                     className="w-full py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-95 disabled:opacity-50"
                                 >
@@ -2730,6 +3243,74 @@ export default function Workspace({ user, canAccessHub }) {
                                 </button>
                             </div>
                         </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Premium Overtime Check-out Reminder Toast */}
+            <AnimatePresence>
+                {showOvertimeNotification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                        className="fixed bottom-6 right-6 z-[9999] max-w-sm w-full bg-white/80 backdrop-blur-xl border border-slate-200/50 rounded-2xl shadow-2xl p-5 overflow-hidden transition-all duration-300 hover:shadow-emerald-500/10"
+                    >
+                        {/* Premium Glow effect */}
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl -mr-6 -mt-6"></div>
+
+                        <div className="flex gap-4 items-start relative z-10">
+                            <div className="flex-shrink-0 relative">
+                                <div className="p-3 bg-emerald-600 rounded-xl text-white shadow-md shadow-emerald-600/10">
+                                    <Clock size={20} className="animate-spin-slow shrink-0" />
+                                </div>
+                                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-500 border border-white"></span>
+                                </span>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-600">Gecko Alert</span>
+                                    <button
+                                        onClick={() => {
+                                            setShowOvertimeNotification(false);
+                                            setHasDismissedOvertime(true);
+                                        }}
+                                        className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                                <h4 className="text-sm font-bold text-slate-800 leading-snug">
+                                    Working overtime? 🚀
+                                </h4>
+                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                                    You've been checked in for over <strong>7 hours</strong> today. Would you like to log overtime or check out?
+                                </p>
+
+                                <div className="flex gap-2 mt-4">
+                                    <button
+                                        onClick={() => {
+                                            setShowOvertimeNotification(false);
+                                            setHasDismissedOvertime(true);
+                                            toast.success("Overtime logged! Keep up the great work. 🚀");
+                                        }}
+                                        className="flex-1 py-2 px-3 text-center text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all shadow-sm active:scale-95"
+                                    >
+                                        Log Overtime
+                                    </button>
+                                    <button
+                                        onClick={handleOvertimeCheckout}
+                                        className="flex-1 py-2 px-3 text-center text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all active:scale-95 border border-emerald-100"
+                                    >
+                                        Check Out
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
