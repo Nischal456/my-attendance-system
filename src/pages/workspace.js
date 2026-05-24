@@ -1986,8 +1986,6 @@ export default function Workspace({ user, canAccessHub }) {
     const [isAcknowledgingPromotion, setIsAcknowledgingPromotion] = useState(false);
 
     // Overtime Check-out Reminder State
-    const [showOvertimeNotification, setShowOvertimeNotification] = useState(false);
-    const [hasDismissedOvertime, setHasDismissedOvertime] = useState(false);
     const [highlightDescription, setHighlightDescription] = useState(false);
 
     const breakTimerRef = useRef(null);
@@ -2192,32 +2190,7 @@ export default function Workspace({ user, canAccessHub }) {
     }, [checkInTime]);
     useEffect(() => { const timer = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(timer); }, []);
 
-    // Monitor for check-in duration exceeding 7 hours (25,200 seconds)
-    useEffect(() => {
-        if (checkInTime && !hasDismissedOvertime) {
-            const checkOvertime = () => {
-                const now = new Date(Date.now() + timeOffset);
-                const start = new Date(checkInTime);
-                const elapsedSeconds = Math.floor((now - start) / 1000);
-                if (elapsedSeconds >= 25200) {
-                    setShowOvertimeNotification(true);
-                }
-            };
-            checkOvertime();
-            const interval = setInterval(checkOvertime, 10000); // Check every 10 seconds
-            return () => clearInterval(interval);
-        } else {
-            setShowOvertimeNotification(false);
-        }
-    }, [checkInTime, hasDismissedOvertime]);
 
-    // Reset overtime notification state on check out
-    useEffect(() => {
-        if (!checkInTime) {
-            setHasDismissedOvertime(false);
-            setShowOvertimeNotification(false);
-        }
-    }, [checkInTime]);
 
     useEffect(() => {
         if (breakTimerRef.current) {
@@ -2307,25 +2280,7 @@ export default function Workspace({ user, canAccessHub }) {
         setAttendance(prev => [result.data, ...prev]);
     }, `Checked in from ${location}!`);
 
-    const handleOvertimeCheckout = () => {
-        setShowOvertimeNotification(false);
-        setHasDismissedOvertime(true);
-        const descEl = document.getElementById('description');
-        if (descEl) {
-            descEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => {
-                descEl.focus();
-                setHighlightDescription(true);
-                setTimeout(() => {
-                    setHighlightDescription(false);
-                }, 4000);
-            }, 800);
-        }
-        toast('Please enter your work description and click Check Out.', {
-            icon: '⏳',
-            duration: 5000
-        });
-    };
+
 
     const handleCheckOut = () => handleAction('checkout', async () => {
         if (!description.trim()) throw new Error('Work description is required.');
@@ -3247,73 +3202,7 @@ export default function Workspace({ user, canAccessHub }) {
                 )}
             </AnimatePresence>
 
-            {/* Premium Overtime Check-out Reminder Toast */}
-            <AnimatePresence>
-                {showOvertimeNotification && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 50, scale: 0.9 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                        className="fixed bottom-6 right-6 z-[9999] max-w-sm w-full bg-white/80 backdrop-blur-xl border border-slate-200/50 rounded-2xl shadow-2xl p-5 overflow-hidden transition-all duration-300 hover:shadow-emerald-500/10"
-                    >
-                        {/* Premium Glow effect */}
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl -mr-6 -mt-6"></div>
 
-                        <div className="flex gap-4 items-start relative z-10">
-                            <div className="flex-shrink-0 relative">
-                                <div className="p-3 bg-emerald-600 rounded-xl text-white shadow-md shadow-emerald-600/10">
-                                    <Clock size={20} className="animate-spin-slow shrink-0" />
-                                </div>
-                                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-500 border border-white"></span>
-                                </span>
-                            </div>
-
-                            <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-600">Gecko Alert</span>
-                                    <button
-                                        onClick={() => {
-                                            setShowOvertimeNotification(false);
-                                            setHasDismissedOvertime(true);
-                                        }}
-                                        className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                                <h4 className="text-sm font-bold text-slate-800 leading-snug">
-                                    Working overtime? 🚀
-                                </h4>
-                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                    You've been checked in for over <strong>7 hours</strong> today. Would you like to log overtime or check out?
-                                </p>
-
-                                <div className="flex gap-2 mt-4">
-                                    <button
-                                        onClick={() => {
-                                            setShowOvertimeNotification(false);
-                                            setHasDismissedOvertime(true);
-                                            toast.success("Overtime logged! Keep up the great work. 🚀");
-                                        }}
-                                        className="flex-1 py-2 px-3 text-center text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all shadow-sm active:scale-95"
-                                    >
-                                        Log Overtime
-                                    </button>
-                                    <button
-                                        onClick={handleOvertimeCheckout}
-                                        className="flex-1 py-2 px-3 text-center text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all active:scale-95 border border-emerald-100"
-                                    >
-                                        Check Out
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </>
     );
 }

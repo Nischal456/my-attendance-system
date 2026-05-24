@@ -24,28 +24,42 @@ export default async function handler(req, res) {
   await dbConnect();
 
   try {
-    // Threshold: 7 hours ago
-    const thresholdDate = new Date(Date.now() - 7 * 60 * 60 * 1000);
-
     // Find attendances that:
     // 1. Have not checked out
-    // 2. Checked in MORE than 7 hours ago
-    // 3. Haven't been notified yet
-    const overdueAttendances = await Attendance.find({
-      checkOutTime: { $exists: false }, // Using $exists or null check based on schema structure
-      checkInTime: { $lte: thresholdDate },
+    // 2. Haven't been notified of overtime yet
+    const activeAttendances = await Attendance.find({
+      checkOutTime: { $exists: false },
       overtimeNotified: { $ne: true }
-    }).populate('user', 'name pushSubscriptions');
+    }).populate('user', 'name role pushSubscriptions');
 
-    // Also try checking explicit nulls just in case
-    const overdueAttendancesNull = await Attendance.find({
+    const activeAttendancesNull = await Attendance.find({
       checkOutTime: null,
-      checkInTime: { $lte: thresholdDate },
       overtimeNotified: { $ne: true }
-    }).populate('user', 'name pushSubscriptions');
+    }).populate('user', 'name role pushSubscriptions');
 
     // Combine and deduplicate
-    const allOverdue = [...new Map([...overdueAttendances, ...overdueAttendancesNull].map(item => [item._id.toString(), item])).values()];
+    const allActive = [...new Map([...activeAttendances, ...activeAttendancesNull].map(item => [item._id.toString(), item])).values()];
+
+    // Filter by role-specific thresholds:
+    // Intern: 7 hours (7 * 60 * 60 * 1000 ms)
+    // Trainee: 8 hours (8 * 60 * 60 * 1000 ms)
+    const allOverdue = allActive.filter(record => {
+      if (!record.user || !record.checkInTime) return false;
+      
+      const role = record.user.role;
+      const elapsedMs = Date.now() - new Date(record.checkInTime).getTime();
+      const elapsedHours = elapsedMs / (1000 * 60 * 60);
+
+      if (role === 'Intern') {
+        return elapsedHours >= 7;
+      }
+      if (role === 'Trainee') {
+        return elapsedHours >= 8;
+      }
+      
+      // Other roles are ignored for check-out warning push notifications
+      return false;
+    });
 
     if (allOverdue.length === 0) {
       return res.status(200).json({ success: true, message: 'No overdue checkouts found.' });
@@ -67,7 +81,7 @@ export default async function handler(req, res) {
       await Notification.create({
         recipient: userId,
         author: 'System Monitor',
-        content: `Hey ${userName}, you have been checked in for over 7 hours. Did you forget to checkout?`,
+        content: `Hey ${userName}, you haven't checked out. Please, did you forget to check out?`,
         link: '/workspace'
       });
 
@@ -75,7 +89,7 @@ export default async function handler(req, res) {
       if (record.user.pushSubscriptions && record.user.pushSubscriptions.length > 0) {
         const pushPayload = {
           title: 'Checkout Reminder ⏰',
-          body: `Hey ${userName}, you've been working for over 7 hours! Don't forget to check out.`,
+          body: `Hey ${userName}, you haven't checked out. Please, did you forget to check out?`,
           url: '/workspace'
         };
 
