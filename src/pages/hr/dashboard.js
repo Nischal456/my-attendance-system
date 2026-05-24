@@ -538,7 +538,7 @@ const StaffView = ({ allUsers, onUpdateUser }) => {
     const [statusFilter, setStatusFilter] = useState('Active'); // 'Active' or 'Alumni'
     const [selectedUser, setSelectedUser] = useState(null);
 
-    const roles = ['All', 'Manager', 'Staff', 'Intern', 'HR', 'Finance'];
+    const roles = ['All', 'Manager', 'Staff', 'Intern', 'Trainee', 'Project Manager', 'HR', 'Finance', 'Superadmin'];
 
     // Smart Filtering
     const filteredUsers = useMemo(() => {

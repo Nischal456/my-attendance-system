@@ -30,7 +30,7 @@ export default async function handler(req, res) {
             { $group: { _id: "$user", totalSeconds: { $sum: "$duration" } } },
             { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "userDetails" } },
             { $unwind: "$userDetails" },
-            { $match: { "userDetails.role": { $in: ['Staff', 'Intern', 'Manager', 'Project Manager'] } } },
+            { $match: { "userDetails.role": { $in: ['Staff', 'Intern', 'Trainee', 'Manager', 'Project Manager', 'HR', 'Finance', 'Superadmin'] } } },
             { $project: { _id: 0, userId: "$userDetails._id", name: "$userDetails.name", totalHours: { $divide: ["$totalSeconds", 3600] } } },
             { $sort: { name: 1 } }
         ]);
