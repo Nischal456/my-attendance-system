@@ -7,7 +7,8 @@ import {
     DollarSign, Send, CreditCard, Bell, ArrowUpRight, ArrowDownLeft,
     X as XIcon, CheckCircle, Download, Globe, Layers,
     Trash2, Target, Search, Grid, Activity,
-    Facebook, Instagram, Linkedin, Video, AlertTriangle, AlertCircle
+    Facebook, Instagram, Linkedin, Video, AlertTriangle, AlertCircle,
+    Eye, EyeOff, BarChart2
 } from 'react-feather';
 import { Sparkles, ArrowLeft } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -38,9 +39,21 @@ const modalContent = {
     exit: { scale: 0.95, opacity: 0, y: 10, transition: { duration: 0.15 } }
 };
 
-// --- Helper Functions ---
-const formatCurrency = (amount) => `Rs. ${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(amount || 0)}`;
-const formatUSD = (amount) => `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount || 0)}`;
+// --- Helper Functions & Haptic Feedback ---
+let globalIsBalanceHidden = false;
+const formatCurrency = (amount) => globalIsBalanceHidden ? 'Rs. ••••' : `Rs. ${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(amount || 0)}`;
+const formatUSD = (amount) => globalIsBalanceHidden ? '$ ••••' : `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount || 0)}`;
+
+const triggerHaptic = (pattern = 50) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try {
+            navigator.vibrate(pattern);
+        } catch (e) {
+            // Ignore fail-silent
+        }
+    }
+};
+
 const formatDate = (dateString, includeTime = false) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -167,37 +180,157 @@ const DashboardEntryLoader = ({ userName }) => (
     </motion.div>
 );
 
-// 2. Stat Card (Glassmorphism)
-const StatCard = memo(({ title, value, icon, color }) => (
-    <motion.div variants={fadeInUp} className="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex items-start gap-5 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-100/40 hover:-translate-y-1 group transform-gpu">
-        <div className={`w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 shadow-sm ${color.bg} text-white`}>
-            <div className={`${color.iconColor || 'text-current'}`}>{icon}</div>
-        </div>
-        <div>
-            <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase mb-1">{title}</p>
-            <p className={`text-2xl sm:text-3xl font-black tracking-tight ${color.text}`}>{value}</p>
-        </div>
-    </motion.div>
-));
-StatCard.displayName = "StatCard";
+// 2. Unified Stats Widget (Unified Premium Box)
+const UnifiedStatsWidget = memo(({ summary, balance, refetchData, isBalanceHidden, onTogglePrivacy }) => {
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleSync = async () => {
+        triggerHaptic(60);
+        setIsSyncing(true);
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        await refetchData();
+        setIsSyncing(false);
+        triggerHaptic([40, 40]);
+        toast.success("secure bank ledger synchronized and verified with 100% accuracy!", {
+            id: 'bank-sync-toast',
+            duration: 4000,
+            icon: '🔒'
+        });
+    };
+
+    return (
+        <motion.div
+            variants={fadeInUp}
+            className="bg-white rounded-[2.5rem] p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-slate-100 w-full transition-all duration-300 hover:shadow-xl hover:shadow-emerald-100/10 transform-gpu relative overflow-hidden"
+        >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none -mr-8 -mt-8"></div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 divide-y-0 divide-x-0 sm:divide-x sm:divide-slate-100/80">
+                {/* 1. Income */}
+                <div className="group flex flex-col justify-between p-3 sm:p-4 rounded-2xl hover:bg-slate-50/50 transition-all duration-300 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300">
+                            <TrendingUp size={16} />
+                        </div>
+                        <span className="text-[10px] font-extrabold text-slate-400 tracking-widest uppercase truncate">Income</span>
+                    </div>
+                    <div className="flex items-baseline gap-1 min-w-0">
+                        <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-800 truncate font-mono">
+                            {formatCurrency(summary.totalIncome)}
+                        </span>
+                    </div>
+                </div>
+
+                {/* 2. Expense */}
+                <div className="group flex flex-col justify-between p-3 sm:p-4 lg:pl-6 rounded-2xl hover:bg-slate-50/50 transition-all duration-300 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-110 group-hover:rotate-[-6deg] transition-transform duration-300">
+                            <TrendingDown size={16} />
+                        </div>
+                        <span className="text-[10px] font-extrabold text-slate-400 tracking-widest uppercase truncate">Expense</span>
+                    </div>
+                    <div className="flex items-baseline gap-1 min-w-0">
+                        <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-800 truncate font-mono">
+                            {formatCurrency(summary.totalExpenses)}
+                        </span>
+                    </div>
+                </div>
+
+                {/* 3. Net Profit */}
+                <div className="group flex flex-col justify-between p-3 sm:p-4 lg:pl-6 rounded-2xl hover:bg-slate-50/50 transition-all duration-300 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-110 group-hover:-translate-y-0.5 transition-transform duration-300">
+                            <BarChart2 size={16} />
+                        </div>
+                        <span className="text-[10px] font-extrabold text-slate-400 tracking-widest uppercase truncate">Net Profit</span>
+                    </div>
+                    <div className="flex items-baseline gap-1 min-w-0">
+                        <span className={`text-xl sm:text-2xl font-black tracking-tight truncate font-mono ${summary.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {formatCurrency(summary.netProfit)}
+                        </span>
+                    </div>
+                </div>
+
+                {/* 4. Bank Balance Widget */}
+                <div className="group flex flex-col justify-between p-3 sm:p-4 lg:pl-6 rounded-2xl hover:bg-slate-50/50 transition-all duration-300 min-w-0 relative">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300">
+                                <CreditCard size={16} />
+                            </div>
+                            <span className="text-[10px] font-extrabold text-slate-400 tracking-widest uppercase truncate">Bank Balance</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {/* Sync Button */}
+                            <button
+                                onClick={handleSync}
+                                disabled={isSyncing}
+                                className="p-1 hover:bg-slate-100 text-slate-400 hover:text-blue-600 rounded-lg transition-all active:scale-90 border border-slate-200/50 shadow-sm bg-white cursor-pointer flex items-center justify-center"
+                                title="Synchronize ledger"
+                            >
+                                <svg
+                                    className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-blue-500' : ''}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="3.5"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
+                            </button>
+                            {/* Privacy Toggle */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); triggerHaptic(40); onTogglePrivacy(); }}
+                                className="p-1 hover:bg-slate-100 text-slate-400 hover:text-emerald-600 rounded-lg transition-all active:scale-90 border border-slate-200/50 shadow-sm bg-white cursor-pointer flex items-center justify-center"
+                                title={isBalanceHidden ? "Show balance" : "Hide balance"}
+                            >
+                                {isBalanceHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                        <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 truncate font-mono">
+                            {formatCurrency(balance)}
+                        </span>
+
+                        {/* Live Sync badge */}
+                        <motion.div
+                            animate={{ y: [0, -2, 0] }}
+                            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                            className="flex items-center gap-1 bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wide border border-emerald-100/50 shadow-sm flex-shrink-0"
+                        >
+                            <span className="relative flex h-1 w-1">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-1 w-1 bg-emerald-500"></span>
+                            </span>
+                            <span>Live balance</span>
+                        </motion.div>
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
+});
+UnifiedStatsWidget.displayName = "UnifiedStatsWidget";
 
 // 3. Profit Margin Widget (Doughnut Chart)
 const ProfitMarginWidget = ({ income, expense }) => {
     const profit = income - expense;
     const margin = income > 0 ? Math.round((profit / income) * 100) : 0;
-    const color = margin > 20 ? '#10b981' : margin > 0 ? '#f59e0b' : '#f43f5e';
-    const data = { labels: ['Margin', 'Cost'], datasets: [{ data: [Math.max(0, margin), 100 - Math.max(0, margin)], backgroundColor: [color, '#f1f5f9'], borderWidth: 0, circumference: 230, rotation: 245, cutout: '85%' }] };
+    const clampedMargin = Math.min(100, Math.max(0, margin));
+    const isHealthy = clampedMargin > 20;
+    const color = isHealthy ? '#10b981' : clampedMargin > 0 ? '#f59e0b' : '#f43f5e';
+    const data = { labels: ['Margin', 'Cost'], datasets: [{ data: [clampedMargin, 100 - clampedMargin], backgroundColor: [color, '#f1f5f9'], borderWidth: 0, circumference: 230, rotation: 245, cutout: '85%' }] };
 
     return (
         <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col items-center justify-center h-full relative overflow-hidden group hover:shadow-lg transition-all duration-500 min-h-[220px]">
             <div className="w-full flex justify-between items-center mb-2 z-10 relative">
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Activity size={14} className="text-emerald-500" /> Profit Margin</h3>
-                <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wide border ${margin > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>{margin > 0 ? 'Healthy' : 'Critical'}</span>
+                <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wide border ${isHealthy ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>{clampedMargin > 0 ? 'Healthy' : 'Critical'}</span>
             </div>
             <div className="relative w-40 h-40 z-10 mt-2 flex justify-center items-center">
                 <Doughnut data={data} options={{ plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 2000, easing: 'easeOutQuart' }, maintainAspectRatio: false }} />
                 <div className="absolute inset-0 flex items-center justify-center flex-col">
-                    <span className="text-4xl font-black text-slate-800 tracking-tighter">{margin}%</span>
+                    <span className="text-4xl font-black text-slate-800 tracking-tighter">{clampedMargin}%</span>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mt-1">Efficiency</p>
                 </div>
             </div>
@@ -205,22 +338,40 @@ const ProfitMarginWidget = ({ income, expense }) => {
     );
 };
 
-// 4. Quick Actions Grid
+// 4. Quick Actions Grid (Premium Deposit & Withdraw Buttons Only)
 const ActionCard = ({ onAction }) => (
-    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 h-full flex flex-col">
-        <h2 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><Grid size={18} className="text-emerald-500" /> Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-4 h-full">
-            {[
-                { label: 'Income', icon: <Plus size={24} />, color: 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-600 hover:text-white', action: 'Income' },
-                { label: 'Expense', icon: <Minus size={24} />, color: 'bg-rose-50 text-rose-700 border-rose-100 hover:bg-rose-600 hover:text-white', action: 'Expense' },
-                { label: 'Deposit', icon: <ArrowUpRight size={24} />, color: 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-600 hover:text-white', action: 'Deposit' },
-                { label: 'Withdraw', icon: <ArrowDownLeft size={24} />, color: 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-500 hover:text-white', action: 'Withdrawal' }
-            ].map((btn) => (
-                <button key={btn.label} onClick={() => onAction(btn.action)} className={`${btn.color} font-bold p-4 rounded-[1.5rem] border flex flex-col items-center justify-center gap-3 transition-all duration-200 hover:-translate-y-1 shadow-sm hover:shadow-lg w-full h-full min-h-[110px] aspect-[4/3] group active:scale-95`}>
-                    <div className="p-3 bg-white/80 backdrop-blur-sm rounded-full shadow-sm group-hover:bg-white/20 group-hover:text-current transition-colors">{btn.icon}</div>
-                    <span className="text-xs font-bold uppercase tracking-wider">{btn.label}</span>
-                </button>
-            ))}
+    <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 h-full flex flex-col justify-between min-h-[220px]">
+        <div>
+            <h2 className="text-lg font-black text-slate-800 mb-0.5 flex items-center gap-2"><Grid size={18} className="text-emerald-500" /> Quick Actions</h2>
+            <p className="text-[11px] text-slate-400 font-bold mb-4 tracking-wide leading-none">Manage bank transactions instantly</p>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+            <button
+                onClick={() => {
+                    triggerHaptic(40);
+                    onAction('Deposit');
+                }}
+                className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold p-4 rounded-[2rem] border border-emerald-400/20 flex flex-col items-center justify-center gap-2.5 transition-all duration-300 hover:-translate-y-1.5 shadow-[0_10px_20px_rgba(16,185,129,0.15)] hover:shadow-[0_20px_35px_rgba(16,185,129,0.35)] w-full min-h-[105px] group/btn active:scale-95 transform-gpu cursor-pointer text-center"
+            >
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                <div className="p-2 bg-white/20 shadow-inner rounded-xl group-hover/btn:bg-white group-hover/btn:text-emerald-600 transition-all duration-300 text-white transform group-hover/btn:rotate-90 flex items-center justify-center">
+                    <Plus size={18} className="stroke-[3]" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white text-center w-full block leading-none">Deposit</span>
+            </button>
+            <button
+                onClick={() => {
+                    triggerHaptic(40);
+                    onAction('Withdrawal');
+                }}
+                className="relative overflow-hidden bg-gradient-to-br from-rose-500 to-orange-600 text-white font-bold p-4 rounded-[2rem] border border-rose-400/20 flex flex-col items-center justify-center gap-2.5 transition-all duration-300 hover:-translate-y-1.5 shadow-[0_10px_20px_rgba(244,63,94,0.15)] hover:shadow-[0_20px_35px_rgba(244,63,94,0.35)] w-full min-h-[105px] group/btn active:scale-95 transform-gpu cursor-pointer text-center"
+            >
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                <div className="p-2 bg-white/20 shadow-inner rounded-xl group-hover/btn:bg-white group-hover/btn:text-rose-600 transition-all duration-300 text-white transform group-hover/btn:scale-110 flex items-center justify-center">
+                    <Minus size={18} className="stroke-[3]" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white text-center w-full block leading-none">Withdraw</span>
+            </button>
         </div>
     </div>
 );
@@ -262,10 +413,10 @@ const NotificationDropdown = ({ isOpen, notifications, onClose, onMarkRead }) =>
 );
 
 // 6. Dollar Spend Card (Credit Card Style)
-const DollarCardWidget = ({ dollarData, dollarBalance, auditLogs, onAddClick, onLoadClick, onItemClick, onDelete }) => {
+const DollarCardWidget = ({ dollarData, dollarBalance, auditLogs, onAddClick, onLoadClick, onItemClick, onDelete, isBalanceHidden, onTogglePrivacy }) => {
     const recentActivity = [...dollarData].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+        <div id="cards-widget" className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
             {/* Virtual Card */}
             <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.3 }} className="relative h-80 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-emerald-900/20 bg-[#0f172a] group transform-gpu">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 via-[#0f172a] to-slate-900 opacity-100"></div>
@@ -275,13 +426,35 @@ const DollarCardWidget = ({ dollarData, dollarBalance, auditLogs, onAddClick, on
                 {/* Card Content */}
                 <div className="relative p-8 flex flex-col justify-between h-full text-white z-10">
                     <div className="flex justify-between items-start">
-                        <div><p className="text-emerald-200/80 text-[10px] font-black tracking-[0.2em] uppercase mb-2">ADS DOLLAR FUND</p><h3 className="text-5xl font-black tracking-tighter text-white drop-shadow-sm">{formatUSD(dollarBalance)}</h3></div>
+                        <div>
+                            <p className="text-emerald-200/80 text-[10px] font-black tracking-[0.2em] uppercase mb-2">ADS DOLLAR FUND</p>
+                            <div className="flex items-center gap-3">
+                                <h3 className="text-5xl font-black tracking-tighter text-white drop-shadow-sm">{formatUSD(dollarBalance)}</h3>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onTogglePrivacy(); }}
+                                    className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all active:scale-90 flex-shrink-0 cursor-pointer"
+                                    title={isBalanceHidden ? "Show balance" : "Hide balance"}
+                                >
+                                    {isBalanceHidden ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
+                        </div>
                         <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner"><Globe size={24} className="text-emerald-200" /></div>
                     </div>
                     <div className="mt-auto">
                         <div className="flex gap-3 mb-8">
-                            <button onClick={onLoadClick} className="bg-white text-slate-900 text-xs font-bold py-3 px-6 rounded-xl flex items-center gap-2 transition-all hover:bg-emerald-50 shadow-lg hover:shadow-emerald-900/20 active:scale-95"><ArrowDownLeft size={16} /> Load Fund</button>
-                            <button onClick={onAddClick} className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-3 px-6 rounded-xl border border-white/10 flex items-center gap-2 transition-all backdrop-blur-sm active:scale-95"><Minus size={16} /> Record Spend</button>
+                            <button
+                                onClick={onLoadClick}
+                                className="h-11 px-5 rounded-2xl bg-white text-slate-900 hover:bg-slate-50 hover:scale-[1.02] shadow-lg shadow-black/10 flex items-center justify-center gap-2 transition-all text-xs font-black uppercase tracking-wider cursor-pointer active:scale-95 border border-transparent"
+                            >
+                                <ArrowDownLeft size={16} /> Load Fund
+                            </button>
+                            <button
+                                onClick={onAddClick}
+                                className="h-11 px-5 rounded-2xl bg-white/10 hover:bg-white/20 hover:scale-[1.02] text-white border border-white/15 flex items-center justify-center gap-2 transition-all text-xs font-black uppercase tracking-wider cursor-pointer active:scale-95"
+                            >
+                                <Minus size={16} /> Record Spend
+                            </button>
                         </div>
                         <div className="flex justify-between items-end opacity-90">
                             <div><div className="flex items-center gap-3 mb-1"><div className="flex -space-x-2"><div className="w-8 h-8 rounded-full bg-rose-500/80 border-2 border-slate-900 backdrop-blur-md"></div><div className="w-8 h-8 rounded-full bg-amber-400/80 border-2 border-slate-900 backdrop-blur-md"></div></div><span className="text-sm text-emerald-100/60 font-mono tracking-widest">•••• 5869</span></div></div>
@@ -391,17 +564,23 @@ const NotificationCard = ({ allUsers, onSubmit, content, setContent, targetUser,
     </div>
 );
 
-// 8. Transaction Row (Optimized)
-const TransactionRow = memo(({ transaction, remainingBalance, onRowClick, onDelete, index }) => {
+// 8. Transaction Row (Optimized Hover Interactions)
+const TransactionRow = memo(({ transaction, remainingBalance, onRowClick, index }) => {
     const isIncome = transaction.type === 'Income' || transaction.type === 'Deposit';
     return (
         <motion.div
-            variants={modalContent}
-            layout
-            onClick={onRowClick}
-            className="bg-white p-4 sm:p-5 rounded-[1.5rem] shadow-sm border border-slate-100 hover:shadow-lg hover:border-emerald-100 transition-all duration-300 cursor-pointer group relative overflow-hidden pr-3 sm:pr-4 transform-gpu"
+            whileHover={{ y: -3, scale: 1.008 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className={`relative overflow-hidden rounded-[1.5rem] bg-white shadow-sm border border-slate-100/80 transition-all duration-300 ${isIncome
+                ? "hover:border-emerald-200/80 hover:shadow-[0_12px_30px_-5px_rgba(16,185,129,0.12)]"
+                : "hover:border-rose-200/80 hover:shadow-[0_12px_30px_-5px_rgba(244,63,94,0.12)]"
+                }`}
         >
-            <div className="flex items-center justify-between relative z-10 w-full">
+            {/* Foreground Row Card */}
+            <div
+                onClick={onRowClick}
+                className="bg-white p-4 sm:p-5 flex items-center justify-between cursor-pointer w-full transform-gpu"
+            >
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1 mr-2">
                     <div className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-2xl shadow-sm ${isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                         {isIncome ? <ArrowUpRight size={20} /> : <ArrowDownLeft size={20} />}
@@ -429,15 +608,10 @@ const TransactionRow = memo(({ transaction, remainingBalance, onRowClick, onDele
                     </div>
                 </div>
 
-                <div className="text-right flex-shrink-0 transition-transform duration-300 group-hover:-translate-x-12">
+                <div className="text-right flex-shrink-0">
                     <p className={`text-base sm:text-lg font-black ${isIncome ? 'text-emerald-600' : 'text-slate-800'}`}>{isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}</p>
-                    {/* ✅ CHANGED Ref ID to Bal: Remaining Balance */}
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">Bal: {formatCurrency(remainingBalance)}</p>
                 </div>
-            </div>
-
-            <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white via-white to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
-                <button onClick={(e) => { e.stopPropagation(); onDelete(transaction._id); }} className="p-3 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-full shadow-md transition-all transform scale-90 group-hover:scale-100 hover:rotate-90"><Trash2 size={18} /></button>
             </div>
         </motion.div>
     );
@@ -447,14 +621,14 @@ TransactionRow.displayName = "TransactionRow";
 // --- Modals (Standard) ---
 const TransactionModal = ({ type, onClose, onSuccess }) => {
     let defaultCategory = 'General';
-    if (type === 'Income') defaultCategory = 'Client Payment';
-    if (type === 'Expense') defaultCategory = 'Office Supplies';
+    if (type === 'Income' || type === 'Deposit') defaultCategory = 'Bank Deposit';
+    if (type === 'Expense' || type === 'Withdrawal') defaultCategory = 'Bank Withdrawal';
     const [formData, setFormData] = useState({ title: '', amount: '', category: defaultCategory, date: new Date().toISOString().split('T')[0], description: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
     const handleSubmit = async (e) => {
         e.preventDefault(); setIsSubmitting(true);
-        try { const res = await fetch('/api/finance/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, type }) }); if (!res.ok) throw new Error('Failed'); toast.success('Logged successfully!'); await onSuccess(); onClose(); } catch (err) { toast.error(err.message); } finally { setIsSubmitting(false); }
+        try { const res = await fetch('/api/finance/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, type }) }); if (!res.ok) throw new Error('Failed'); triggerHaptic([40, 40]); toast.success('Logged successfully!'); await onSuccess(); onClose(); } catch (err) { toast.error(err.message); } finally { setIsSubmitting(false); }
     };
     return (
         <motion.div variants={modalBackdrop} initial="initial" animate="animate" exit="exit" className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[80] flex justify-center items-center p-4">
@@ -492,7 +666,7 @@ const AddDollarSpendModal = ({ onClose, onSuccess }) => {
     const [formData, setFormData] = useState({ companyName: '', platform: 'Facebook', campaignName: '', amount: '', exchangeRate: '135.0' });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const platforms = [{ id: 'Facebook', icon: <Facebook size={18} />, color: 'bg-blue-600' }, { id: 'Instagram', icon: <Instagram size={18} />, color: 'bg-pink-600' }, { id: 'Google', icon: <Globe size={18} />, color: 'bg-red-500' }, { id: 'LinkedIn', icon: <Linkedin size={18} />, color: 'bg-blue-700' }, { id: 'TikTok', icon: <Video size={18} />, color: 'bg-black' }];
-    const handleSubmit = async (e) => { e.preventDefault(); setIsSubmitting(true); try { const res = await fetch('/api/finance/dollar-spend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, type: 'Spend' }) }); if (!res.ok) throw new Error('Failed'); toast.success('Spend recorded!'); await onSuccess(); onClose(); } catch (error) { toast.error(error.message); } finally { setIsSubmitting(false); } };
+    const handleSubmit = async (e) => { e.preventDefault(); setIsSubmitting(true); try { const res = await fetch('/api/finance/dollar-spend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, type: 'Spend' }) }); if (!res.ok) throw new Error('Failed'); triggerHaptic([40, 40]); toast.success('Spend recorded!'); await onSuccess(); onClose(); } catch (error) { toast.error(error.message); } finally { setIsSubmitting(false); } };
     return (
         <motion.div variants={modalBackdrop} initial="initial" animate="animate" exit="exit" className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[60] flex justify-center items-center p-4">
             <motion.div variants={modalContent} className="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-md border border-white/60">
@@ -516,7 +690,7 @@ const AddDollarSpendModal = ({ onClose, onSuccess }) => {
 
 const LoadFundsModal = ({ onClose, onSuccess }) => {
     const [amount, setAmount] = useState(''); const [rate, setRate] = useState('135.0'); const [isSubmitting, setIsSubmitting] = useState(false);
-    const handleSubmit = async (e) => { e.preventDefault(); setIsSubmitting(true); try { const res = await fetch('/api/finance/dollar-spend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'Load', amount, exchangeRate: rate }) }); if (!res.ok) throw new Error('Failed'); toast.success(`Loaded $${amount} successfully!`); await onSuccess(); onClose(); } catch (error) { toast.error(error.message); } finally { setIsSubmitting(false); } };
+    const handleSubmit = async (e) => { e.preventDefault(); setIsSubmitting(true); try { const res = await fetch('/api/finance/dollar-spend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'Load', amount, exchangeRate: rate }) }); if (!res.ok) throw new Error('Failed'); triggerHaptic([40, 40]); toast.success(`Loaded $${amount} successfully!`); await onSuccess(); onClose(); } catch (error) { toast.error(error.message); } finally { setIsSubmitting(false); } };
     return (
         <motion.div variants={modalBackdrop} initial="initial" animate="animate" exit="exit" className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[70] flex justify-center items-center p-4">
             <div className="bg-white rounded-[2.5rem] shadow-2xl p-8 w-full max-w-md border border-white/60">
@@ -555,7 +729,7 @@ const DollarDetailModal = ({ transaction, onClose }) => {
     );
 };
 
-const TransactionDetailModal = ({ transaction, onClose }) => (
+const TransactionDetailModal = ({ transaction, onClose, onDelete }) => (
     <AnimatePresence>
         {transaction && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex justify-center items-center p-4">
@@ -583,11 +757,78 @@ const TransactionDetailModal = ({ transaction, onClose }) => (
                             </div>
                         );
                     })()}
+
+                    {/* Actions Panel */}
+                    <div className="mt-8 flex justify-end gap-3 border-t border-slate-100 pt-6">
+                        <button
+                            onClick={onClose}
+                            className="px-5 py-2.5 rounded-2xl border border-slate-200 text-slate-500 hover:bg-slate-50 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer active:scale-95"
+                        >
+                            Close
+                        </button>
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                                triggerHaptic(60);
+                                onDelete(transaction);
+                            }}
+                            className="px-5 py-2.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-rose-200 transition-all cursor-pointer"
+                        >
+                            <Trash2 size={14} className="stroke-[2.5] text-white" /> Delete Transaction
+                        </motion.button>
+                    </div>
                 </motion.div>
             </div>
         )}
     </AnimatePresence>
 );
+
+// --- Delete Confirmation Modal (Premium Dialog) ---
+const DeleteConfirmModal = ({ transaction, onClose, onConfirm }) => {
+    return (
+        <motion.div
+            variants={modalBackdrop}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex justify-center items-center p-4"
+        >
+            <motion.div
+                variants={modalContent}
+                className="bg-white rounded-[2.5rem] shadow-2xl p-8 w-full max-w-md relative overflow-hidden border border-white/60 text-center"
+            >
+                {/* Visual warning icon with soft red pulse */}
+                <div className="mx-auto w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6 animate-pulse shadow-inner">
+                    <AlertTriangle size={32} className="stroke-[2.5]" />
+                </div>
+
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight mb-2">Delete Transaction?</h3>
+                <p className="text-slate-500 font-medium text-sm px-2 leading-relaxed mb-6">
+                    Are you absolutely sure you want to delete <span className="font-extrabold text-slate-800">"{transaction.title}"</span>? This action is permanent and will adjust your balance by <span className="font-mono font-black text-rose-600">{formatCurrency(transaction.amount)}</span>.
+                </p>
+
+                {/* Actions Panel */}
+                <div className="flex gap-4">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-500 hover:bg-slate-50 font-bold text-xs uppercase tracking-widest transition-all cursor-pointer active:scale-95"
+                    >
+                        Cancel
+                    </button>
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={onConfirm}
+                        className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 text-white font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-rose-200 transition-all cursor-pointer"
+                    >
+                        <Trash2 size={14} className="stroke-[2.5] text-white" /> Delete
+                    </motion.button>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+};
 
 // --- Main Finance Dashboard Component ---
 export default function FinanceDashboard({ financeUser, allUsers, initialTransactions, canAccessHub }) {
@@ -601,6 +842,12 @@ export default function FinanceDashboard({ financeUser, allUsers, initialTransac
     const [allUsersList, setAllUsersList] = useState(allUsers);
     const [notifications, setNotifications] = useState([]);
     const [auditLogs, setAuditLogs] = useState([]);
+
+    // Privacy Mode State
+    const [isBalanceHidden, setIsBalanceHidden] = useState(false);
+    useEffect(() => {
+        globalIsBalanceHidden = isBalanceHidden;
+    }, [isBalanceHidden]);
     const [unreadAuditCount, setUnreadAuditCount] = useState(0);
     const [dollarData, setDollarData] = useState([]);
     const [dollarBalance, setDollarBalance] = useState(0);
@@ -610,6 +857,7 @@ export default function FinanceDashboard({ financeUser, allUsers, initialTransac
     const [isLoadFundsModalOpen, setIsLoadFundsModalOpen] = useState(false);
     const [viewingDollarTransaction, setViewingDollarTransaction] = useState(null);
     const [viewingTransaction, setViewingTransaction] = useState(null);
+    const [transactionToDelete, setTransactionToDelete] = useState(null);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
     // Filter States
@@ -715,8 +963,18 @@ export default function FinanceDashboard({ financeUser, allUsers, initialTransac
         setAuditLogs(prev => prev.map(log => ({ ...log, isRead: true })));
     };
 
-    const handleDeleteTransaction = async (id) => { if (!confirm("Are you sure? This affects the balance.")) return; try { const res = await fetch(`/api/finance/transactions?id=${id}`, { method: 'DELETE' }); if (!res.ok) throw new Error("Failed"); toast.success("Deleted."); refetchData(); } catch (e) { toast.error(e.message); } };
-    const handleDeleteDollarSpend = async (id) => { if (!confirm("Delete record?")) return; try { const res = await fetch(`/api/finance/dollar-spend?id=${id}`, { method: 'DELETE' }); if (!res.ok) throw new Error("Failed"); toast.success("Deleted."); refetchData(); } catch (e) { toast.error(e.message); } };
+    const handleDeleteTransaction = async (id) => {
+        try {
+            const res = await fetch(`/api/finance/transactions?id=${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error("Failed");
+            triggerHaptic(70);
+            toast.success("Deleted successfully.");
+            refetchData();
+        } catch (e) {
+            toast.error(e.message);
+        }
+    };
+    const handleDeleteDollarSpend = async (id) => { if (!confirm("Delete record?")) return; try { const res = await fetch(`/api/finance/dollar-spend?id=${id}`, { method: 'DELETE' }); if (!res.ok) throw new Error("Failed"); triggerHaptic(70); toast.success("Deleted."); refetchData(); } catch (e) { toast.error(e.message); } };
 
     const handleSendNotification = async (e) => { e.preventDefault(); if (!notificationContent.trim() || !targetUser) return toast.error('Check fields.'); setIsSending(true); try { const res = await fetch('/api/finance/send-notification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: notificationContent, targetUser }) }); if (!res.ok) throw new Error("Failed"); toast.success('Sent!'); setNotificationContent(''); } catch (err) { toast.error("Error sending."); } finally { setIsSending(false); } };
 
@@ -747,7 +1005,7 @@ export default function FinanceDashboard({ financeUser, allUsers, initialTransac
     if (showSplash) return <AnimatePresence mode="wait"><DashboardEntryLoader key="loader" userName={financeUser.name} /></AnimatePresence>;
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 selection:bg-emerald-100 selection:text-emerald-900 flex flex-col">
+        <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 selection:bg-emerald-100 selection:text-emerald-900 flex flex-col pb-24 md:pb-8">
             {/* Background Gradients */}
             <div className="fixed inset-0 overflow-hidden -z-0 pointer-events-none">
                 <div className="absolute top-0 -left-48 w-[40rem] h-[40rem] bg-emerald-200/30 rounded-full filter blur-[120px] opacity-50"></div>
@@ -774,8 +1032,25 @@ export default function FinanceDashboard({ financeUser, allUsers, initialTransac
                 </Link>
 
                 <div className="flex items-center gap-3">
+                    {/* Privacy Mode Eye Toggle */}
+                    <button
+                        onClick={() => {
+                            triggerHaptic(60);
+                            setIsBalanceHidden(prev => !prev);
+                            toast.success(isBalanceHidden ? "Balances displayed safely." : "Balances hidden for your privacy!", {
+                                id: 'privacy-toast',
+                                duration: 2000,
+                                icon: isBalanceHidden ? '🔓' : '🔒'
+                            });
+                        }}
+                        className="p-2.5 text-slate-500 hover:text-emerald-600 hover:bg-white bg-slate-100/50 rounded-xl transition-all active:scale-90 cursor-pointer flex items-center justify-center"
+                        title={isBalanceHidden ? "Show balances" : "Hide balances"}
+                    >
+                        {isBalanceHidden ? <EyeOff size={20} className="stroke-[2.5]" /> : <Eye size={20} className="stroke-[2.5]" />}
+                    </button>
+
                     <div ref={notificationDropdownRef} className="relative">
-                        <button onClick={() => setIsNotificationOpen(!isNotificationOpen)} className="p-2.5 text-slate-500 hover:text-emerald-600 hover:bg-white bg-slate-100/50 rounded-xl transition-all relative">
+                        <button onClick={() => setIsNotificationOpen(!isNotificationOpen)} className="p-2.5 text-slate-500 hover:text-emerald-600 hover:bg-white bg-slate-100/50 rounded-xl transition-all relative cursor-pointer">
                             <Bell size={20} />
                             {unreadNotifications.length > 0 && <span className="absolute top-2 right-2.5 h-2.5 w-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>}
                         </button>
@@ -816,12 +1091,13 @@ export default function FinanceDashboard({ financeUser, allUsers, initialTransac
                 <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.1 } } }} className="space-y-6 lg:space-y-8">
 
                     {/* Stats Row */}
-                    <motion.div variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                        <StatCard title="Income (Selected Period)" value={formatCurrency(summary.totalIncome)} icon={<TrendingUp className="text-emerald-600" />} color={{ bg: 'bg-emerald-50', text: 'text-emerald-900' }} />
-                        <StatCard title="Expense (Selected Period)" value={formatCurrency(summary.totalExpenses)} icon={<TrendingDown className="text-rose-600" />} color={{ bg: 'bg-rose-50', text: 'text-rose-900' }} />
-                        <StatCard title="Net Profit" value={formatCurrency(summary.netProfit)} icon={<DollarSign className="text-indigo-600" />} color={{ bg: 'bg-indigo-50', text: 'text-indigo-900' }} />
-                        <StatCard title="Current Available Balance" value={formatCurrency(bankAccount.balance)} icon={<CreditCard className="text-blue-600" />} color={{ bg: 'bg-blue-50', text: 'text-blue-900' }} />
-                    </motion.div>
+                    <UnifiedStatsWidget
+                        summary={summary}
+                        balance={bankAccount.balance}
+                        refetchData={refetchData}
+                        isBalanceHidden={isBalanceHidden}
+                        onTogglePrivacy={() => setIsBalanceHidden(prev => !prev)}
+                    />
 
                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8">
 
@@ -832,9 +1108,11 @@ export default function FinanceDashboard({ financeUser, allUsers, initialTransac
                                     dollarData={dollarData}
                                     dollarBalance={dollarBalance}
                                     auditLogs={auditLogs}
-                                    onAddClick={() => setIsDollarModalOpen(true)}
-                                    onLoadClick={() => setIsLoadFundsModalOpen(true)}
-                                    onItemClick={(transaction) => setViewingDollarTransaction(transaction)}
+                                    isBalanceHidden={isBalanceHidden}
+                                    onTogglePrivacy={() => setIsBalanceHidden(prev => !prev)}
+                                    onAddClick={() => { triggerHaptic(40); setIsDollarModalOpen(true); }}
+                                    onLoadClick={() => { triggerHaptic(40); setIsLoadFundsModalOpen(true); }}
+                                    onItemClick={(transaction) => { triggerHaptic(40); setViewingDollarTransaction(transaction); }}
                                     onDelete={(id) => handleDeleteDollarSpend(id)}
                                 />
                             </div>
@@ -891,7 +1169,6 @@ export default function FinanceDashboard({ financeUser, allUsers, initialTransac
                                                     remainingBalance={t.runningBalance} // Accurate historical balance!
                                                     index={index}
                                                     onRowClick={() => setViewingTransaction(t)}
-                                                    onDelete={(id) => handleDeleteTransaction(id)}
                                                 />
                                             ))
                                         ) : (
@@ -914,8 +1191,98 @@ export default function FinanceDashboard({ financeUser, allUsers, initialTransac
                 {isDollarModalOpen && <AddDollarSpendModal onClose={() => setIsDollarModalOpen(false)} onSuccess={refetchData} />}
                 {isLoadFundsModalOpen && <LoadFundsModal onClose={() => setIsLoadFundsModalOpen(false)} onSuccess={refetchData} />}
                 {viewingDollarTransaction && <DollarDetailModal transaction={viewingDollarTransaction} onClose={() => setViewingDollarTransaction(null)} />}
+                {transactionToDelete && (
+                    <DeleteConfirmModal
+                        transaction={transactionToDelete}
+                        onClose={() => setTransactionToDelete(null)}
+                        onConfirm={() => {
+                            handleDeleteTransaction(transactionToDelete._id);
+                            setTransactionToDelete(null);
+                        }}
+                    />
+                )}
             </AnimatePresence>
-            <TransactionDetailModal transaction={viewingTransaction} onClose={() => setViewingTransaction(null)} />
+            <TransactionDetailModal
+                transaction={viewingTransaction}
+                onClose={() => setViewingTransaction(null)}
+                onDelete={(t) => {
+                    setTransactionToDelete(t);
+                    setViewingTransaction(null);
+                }}
+            />
+
+            {/* Mobile Bottom Navigation Bar (Mobile Only) */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-2xl border-t border-slate-200/60 px-6 py-4 pb-6 shadow-[0_-12px_40px_rgba(0,0,0,0.08)] flex justify-around items-center">
+                {/* 1. Withdraw Tab */}
+                <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => {
+                        triggerHaptic(45);
+                        openModal('Withdrawal');
+                    }}
+                    className="flex flex-col items-center gap-1.5 text-slate-500 hover:text-rose-600 transition-all cursor-pointer bg-transparent border-none outline-none active:text-rose-600 group px-3 py-1 rounded-2xl hover:bg-rose-50/50"
+                >
+                    <div className="relative flex items-center justify-center">
+                        <Minus size={22} className="stroke-[3] group-hover:scale-110 transition-transform" />
+                        <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-rose-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider">Withdraw</span>
+                </motion.button>
+
+                {/* 2. Deposit Tab */}
+                <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => {
+                        triggerHaptic(45);
+                        openModal('Deposit');
+                    }}
+                    className="flex flex-col items-center gap-1.5 text-slate-500 hover:text-emerald-600 transition-all cursor-pointer bg-transparent border-none outline-none active:text-emerald-600 group px-3 py-1 rounded-2xl hover:bg-emerald-50/50"
+                >
+                    <div className="relative flex items-center justify-center">
+                        <Plus size={22} className="stroke-[3] group-hover:rotate-90 transition-transform" />
+                        <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider">Deposit</span>
+                </motion.button>
+
+                {/* 3. Cards Tab */}
+                <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => {
+                        triggerHaptic(45);
+                        const el = document.getElementById('cards-widget');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="flex flex-col items-center gap-1.5 text-slate-500 hover:text-blue-600 transition-all cursor-pointer bg-transparent border-none outline-none active:text-blue-600 group px-3 py-1 rounded-2xl hover:bg-blue-50/50"
+                >
+                    <div className="relative flex items-center justify-center">
+                        <CreditCard size={22} className="stroke-[2.5] group-hover:translate-y-[-1px] transition-transform" />
+                        <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider">Cards</span>
+                </motion.button>
+
+                {/* 4. Privacy Tab */}
+                <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => {
+                        triggerHaptic(60);
+                        setIsBalanceHidden(prev => !prev);
+                        toast.success(isBalanceHidden ? "Balances displayed safely." : "Balances hidden for your privacy!", {
+                            id: 'privacy-toast',
+                            duration: 2000,
+                            icon: isBalanceHidden ? '🔓' : '🔒'
+                        });
+                    }}
+                    className={`flex flex-col items-center gap-1.5 transition-all cursor-pointer bg-transparent border-none outline-none group px-3 py-1 rounded-2xl ${isBalanceHidden ? 'text-emerald-600 bg-emerald-50/50' : 'text-slate-500 hover:text-emerald-600 hover:bg-emerald-50/50'}`}
+                >
+                    <div className="relative flex items-center justify-center">
+                        {isBalanceHidden ? <EyeOff size={22} className="stroke-[2.5]" /> : <Eye size={22} className="stroke-[2.5]" />}
+                        <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider">{isBalanceHidden ? 'Masked' : 'Privacy'}</span>
+                </motion.button>
+            </div>
         </div>
     );
 }
