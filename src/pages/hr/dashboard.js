@@ -73,11 +73,30 @@ const formatDuration = (totalSeconds) => {
   return `${hours}h ${minutes}m`; 
 };
 const MIN_WORK_SECONDS = 21600; // 6 hours
+
+const getLocalDateString = (isoString) => {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getAttendanceDuration = (att) => {
+  if (!att) return 0;
+  if (att.checkOutTime) return att.duration || 0;
+  if (!att.checkInTime) return 0;
+  const elapsed = Math.floor((Date.now() - new Date(att.checkInTime).getTime()) / 1000);
+  return Math.max(0, elapsed - (att.totalBreakDuration || 0));
+};
+
 const getDurationStyle = (attendanceEntry) => { 
+  const duration = getAttendanceDuration(attendanceEntry);
   if (attendanceEntry.checkOutTime) { 
-    return attendanceEntry.duration >= MIN_WORK_SECONDS ? "text-emerald-600 font-bold" : "text-rose-500 font-bold"; 
+    return duration >= MIN_WORK_SECONDS ? "text-emerald-600 font-bold" : "text-rose-500 font-bold"; 
   } 
-  return "font-bold text-blue-500"; 
+  return duration >= MIN_WORK_SECONDS ? "text-emerald-600 font-bold" : "font-bold text-blue-500"; 
 };
 const getStatusBadge = (status) => { 
   switch (status) { 
@@ -943,17 +962,16 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
     
     if (query) { result = result.filter(att => att.user?.name.toLowerCase().includes(query) || att.user?.role.toLowerCase().includes(query)); }
     if (locationFilter) { result = result.filter(att => att.workLocation === locationFilter); }
-    if (dateRange.start) { result = result.filter(att => new Date(att.checkInTime) >= new Date(dateRange.start)); }
-    if (dateRange.end) { result = result.filter(att => new Date(att.checkInTime) <= new Date(new Date(dateRange.end).setHours(23, 59, 59, 999))); }
+    if (dateRange.start) { result = result.filter(att => getLocalDateString(att.checkInTime) >= dateRange.start); }
+    if (dateRange.end) { result = result.filter(att => getLocalDateString(att.checkInTime) <= dateRange.end); }
     return result;
   }, [searchQuery, locationFilter, dateRange, attendanceData]);
 
   const stats = useMemo(() => {
-    const completed = filteredAttendance.filter(a => a.checkOutTime);
-    const totalSeconds = completed.reduce((acc, att) => acc + (att.duration || 0), 0);
+    const totalSeconds = filteredAttendance.reduce((acc, att) => acc + getAttendanceDuration(att), 0);
     return {
       totalTime: formatDuration(totalSeconds),
-      onTarget: completed.filter(d => d.duration >= MIN_WORK_SECONDS).length,
+      onTarget: filteredAttendance.filter(d => getAttendanceDuration(d) >= MIN_WORK_SECONDS).length,
       totalCount: filteredAttendance.length
     };
   }, [filteredAttendance]);
@@ -964,7 +982,7 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
     const rows = filteredAttendance.map(a => [
       `"${a.user?.name||''}"`, `"${a.user?.role||''}"`, `"${formatEnglishDate(a.checkInTime)}"`, a.workLocation,
       new Date(a.checkInTime).toLocaleTimeString(), a.checkOutTime ? new Date(a.checkOutTime).toLocaleTimeString() : 'Active',
-      ((a.duration||0)/3600).toFixed(2), Math.round((a.totalBreakDuration||0)/60), `"${a.description||''}"`
+      (getAttendanceDuration(a)/3600).toFixed(2), Math.round((a.totalBreakDuration||0)/60), `"${a.description||''}"`
     ].join(','));
     const blob = new Blob([[...headers, ...rows].join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -1035,7 +1053,7 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
                        <span className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${att.checkOutTime?'bg-rose-500':'bg-amber-400 animate-pulse'}`}></span> {att.checkOutTime? `Out: ${new Date(att.checkOutTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}` : 'Active'}</span>
                     </div>
                   </td>
-                  <td className={`px-6 py-4 font-mono text-sm ${getDurationStyle(att)}`}>{formatDuration(att.duration)}</td>
+                  <td className={`px-6 py-4 font-mono text-sm ${getDurationStyle(att)}`}>{formatDuration(getAttendanceDuration(att))}</td>
                   <td className="px-6 py-4 font-mono text-sm text-slate-500">{formatDuration(att.totalBreakDuration)}</td>
                   <td className="px-6 py-4 max-w-xs truncate text-slate-400 italic" title={att.description}>{att.description || '—'}</td>
                   <td className="px-6 py-4 text-right">
