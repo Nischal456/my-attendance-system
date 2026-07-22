@@ -6,8 +6,8 @@ function MyApp({ Component, pageProps }) {
   return (
     <>
       <Head>
-        <title>Gecko Oms Enterprise</title>
-        <meta name="description" content="GeckoOms Enterprise platform" />
+        <title>Gecko Oms </title>
+        <meta name="description" content="GeckoOms  platform" />
         <link rel="icon" href="/favicon.ico?v=4" />
         <link rel="apple-touch-icon" href="/favicon.ico?v=4" />
       </Head>

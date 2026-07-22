@@ -9,6 +9,7 @@ const NotificationSchema = new mongoose.Schema({
     author: {
         type: String, // e.g., "John Doe (Project Manager)" or "System Security"
         required: true,
+        default: 'WorkOS System'
     },
     content: {
         type: String,
@@ -21,10 +22,13 @@ const NotificationSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    remindAt: {
+        type: Date,
+    },
     createdAt: { 
       type: Date,
       default: Date.now,
-      expires: '7d', // Automatically delete notifications after 30 days
+      expires: '30d',
     },
 }, { 
   timestamps: { createdAt: false, updatedAt: true } 

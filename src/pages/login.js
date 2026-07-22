@@ -245,8 +245,12 @@ export default function LoginPage() {
               </motion.div>
 
               {/* Animated Gradient Text */}
-              <h1 className="text-7xl font-black tracking-tighter leading-[1.1] mb-6 flex justify-center gap-1 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-emerald-800 to-slate-900 animate-text-shimmer bg-[length:200%_auto]">
-                {brandName.map((letter, i) => (<motion.span key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className={letter === " " ? "w-5" : ""}>{letter}</motion.span>))}
+              <h1 className="text-5xl xl:text-6xl font-black tracking-tight leading-normal mb-6 flex justify-center items-center whitespace-nowrap px-3 py-1 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-emerald-800 to-slate-900 animate-text-shimmer bg-[length:200%_auto]">
+                {brandName.map((letter, i) => (
+                  <motion.span key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className={letter === " " ? "w-4 inline-block" : "inline-block"}>
+                    {letter}
+                  </motion.span>
+                ))}
               </h1>
 
               <p className="text-xl text-slate-500 font-medium leading-relaxed mb-10 max-w-sm mx-auto">
@@ -365,7 +369,7 @@ export default function LoginPage() {
                       <span className="mx-4 flex-shrink-0 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Or Instant Login</span>
                       <div className="flex-grow border-t border-slate-100"></div>
                     </div>
-                    
+
                     <button
                       type="button"
                       onClick={handleBiometricLogin}
@@ -398,7 +402,7 @@ export default function LoginPage() {
       </div>
 
       <div className="fixed bottom-4 w-full text-center pointer-events-none z-40 lg:w-1/2 lg:right-0">
-        <p className="text-[10px] font-medium text-slate-400/80">&copy; 2025 GeckoOms Enterprise. All Rights Reserved.</p>
+        <p className="text-[10px] font-medium text-slate-400/80">&copy; 2025 GeckoOms . All Rights Reserved.</p>
       </div>
     </div>
   );

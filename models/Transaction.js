@@ -33,7 +33,7 @@ const TransactionSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
-  // --- ENTERPRISE AUDIT TRAIL ---
+  // ---  AUDIT TRAIL ---
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

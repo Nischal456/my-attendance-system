@@ -12,6 +12,10 @@ const NoteSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  isPinned: {
+    type: Boolean,
+    default: false,
+  },
   // Link to the user who owns this note
   user: {
     type: mongoose.Schema.Types.ObjectId,

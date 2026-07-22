@@ -64,22 +64,24 @@ export default async function handler(req, res) {
         // 2. SET REMINDER (Creates Notification & Push)
         else if (action === 'setReminder') {
             try {
-                await Notification.create({
+                const user = await User.findById(currentUserId);
+                const userName = user ? user.name : 'System';
+
+                const newNotif = await Notification.create({
                     recipient: currentUserId,
-                    content: `Reminder: ${reminderNote || 'Check Project'}`,
-                    type: 'alert',
+                    author: 'Canvas Reminder',
+                    content: `⏰ Reminder: ${reminderNote || 'Check Project'}`,
                     link: `/projects/${id}`,
                     isRead: false,
-                    remindAt: reminderDate || new Date(),
+                    remindAt: reminderDate ? new Date(reminderDate) : new Date(),
                     createdAt: new Date()
                 });
 
-                // Immediately Push Alert Confirmation
-                const user = await User.findById(currentUserId);
-                if (user && user.pushSubscriptions) {
+                // Send Web Push Notification
+                if (user && user.pushSubscriptions && user.pushSubscriptions.length > 0) {
                     const payload = JSON.stringify({
-                        title: 'WorkOS Reminder Set',
-                        body: `We will remind you about ${reminderNote || 'this project'} at the scheduled time.`,
+                        title: '⏰ Canvas Reminder Set',
+                        body: `Reminder: ${reminderNote || 'Check Project'}`,
                         url: `/projects/${id}`
                     });
                     
@@ -87,28 +89,53 @@ export default async function handler(req, res) {
                         try {
                             await sendPushNotification(sub, payload);
                         } catch (err) {
-                            console.error('Failed to send confirmation push:', err);
+                            console.error('Failed to send push notification:', err);
                         }
                     }
                 }
             } catch (e) {
-                console.log("Notification error:", e);
+                console.error("Set Reminder Notification Error:", e);
+                return res.status(500).json({ success: false, message: 'Failed to set reminder' });
             }
-            return res.status(200).json({ success: true, message: 'Reminder set' });
+            return res.status(200).json({ success: true, message: 'Reminder set successfully' });
         }
 
-        // 3. PIN TASK (Leader Only)
+        // 3. PIN TASK (Leader or Assigned Team Members)
         else if (action === 'togglePinTask') {
             const project = await Project.findById(id);
-            // Strict Leader Check
-            if (project.leader.toString() !== currentUserId) {
-                return res.status(403).json({ message: 'Only the project leader can pin tasks.' });
+            if (!project) return res.status(404).json({ message: 'Project not found' });
+
+            const isLeader = project.leader.toString() === currentUserId;
+            const isAssigned = (project.assignedTo || []).some(uId => uId.toString() === currentUserId);
+            
+            if (!isLeader && !isAssigned) {
+                return res.status(403).json({ message: 'Only project team members can pin tasks.' });
             }
             
-            // Fix: Check if task exists safely
             const task = project.tasks.id(taskId);
             if (task) {
                 task.isPinned = !task.isPinned;
+                await project.save();
+                return res.status(200).json({ success: true, data: project });
+            }
+        }
+
+        // 3b. PIN COMMENT / MESSAGE (Leader or Assigned Team Members)
+        else if (action === 'togglePinComment') {
+            const { commentId } = req.body;
+            const project = await Project.findById(id);
+            if (!project) return res.status(404).json({ message: 'Project not found' });
+
+            const isLeader = project.leader.toString() === currentUserId;
+            const isAssigned = (project.assignedTo || []).some(uId => uId.toString() === currentUserId);
+            
+            if (!isLeader && !isAssigned) {
+                return res.status(403).json({ message: 'Only project team members can pin discussion messages.' });
+            }
+            
+            const comment = project.comments.id(commentId);
+            if (comment) {
+                comment.isPinned = !comment.isPinned;
                 await project.save();
                 return res.status(200).json({ success: true, data: project });
             }

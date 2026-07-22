@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import dbConnect from '../../../../lib/dbConnect';
 import User from '../../../../models/User';
 import LeaveRequest from '../../../../models/LeaveRequest';
+import Notification from '../../../../models/Notification';
 import { sendPushNotification } from '../../../../lib/webPush';
 
 export default async function handler(req, res) {
@@ -50,25 +51,45 @@ export default async function handler(req, res) {
     // 6. Save the new leave request to the database
     await newLeaveRequest.save();
 
-    // 7. Notify HR about the new leave request via Web Push
-    const hrUsers = await User.find({ role: 'HR' }).select('pushSubscriptions');
+    // 7. Notify Managers strictly (Manager, Project Manager, HR, Superadmin) via In-App Web Notification & Web Push
+    const managerUsers = await User.find({
+      role: { $in: ['Manager', 'Project Manager', 'HR', 'Superadmin'] }
+    }).select('_id pushSubscriptions role name');
+
+    const formattedStart = new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const formattedEnd = new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
     const pushPromises = [];
-    
-    hrUsers.forEach(hr => {
-        if (hr.pushSubscriptions && hr.pushSubscriptions.length > 0) {
-            hr.pushSubscriptions.forEach(sub => {
-                pushPromises.push(
-                    sendPushNotification(sub, {
-                        title: "New Leave Request 📅",
-                        body: `${user.name} has requested ${leaveType} leave.`,
-                        url: '/hr/dashboard',
-                        icon: '/hr.png'
-                    })
-                );
-            });
-        }
-    });
-    
+
+    for (const mgr of managerUsers) {
+      // Never send to oneself if a manager applies for leave
+      if (String(mgr._id) === String(user._id)) continue;
+
+      // Create Web App In-App Notification document strictly for Manager
+      await Notification.create({
+        recipient: mgr._id,
+        author: `${user.name} (${user.role || 'Staff'})`,
+        content: `📋 Leave Request: ${user.name} has submitted a ${leaveType} request from ${formattedStart} to ${formattedEnd}. Reason: "${reason}"`,
+        link: '/hr/dashboard',
+        isRead: false,
+        createdAt: new Date(),
+      });
+
+      // Send Web Push Notification to Manager's registered devices
+      if (mgr.pushSubscriptions && mgr.pushSubscriptions.length > 0) {
+        mgr.pushSubscriptions.forEach(sub => {
+          pushPromises.push(
+            sendPushNotification(sub, {
+              title: `📋 New Leave Request: ${user.name}`,
+              body: `${user.name} requested ${leaveType} leave (${formattedStart} - ${formattedEnd}). Reason: ${reason}`,
+              url: '/hr/dashboard',
+              icon: '/hr.png'
+            })
+          );
+        });
+      }
+    }
+
     await Promise.allSettled(pushPromises);
 
     // 8. Send a success response

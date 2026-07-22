@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
-import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home, Send, Search, ArrowLeft, ArrowRight, AlertTriangle, AlertCircle } from 'react-feather';
+import { LogOut, Clock, Calendar, Coffee, CheckCircle, Play, Star, Bell, Edit, Trash2, Save, X, User as UserIcon, FileText, Briefcase, Info, CheckSquare, Paperclip, Upload, Inbox, MessageSquare, Users, List, Plus, BarChart2, TrendingUp, AlertOctagon, Home, Send, Search, ArrowLeft, ArrowRight, AlertTriangle, AlertCircle, ExternalLink, Bookmark, MapPin } from 'react-feather';
 import { Wallet } from 'lucide-react';
 import { ChevronDown, MessageSquarePlus, Fingerprint, Loader2 as LucideLoader2 } from 'lucide-react';
 import { startRegistration } from '@simplewebauthn/browser';
@@ -739,8 +739,8 @@ const DraggableTaskCard = ({ task, onUpdateTaskStatus, onOpenSubmitModal, onOpen
             <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
                 <div
                     className={`flex items-center gap-1 text-[9px] font-black tracking-wide uppercase px-2 py-0.5 rounded-lg border ${isOverdue
-                            ? 'bg-rose-50 text-rose-600 border-rose-200/30'
-                            : 'bg-slate-50 text-slate-500 border-slate-200/30'
+                        ? 'bg-rose-50 text-rose-600 border-rose-200/30'
+                        : 'bg-slate-50 text-slate-500 border-slate-200/30'
                         }`}
                 >
                     <Clock size={9} className="stroke-[2.5]" />
@@ -1129,9 +1129,9 @@ const DailyStandupReport = () => {
                     <div className="flex justify-center items-center h-48"><ButtonLoader /></div>
                 ) : filteredReports.length > 0 ? (
                     <div className={`grid ${filteredReports.length === 1 ? 'grid-cols-1' :
-                            filteredReports.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-                                filteredReports.length === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
-                                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                        filteredReports.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                            filteredReports.length === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
+                                'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                         } gap-5`}>
                         {filteredReports.map((report, idx) => {
                             const badge = getRoleBadgeStyles(report.user.role);
@@ -1951,6 +1951,44 @@ const DashboardSkeleton = () => (
 );
 
 
+// --- Shift Target & Note Link Helpers ---
+const SHIFT_TARGET_SECONDS = 8 * 3600; // 8 Hours Daily Shift Target
+
+const getElapsedSeconds = (timeStr) => {
+    if (!timeStr) return 0;
+    const parts = timeStr.split(':').map(Number);
+    if (parts.length === 3) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+        return parts[0] * 60 + parts[1];
+    }
+    return 0;
+};
+
+const renderNoteContentWithLinks = (text) => {
+    if (!text) return null;
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, idx) => {
+        if (part.match(urlRegex)) {
+            let label = part.replace(/^https?:\/\//, '');
+            if (label.length > 24) label = label.slice(0, 21) + '...';
+            return (
+                <a
+                    key={idx}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 my-1 px-3 py-1 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white font-extrabold text-[11px] shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                >
+                    <ExternalLink size={12} strokeWidth={2.5} /> {label}
+                </a>
+            );
+        }
+        return part;
+    });
+};
+
 // --- Main Component ---
 export default function Workspace({ user, canAccessHub }) {
     const router = useRouter();
@@ -2267,10 +2305,11 @@ export default function Workspace({ user, canAccessHub }) {
     };
 
     const handleCheckIn = (location) => handleAction(`check-in`, async () => {
+        const clientNow = new Date().toISOString();
         const res = await fetch('/api/attendance/checkin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ workLocation: location })
+            body: JSON.stringify({ workLocation: location, checkInTime: clientNow })
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.message);
@@ -2350,6 +2389,25 @@ export default function Workspace({ user, canAccessHub }) {
     const handleCreateNote = async (e) => { e.preventDefault(); if (!newNoteContent.trim()) return; setIsSubmittingNote(true); setError(''); try { const res = await fetch('/api/notes/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: newNoteContent }), }); if (!res.ok) throw new Error(await handleApiError(res)); const result = await res.json(); setNotes(prevNotes => [result.data, ...prevNotes]); setNewNoteContent(''); toast.success('Note saved.'); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmittingNote(false); } };
     const handleUpdateNote = async () => { if (!editingNote || !editingNote.content.trim()) return; setIsSubmittingNote(true); setError(''); try { const res = await fetch('/api/notes/edit', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ noteId: editingNote._id, content: editingNote.content }), }); if (!res.ok) throw new Error(await handleApiError(res)); const result = await res.json(); setNotes(prevNotes => prevNotes.map(n => n._id === editingNote._id ? result.data : n)); setEditingNote(null); toast.success('Note updated.'); } catch (err) { setError(err.message); toast.error(err.message); } finally { setIsSubmittingNote(false); } };
     const handleDeleteNote = async (noteId) => { if (!window.confirm('Are you sure you want to delete this note?')) return; setError(''); try { const res = await fetch('/api/notes/delete', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ noteId }), }); if (!res.ok) throw new Error(await handleApiError(res)); setNotes(prevNotes => prevNotes.filter(n => n._id !== noteId)); toast.success('Note deleted.'); } catch (err) { setError(err.message); toast.error(err.message); } };
+    const handleTogglePinNote = async (noteId, currentPinnedState) => {
+        const newPinnedState = !currentPinnedState;
+        setNotes(prevNotes => prevNotes.map(n => n._id === noteId ? { ...n, isPinned: newPinnedState } : n));
+        try {
+            const res = await fetch('/api/notes/edit', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ noteId, isPinned: newPinnedState }),
+            });
+            if (!res.ok) throw new Error('Failed to update note pin');
+            toast.success(newPinnedState ? 'Note pinned to top 📌' : 'Note unpinned');
+        } catch (err) {
+            toast.error(err.message || 'Failed to update note pin');
+            setNotes(prevNotes => prevNotes.map(n => n._id === noteId ? { ...n, isPinned: currentPinnedState } : n));
+        }
+    };
+    const sortedNotes = useMemo(() => {
+        return [...notes].sort((a, b) => (b.isPinned === a.isPinned ? 0 : b.isPinned ? 1 : -1));
+    }, [notes]);
     const handleMarkAsRead = async () => { if (unreadNotifications.length === 0) return; try { await fetch('/api/notification/mark-as-read', { method: 'POST' }); setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))); } catch (err) { console.error(err); toast.error("Failed to mark notifications as read."); } };
 
     const handleSetupBiometrics = async () => {
@@ -2494,47 +2552,46 @@ export default function Workspace({ user, canAccessHub }) {
                                 </div>
 
                                 {/* Controls Area */}
-                                <div className="flex items-center gap-2 sm:gap-6">
-                                    {/* ✅ Premium Projects Button (Compact & Aligned) */}
+                                <div className="flex items-center gap-2">
+                                    {/* ✅ Projects Canvas Button (Icon-Only on Mobile, Full Pill on Desktop) */}
                                     <Link
                                         href="/projects"
                                         className="
-    hidden lg:flex items-center gap-3 
-    pl-2 pr-5 py-1.5 
-    bg-white rounded-full 
-    shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] 
-    border border-slate-100 
-    hover:shadow-[0_4px_12px_-2px_rgba(16,185,129,0.1)] 
-    hover:border-emerald-100 
-    hover:scale-[1.01] 
-    transition-all duration-300 ease-out 
-    cursor-pointer group
-  "
+                                            p-2.5 sm:p-0
+                                            sm:pl-2 sm:pr-5 sm:py-1.5 
+                                            bg-white hover:bg-emerald-50 sm:hover:bg-white
+                                            text-slate-500 hover:text-emerald-600 sm:hover:text-slate-800
+                                            rounded-2xl sm:rounded-full 
+                                            shadow-sm border border-slate-100 
+                                            hover:border-emerald-200 sm:hover:border-emerald-100 
+                                            hover:scale-105 sm:hover:scale-[1.02] active:scale-95
+                                            transition-all duration-300 ease-out 
+                                            cursor-pointer group flex items-center justify-center gap-3
+                                        "
+                                        title="Projects Canvas"
                                     >
-                                        {/* Icon Container - Scaled down to match neighbor height */}
+                                        {/* Mobile Icon - Matches Chat & Notification buttons */}
+                                        <Grid className="h-5 w-5 sm:hidden" />
+
+                                        {/* Desktop Icon Circle */}
                                         <div className="
-    w-8 h-8 
-    bg-slate-900 rounded-full 
-    flex items-center justify-center 
-    text-white shadow-sm 
-    group-hover:bg-emerald-600 
-    transition-all duration-300
-  ">
+                                            hidden sm:flex
+                                            w-8 h-8 
+                                            bg-slate-900 rounded-full 
+                                            items-center justify-center 
+                                            text-white shadow-sm 
+                                            group-hover:bg-emerald-600 
+                                            transition-all duration-300
+                                        ">
                                             <Grid size={16} strokeWidth={2.5} />
                                         </div>
 
-                                        {/* Text Block - Tighter leading for vertical alignment */}
-                                        <div className="flex flex-col justify-center gap-[1px]">
-                                            <h3 className="
-      font-bold text-slate-800 text-sm leading-none
-      group-hover:text-emerald-700 transition-colors
-    ">
+                                        {/* Text Block - Desktop Only */}
+                                        <div className="hidden sm:flex flex-col justify-center gap-[1px]">
+                                            <h3 className="font-bold text-slate-800 text-sm leading-none group-hover:text-emerald-700 transition-colors">
                                                 Projects
                                             </h3>
-                                            <p className="
-      text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none
-      group-hover:text-emerald-600/70 transition-colors
-    ">
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none group-hover:text-emerald-600/70 transition-colors">
                                                 Canvas
                                             </p>
                                         </div>
@@ -2726,10 +2783,10 @@ export default function Workspace({ user, canAccessHub }) {
                                 <div className="bg-white/90 backdrop-blur-xl rounded-[2.2rem] border border-slate-200 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.03)] overflow-hidden relative group/profile">
                                     {/* Dynamic, clean solid header panel that follows the card's curves and provides a professional SaaS backdrop */}
                                     <div className={`absolute top-0 left-0 right-0 h-24 transition-all duration-500 border-b ${isOnBreak
-                                            ? 'bg-amber-50/40 border-amber-100'
-                                            : checkInTime
-                                                ? 'bg-emerald-50/30 border-emerald-100/50'
-                                                : 'bg-slate-50/50 border-slate-100'
+                                        ? 'bg-amber-50/40 border-amber-100'
+                                        : checkInTime
+                                            ? 'bg-emerald-50/30 border-emerald-100/50'
+                                            : 'bg-slate-50/50 border-slate-100'
                                         }`}></div>
                                     <div className="p-5 sm:p-6 pt-7 sm:pt-8 relative">
                                         <div className="flex flex-col items-center">
@@ -2746,17 +2803,17 @@ export default function Workspace({ user, canAccessHub }) {
                                                         ease: "easeInOut"
                                                     }}
                                                     className={`absolute -inset-2 rounded-[2.2rem] blur transition-all duration-500 ${isOnBreak
-                                                            ? 'bg-amber-400'
-                                                            : checkInTime
-                                                                ? 'bg-emerald-400'
-                                                                : 'bg-slate-300'
+                                                        ? 'bg-amber-400'
+                                                        : checkInTime
+                                                            ? 'bg-emerald-400'
+                                                            : 'bg-slate-300'
                                                         }`}
                                                 />
                                                 <div className={`relative z-10 p-1 rounded-[2.1rem] bg-white shadow-sm border transition-all duration-500 ${isOnBreak
-                                                        ? 'border-amber-300'
-                                                        : checkInTime
-                                                            ? 'border-emerald-300'
-                                                            : 'border-slate-200'
+                                                    ? 'border-amber-300'
+                                                    : checkInTime
+                                                        ? 'border-emerald-300'
+                                                        : 'border-slate-200'
                                                     }`}>
                                                     <Image
                                                         src={profileUser.avatar}
@@ -2781,16 +2838,16 @@ export default function Workspace({ user, canAccessHub }) {
 
                                             <div className="mt-1 flex items-center gap-1.5">
                                                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide uppercase border ${isOnBreak
-                                                        ? 'bg-amber-50 text-amber-600 border-amber-200/35'
-                                                        : checkInTime
-                                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200/35'
-                                                            : 'bg-slate-50 text-slate-500 border-slate-200/35'
+                                                    ? 'bg-amber-50 text-amber-600 border-amber-200/35'
+                                                    : checkInTime
+                                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200/35'
+                                                        : 'bg-slate-50 text-slate-500 border-slate-200/35'
                                                     }`}>
                                                     <span className={`h-1.5 w-1.5 rounded-full ${isOnBreak
-                                                            ? 'bg-amber-500 animate-pulse'
-                                                            : checkInTime
-                                                                ? 'bg-emerald-500 animate-pulse'
-                                                                : 'bg-slate-400'
+                                                        ? 'bg-amber-500 animate-pulse'
+                                                        : checkInTime
+                                                            ? 'bg-emerald-500 animate-pulse'
+                                                            : 'bg-slate-400'
                                                         }`}></span>
                                                     {profileUser.role}
                                                 </span>
@@ -2843,8 +2900,8 @@ export default function Workspace({ user, canAccessHub }) {
                                         ) : (
                                             <div className="space-y-5">
                                                 <div className={`text-center rounded-2xl p-5 border relative overflow-hidden transition-all duration-500 shadow-sm ${isOnBreak
-                                                        ? 'bg-amber-50/40 border-amber-200'
-                                                        : 'bg-emerald-50/30 border-emerald-200'
+                                                    ? 'bg-amber-50/40 border-amber-200'
+                                                    : 'bg-emerald-50/30 border-emerald-200'
                                                     }`}>
                                                     {/* Clear view: subtle single-color glowing light instead of muddy gradient radial blur */}
                                                     <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-28 h-28 blur-3xl rounded-full opacity-15 pointer-events-none ${isOnBreak ? 'bg-amber-400' : 'bg-emerald-400'}`}></div>
@@ -2872,12 +2929,59 @@ export default function Workspace({ user, canAccessHub }) {
                                                     </motion.div>
 
                                                     <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold tracking-wide uppercase border relative z-10 transition-colors duration-500 ${isOnBreak
-                                                            ? 'bg-amber-100/50 text-amber-800 border-amber-200'
-                                                            : 'bg-emerald-100/50 text-emerald-800 border-emerald-200'
+                                                        ? 'bg-amber-100/50 text-amber-800 border-amber-200'
+                                                        : 'bg-emerald-100/50 text-emerald-800 border-emerald-200'
                                                         }`}>
                                                         {isOnBreak ? <Coffee size={10} className="stroke-[2.5]" /> : <Clock size={10} className="stroke-[2.5]" />}
                                                         Checked in: {new Date(checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </div>
+
+                                                    {/* 📊 Daily Target Work Shift Ring (Visual Progress) */}
+                                                    {(() => {
+                                                        const elapsedSec = getElapsedSeconds(elapsedTime);
+                                                        const shiftPct = Math.min(100, Math.round((elapsedSec / SHIFT_TARGET_SECONDS) * 100));
+                                                        const hoursLogged = (elapsedSec / 3600).toFixed(1);
+                                                        return (
+                                                            <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col items-center">
+                                                                <div className="relative w-28 h-28 my-1 flex items-center justify-center">
+                                                                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                                                        <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="7" className="text-slate-100" fill="transparent" />
+                                                                        <motion.circle
+                                                                            cx="50"
+                                                                            cy="50"
+                                                                            r="40"
+                                                                            stroke="url(#shiftProgressGradient)"
+                                                                            strokeWidth="7"
+                                                                            strokeDasharray={251.32}
+                                                                            strokeDashoffset={251.32 - (shiftPct / 100) * 251.32}
+                                                                            strokeLinecap="round"
+                                                                            fill="transparent"
+                                                                            transition={{ duration: 0.8, ease: "easeOut" }}
+                                                                        />
+                                                                        <defs>
+                                                                            <linearGradient id="shiftProgressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                                                <stop offset="0%" stopColor="#10b981" />
+                                                                                <stop offset="50%" stopColor="#14b8a6" />
+                                                                                <stop offset="100%" stopColor="#3b82f6" />
+                                                                            </linearGradient>
+                                                                        </defs>
+                                                                    </svg>
+                                                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                                                        <span className="text-xl font-black text-slate-800 font-mono tracking-tight">{shiftPct}%</span>
+                                                                        <span className="text-[8px] font-extrabold uppercase tracking-widest text-slate-400">Shift Target</span>
+                                                                    </div>
+                                                                </div>
+                                                                <span className="mt-1 px-3 py-1 rounded-full bg-slate-100/80 text-slate-700 text-[10px] font-extrabold uppercase tracking-wider border border-slate-200/60">
+                                                                    {hoursLogged}h / 8.0h ({shiftPct}%)
+                                                                </span>
+                                                                {shiftPct >= 100 && (
+                                                                    <span className="mt-2 text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 animate-bounce">
+                                                                        🎉 8.0 Hour Daily Target Shift Completed!
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
 
                                                     <AnimatePresence>
                                                         {isOnBreak && (
@@ -2913,8 +3017,8 @@ export default function Workspace({ user, canAccessHub }) {
                                                         )}
                                                     </div>
                                                     <div className={`transition-all duration-300 rounded-[1.4rem] border overflow-hidden ${highlightDescription
-                                                            ? 'border-emerald-500 ring-4 ring-emerald-500/5 shadow-md shadow-emerald-500/5 bg-white'
-                                                            : 'border-slate-200/80 shadow-sm hover:border-slate-300 bg-slate-50/45 hover:bg-slate-50 focus-within:bg-white focus-within:border-emerald-500/80 focus-within:ring-4 focus-within:ring-emerald-500/5 focus-within:shadow-[0_12px_24px_rgba(0,0,0,0.02)]'
+                                                        ? 'border-emerald-500 ring-4 ring-emerald-500/5 shadow-md shadow-emerald-500/5 bg-white'
+                                                        : 'border-slate-200/80 shadow-sm hover:border-slate-300 bg-slate-50/45 hover:bg-slate-50 focus-within:bg-white focus-within:border-emerald-500/80 focus-within:ring-4 focus-within:ring-emerald-500/5 focus-within:shadow-[0_12px_24px_rgba(0,0,0,0.02)]'
                                                         }`}>
                                                         <textarea
                                                             id="description"
@@ -2970,37 +3074,86 @@ export default function Workspace({ user, canAccessHub }) {
                                 <MyStatsWidget tasks={tasks} attendance={attendance} />
                                 <WorkHoursChartCard attendance={attendance} />
 
-                                {/* Notes Section */}
+                                {/* 📌 Quick Reference Sticky Notes (Pinned Shortcuts) */}
                                 <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden relative z-10">
-                                    <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
-                                        <h2 className="text-lg font-bold text-slate-800">Quick Notes</h2>
-                                        <div className="bg-yellow-100 text-yellow-600 p-1.5 rounded-lg"><Edit size={16} /></div>
+                                    <div className="px-6 py-5 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <div className="bg-amber-100 text-amber-700 p-1.5 rounded-lg"><MapPin size={16} /></div>
+                                            <div>
+                                                <h2 className="text-base font-bold text-slate-800 leading-tight">Pinned Shortcuts & Sticky Notes</h2>
+                                                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Quick Reference Links & Notes</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-xs font-extrabold bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full border border-amber-200/60">
+                                            {notes.length} Notes
+                                        </span>
                                     </div>
-                                    <div className="p-6">
-                                        <form onSubmit={handleCreateNote} className="mb-6 relative">
-                                            <textarea value={newNoteContent} onChange={(e) => setNewNoteContent(e.target.value)} placeholder="Draft notes to remember..." rows="3" className="w-full pl-4 pr-12 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-yellow-200 transition-all resize-none placeholder-slate-400" />
-                                            <button type="submit" disabled={isSubmittingNote || !newNoteContent.trim()} className="absolute right-2 bottom-2 p-2 bg-yellow-400 text-yellow-900 rounded-xl hover:bg-yellow-500 disabled:opacity-50 disabled:bg-slate-200 disabled:text-slate-400 transition-all shadow-sm"><Plus size={18} /></button>
+                                    <div className="p-5 sm:p-6">
+                                        <form onSubmit={handleCreateNote} className="mb-5 relative">
+                                            <textarea
+                                                value={newNoteContent}
+                                                onChange={(e) => setNewNoteContent(e.target.value)}
+                                                placeholder="Important Notes..."
+                                                rows="2"
+                                                className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-300 focus:bg-white outline-none transition-all resize-none placeholder:text-slate-400 font-medium"
+                                            />
+                                            <button
+                                                type="submit"
+                                                disabled={isSubmittingNote || !newNoteContent.trim()}
+                                                className="absolute right-2.5 bottom-2.5 p-2 bg-slate-900 text-white rounded-xl hover:bg-emerald-600 disabled:opacity-40 transition-all shadow-sm active:scale-95"
+                                                title="Pin Note"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
                                         </form>
-                                        <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+
+                                        <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar pr-1">
                                             <AnimatePresence>
-                                                {notes.map((note) => (
-                                                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} key={note._id} className="p-4 bg-yellow-50/50 hover:bg-yellow-50 rounded-2xl border border-yellow-100 group transition-colors relative z-0">
+                                                {sortedNotes.map((note) => (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, scale: 0.9 }}
+                                                        key={note._id}
+                                                        className={`p-4 rounded-2xl border group transition-all relative z-0 shadow-sm ${note.isPinned ? 'bg-amber-100/60 border-amber-300 ring-2 ring-amber-200/50' : 'bg-amber-50/40 hover:bg-amber-50 border-amber-200/80'}`}
+                                                    >
                                                         {editingNote?._id === note._id ? (
                                                             <div className="space-y-2">
-                                                                <textarea value={editingNote.content} onChange={(e) => setEditingNote({ ...editingNote, content: e.target.value })} className="w-full p-2 bg-white border border-yellow-200 rounded-xl text-sm" rows="3" />
+                                                                <textarea
+                                                                    value={editingNote.content}
+                                                                    onChange={(e) => setEditingNote({ ...editingNote, content: e.target.value })}
+                                                                    className="w-full p-2.5 bg-white border border-amber-300 rounded-xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-amber-400"
+                                                                    rows="3"
+                                                                />
                                                                 <div className="flex items-center gap-2 justify-end">
-                                                                    <button onClick={() => setEditingNote(null)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-lg"><X size={16} /></button>
-                                                                    <button onClick={handleUpdateNote} disabled={isSubmittingNote} className="p-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg shadow-sm"><Save size={16} /></button>
+                                                                    <button onClick={() => setEditingNote(null)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-lg"><X size={15} /></button>
+                                                                    <button onClick={handleUpdateNote} disabled={isSubmittingNote} className="p-1.5 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"><Save size={15} /></button>
                                                                 </div>
                                                             </div>
                                                         ) : (
                                                             <div className="relative">
-                                                                <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">{note.content}</p>
-                                                                <div className="flex items-center justify-between mt-3 pt-2 border-t border-yellow-200/50">
-                                                                    <p className="text-[10px] font-bold text-yellow-700/60 uppercase">{formatEnglishDate(note.createdAt)}</p>
-                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <button onClick={() => setEditingNote(note)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
-                                                                        <button onClick={() => handleDeleteNote(note._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <div className="text-slate-800 text-xs sm:text-sm whitespace-pre-wrap leading-relaxed font-medium flex-1">
+                                                                        {renderNoteContentWithLinks(note.content)}
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => handleTogglePinNote(note._id, note.isPinned)}
+                                                                        className={`p-1.5 rounded-lg transition-all ${note.isPinned ? 'text-amber-700 bg-amber-200/80 shadow-sm' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-100/60'}`}
+                                                                        title={note.isPinned ? "Unpin Note" : "Pin Note to Top"}
+                                                                    >
+                                                                        <MapPin size={13} className={note.isPinned ? 'fill-amber-700' : ''} />
+                                                                    </button>
+                                                                </div>
+                                                                <div className="flex items-center justify-between mt-3 pt-2 border-t border-amber-200/60">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <p className="text-[9px] font-extrabold text-amber-700/70 uppercase tracking-wider">{formatEnglishDate(note.createdAt)}</p>
+                                                                        {note.isPinned && (
+                                                                            <span className="text-[9px] font-black text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-md uppercase tracking-wider">📌 Pinned</span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <button onClick={() => setEditingNote(note)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit Note"><Edit size={13} /></button>
+                                                                        <button onClick={() => handleDeleteNote(note._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Delete Note"><Trash2 size={13} /></button>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -3008,7 +3161,13 @@ export default function Workspace({ user, canAccessHub }) {
                                                     </motion.div>
                                                 ))}
                                             </AnimatePresence>
-                                            {notes.length === 0 && <div className="text-center py-8 opacity-50"><FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" /><p className="text-xs text-slate-400">Empty notepad</p></div>}
+                                            {notes.length === 0 && (
+                                                <div className="text-center py-10 opacity-60 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                                    <Bookmark className="mx-auto h-8 w-8 text-amber-400 mb-2" />
+                                                    <p className="text-xs font-bold text-slate-600">No Pinned Shortcuts Yet</p>
+                                                    <p className="text-[10px] text-slate-400 mt-1 max-w-xs mx-auto">Pin Google Meet links, Figma URLs, phone numbers, or key notes above.</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

@@ -14,6 +14,7 @@ const TaskSchema = new mongoose.Schema({
 const CommentSchema = new mongoose.Schema({
   content: { type: String, required: true },
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  isPinned: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 

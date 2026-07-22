@@ -19,16 +19,28 @@ export default async function handler(req, res) {
             return res.status(400).json({ message: 'You are already checked in.' });
         }
 
-        // ✅ FIX: Get workLocation from the request body and validate it
-        const { workLocation } = req.body;
+        // ✅ FIX: Get workLocation and optional client timestamp to prevent clock drift issues
+        const { workLocation, checkInTime: clientTime } = req.body;
         if (!workLocation || !['Office', 'Home'].includes(workLocation)) {
             return res.status(400).json({ message: 'A valid work location ("Office" or "Home") is required.' });
         }
 
+        // Validate client timestamp (within +/- 10 minutes of server time to prevent clock drift)
+        let finalCheckInTime = new Date();
+        if (clientTime) {
+            const parsedClientTime = new Date(clientTime);
+            if (!isNaN(parsedClientTime.getTime())) {
+                const diffMs = Math.abs(parsedClientTime.getTime() - Date.now());
+                if (diffMs <= 10 * 60 * 1000) {
+                    finalCheckInTime = parsedClientTime;
+                }
+            }
+        }
+
         const newAttendance = new Attendance({
             user: decoded.userId,
-            checkInTime: new Date(),
-            workLocation: workLocation, // ✅ FIX: Save the location to the new record
+            checkInTime: finalCheckInTime,
+            workLocation: workLocation,
         });
 
         await newAttendance.save();
