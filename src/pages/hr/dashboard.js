@@ -8,7 +8,7 @@ import {
   Briefcase, Download, ChevronDown, Bell, Users, BarChart2, Clock, 
   Menu, ChevronLeft, ChevronRight, Edit, Home, PieChart, TrendingUp, 
   Search, Calendar, Filter, RefreshCw, Activity, Layers, Coffee, Grid,
-  UserCheck, UserX, Mail, Phone, MapPin
+  UserCheck, UserX, Mail, Phone, MapPin, Shield, User as UserFeatherIcon
 } from 'react-feather';
 import toast, { Toaster } from 'react-hot-toast';
 import { 
@@ -1073,27 +1073,70 @@ const AttendanceView = ({ attendanceData, allUsers, openDeleteModal, openEditMod
   );
 };
 
-const NotificationSender = ({ allUsers, targetType, setTargetType, targetUser, setTargetUser, notificationContent, setNotificationContent, handleSendNotification, isSending }) => (
+const NotificationSender = ({ allUsers, targetType, setTargetType, targetUser, setTargetUser, notificationContent, setNotificationContent, noticeType, setNoticeType, handleSendNotification, isSending }) => (
   <motion.div variants={pageTransition} initial="initial" animate="animate" exit="exit" className="max-w-2xl mx-auto space-y-8">
     <div className="text-center">
-        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">System Broadcast</h1>
-        <p className="text-slate-500 mt-2 font-medium">Send announcements to your team instantly.</p>
+        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">System & HR Broadcast</h1>
+        <p className="text-slate-500 mt-2 font-medium">Broadcast announcements or official system notifications to your team instantly.</p>
     </div>
     <motion.div variants={fadeInUp} className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-100 border border-white/50 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-400"></div>
-      <form onSubmit={handleSendNotification} className="space-y-8 relative z-10">
+      <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-400 via-teal-400 to-blue-500"></div>
+      <form onSubmit={handleSendNotification} className="space-y-7 relative z-10">
+        
+        {/* ⚙️ Notification Category / Type */}
         <div>
-          <label className="block text-sm font-bold text-slate-800 mb-4">Recipient Group</label>
-          <div className="grid grid-cols-2 gap-4">
-             <label className={`cursor-pointer border-2 rounded-2xl p-4 flex flex-col items-center gap-3 transition-all ${targetType==='all' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-800' : 'border-slate-100 hover:border-emerald-200 text-slate-500 hover:bg-slate-50'}`}>
+          <label className="block text-sm font-bold text-slate-800 mb-3">Notification Type</label>
+          <div className="grid grid-cols-3 gap-3">
+             <button
+                type="button"
+                onClick={() => setNoticeType('hr_notice')}
+                className={`p-3 rounded-2xl border-2 flex flex-col items-center gap-2 text-center transition-all ${noticeType === 'hr_notice' ? 'border-emerald-500 bg-emerald-50/60 text-emerald-800 font-extrabold shadow-sm' : 'border-slate-100 text-slate-500 hover:border-slate-200 hover:bg-slate-50 font-semibold'}`}
+             >
+                <span className="text-xl">📢</span>
+                <span className="text-xs">HR Notice</span>
+             </button>
+             <button
+                type="button"
+                onClick={() => setNoticeType('system_update')}
+                className={`p-3 rounded-2xl border-2 flex flex-col items-center gap-2 text-center transition-all ${noticeType === 'system_update' ? 'border-blue-500 bg-blue-50/60 text-blue-800 font-extrabold shadow-sm' : 'border-slate-100 text-slate-500 hover:border-slate-200 hover:bg-slate-50 font-semibold'}`}
+             >
+                <span className="text-xl">⚙️</span>
+                <span className="text-xs">System Update</span>
+             </button>
+             <button
+                type="button"
+                onClick={() => setNoticeType('system_alert')}
+                className={`p-3 rounded-2xl border-2 flex flex-col items-center gap-2 text-center transition-all ${noticeType === 'system_alert' ? 'border-rose-500 bg-rose-50/60 text-rose-800 font-extrabold shadow-sm' : 'border-slate-100 text-slate-500 hover:border-slate-200 hover:bg-slate-50 font-semibold'}`}
+             >
+                <span className="text-xl">🚨</span>
+                <span className="text-xs">System Alert</span>
+             </button>
+          </div>
+        </div>
+
+        {/* 👥 Target Recipient Scope */}
+        <div>
+          <label className="block text-sm font-bold text-slate-800 mb-3">Recipient Scope</label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+             <label className={`cursor-pointer border-2 rounded-2xl p-3 flex flex-col items-center gap-2 text-center transition-all ${targetType==='all' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-800 font-extrabold' : 'border-slate-100 hover:border-emerald-200 text-slate-500 hover:bg-slate-50'}`}>
                 <input type="radio" className="hidden" name="target" value="all" checked={targetType==='all'} onChange={()=>setTargetType('all')}/>
-                <Users size={28} className={targetType==='all'?'text-emerald-600':'text-slate-300'}/>
-                <span className="font-bold text-sm">Everyone</span>
+                <Users size={22} className={targetType==='all'?'text-emerald-600':'text-slate-300'}/>
+                <span className="text-xs">Everyone</span>
              </label>
-             <label className={`cursor-pointer border-2 rounded-2xl p-4 flex flex-col items-center gap-3 transition-all ${targetType==='individual' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-800' : 'border-slate-100 hover:border-emerald-200 text-slate-500 hover:bg-slate-50'}`}>
+             <label className={`cursor-pointer border-2 rounded-2xl p-3 flex flex-col items-center gap-2 text-center transition-all ${targetType==='staff' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-800 font-extrabold' : 'border-slate-100 hover:border-emerald-200 text-slate-500 hover:bg-slate-50'}`}>
+                <input type="radio" className="hidden" name="target" value="staff" checked={targetType==='staff'} onChange={()=>setTargetType('staff')}/>
+                <UserFeatherIcon size={22} className={targetType==='staff'?'text-emerald-600':'text-slate-300'}/>
+                <span className="text-xs">Staff Only</span>
+             </label>
+             <label className={`cursor-pointer border-2 rounded-2xl p-3 flex flex-col items-center gap-2 text-center transition-all ${targetType==='managers' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-800 font-extrabold' : 'border-slate-100 hover:border-emerald-200 text-slate-500 hover:bg-slate-50'}`}>
+                <input type="radio" className="hidden" name="target" value="managers" checked={targetType==='managers'} onChange={()=>setTargetType('managers')}/>
+                <Shield size={22} className={targetType==='managers'?'text-emerald-600':'text-slate-300'}/>
+                <span className="text-xs">Managers</span>
+             </label>
+             <label className={`cursor-pointer border-2 rounded-2xl p-3 flex flex-col items-center gap-2 text-center transition-all ${targetType==='individual' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-800 font-extrabold' : 'border-slate-100 hover:border-emerald-200 text-slate-500 hover:bg-slate-50'}`}>
                 <input type="radio" className="hidden" name="target" value="individual" checked={targetType==='individual'} onChange={()=>setTargetType('individual')}/>
-                <UserPlus size={28} className={targetType==='individual'?'text-emerald-600':'text-slate-300'}/>
-                <span className="font-bold text-sm">Specific Person</span>
+                <UserPlus size={22} className={targetType==='individual'?'text-emerald-600':'text-slate-300'}/>
+                <span className="text-xs">Individual</span>
              </label>
           </div>
         </div>
@@ -1104,20 +1147,20 @@ const NotificationSender = ({ allUsers, targetType, setTargetType, targetUser, s
                <label className="block text-sm font-bold text-slate-700 mb-2">Select Employee</label>
                <select value={targetUser} onChange={(e)=>setTargetUser(e.target.value)} className="w-full p-4 bg-slate-50 border-none rounded-2xl font-medium text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
                  <option value="">-- Choose Employee --</option>
-                 {allUsers.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
+                 {allUsers.map(u => <option key={u._id} value={u._id}>{u.name} ({u.role || 'Staff'})</option>)}
                </select>
             </motion.div>
           )}
         </AnimatePresence>
 
         <div>
-           <label className="block text-sm font-bold text-slate-800 mb-2">Message</label>
-           <textarea value={notificationContent} onChange={(e)=>setNotificationContent(e.target.value)} rows="5" className="w-full p-5 bg-slate-50 border-none rounded-2xl font-medium text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none resize-none transition-all placeholder:text-slate-400" placeholder="Type your announcement here..."></textarea>
+           <label className="block text-sm font-bold text-slate-800 mb-2">Notification Message</label>
+           <textarea value={notificationContent} onChange={(e)=>setNotificationContent(e.target.value)} rows="5" className="w-full p-5 bg-slate-50 border-none rounded-2xl font-medium text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none resize-none transition-all placeholder:text-slate-400" placeholder={noticeType === 'system_update' ? "Type system update message (e.g. Scheduled server maintenance at 10:00 PM)..." : noticeType === 'system_alert' ? "Type emergency alert message..." : "Type your HR announcement here..."}></textarea>
         </div>
 
         <button type="submit" disabled={isSending} className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-xl shadow-emerald-200 transition-all transform active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed text-lg">
            {isSending ? <RefreshCw className="animate-spin" size={24}/> : <Send size={24}/>}
-           {isSending ? 'Sending...' : 'Send Notification'}
+           {isSending ? 'Sending Broadcast...' : `Send ${noticeType === 'system_update' ? 'System Notification' : noticeType === 'system_alert' ? 'System Emergency Alert' : 'HR Announcement'}`}
         </button>
       </form>
     </motion.div>
@@ -1261,6 +1304,7 @@ export default function HRDashboard({ user, errorMsg, initialAttendance, initial
   const [notificationContent, setNotificationContent] = useState('');
   const [targetType, setTargetType] = useState('all');
   const [targetUser, setTargetUser] = useState('');
+  const [noticeType, setNoticeType] = useState('hr_notice');
 
   // --- Side Effects ---
   useEffect(() => {
@@ -1319,14 +1363,24 @@ export default function HRDashboard({ user, errorMsg, initialAttendance, initial
   // Notification Handler
   const handleSendNotification = async (e) => {
     e.preventDefault();
-    if (!notificationContent.trim() || (targetType==='individual' && !targetUser)) return toast.error('Check fields');
+    if (!notificationContent.trim() || (targetType==='individual' && !targetUser)) return toast.error('Please fill in all notification fields.');
     setIsSending(true);
     try {
-      const res = await fetch('/api/hr/send-notification', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ content: notificationContent, targetType, targetUser: targetType==='individual'?targetUser:null }) });
-      if(!res.ok) throw new Error("Failed");
-      toast.success('Sent successfully');
+      const res = await fetch('/api/hr/send-notification', { 
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({ 
+          content: notificationContent, 
+          targetType, 
+          targetUser: targetType==='individual'?targetUser:null,
+          noticeType 
+        }) 
+      });
+      const result = await res.json();
+      if(!res.ok) throw new Error(result.message || "Failed to send notification");
+      toast.success(result.message || 'Notification broadcasted successfully!');
       setNotificationContent('');
-    } catch (err) { toast.error("Failed to send"); } finally { setIsSending(false); }
+    } catch (err) { toast.error(err.message || "Failed to send notification"); } finally { setIsSending(false); }
   };
 
   // Attendance CRUD Handlers
@@ -1358,7 +1412,7 @@ export default function HRDashboard({ user, errorMsg, initialAttendance, initial
         case 'analytics': return <AnalyticsView />;
         case 'attendance': return <AttendanceView attendanceData={attendanceRecords} allUsers={allUsers} openDeleteModal={(id)=>{setRecordToDelete(id);setIsDeleteModalOpen(true)}} openEditModal={(r)=>{setEditingRecord(r);setIsEditModalOpen(true)}} />;
         case 'leaves': return <LeaveManagementView pending={leaveRequests} approved={approvedLeaves} history={concludedLeaves} onManage={openLeaveModal} />;
-        case 'notifications': return <NotificationSender allUsers={allUsers} targetType={targetType} setTargetType={setTargetType} targetUser={targetUser} setTargetUser={setTargetUser} notificationContent={notificationContent} setNotificationContent={setNotificationContent} handleSendNotification={handleSendNotification} isSending={isSending} />;
+        case 'notifications': return <NotificationSender allUsers={allUsers} targetType={targetType} setTargetType={setTargetType} targetUser={targetUser} setTargetUser={setTargetUser} notificationContent={notificationContent} setNotificationContent={setNotificationContent} noticeType={noticeType} setNoticeType={setNoticeType} handleSendNotification={handleSendNotification} isSending={isSending} />;
         case 'staff': return <StaffView allUsers={usersState} onUpdateUser={handleUpdateUser} />;
         default: return null;
     }

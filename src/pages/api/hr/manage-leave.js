@@ -36,14 +36,19 @@ export default async function handler(req, res) {
         return res.status(404).json({ message: 'Leave request not found.' });
     }
 
-    // --- Create a TARGETED notification for the user ---
-    const notificationContent = `Your ${updatedLeaveRequest.leaveType} request for ${formatDate(updatedLeaveRequest.startDate)} has been ${status.toLowerCase()}.`;
+    // --- Create a short, concise notification for the staff user ---
+    const shortStart = new Date(updatedLeaveRequest.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const shortEnd = new Date(updatedLeaveRequest.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const statusEmoji = status === 'Approved' ? '✅' : '❌';
+    const notificationContent = `Leave ${status} ${statusEmoji}: ${updatedLeaveRequest.leaveType} (${shortStart} - ${shortEnd})${hrComments ? `. HR Note: "${hrComments}"` : ''}`;
     
     await Notification.create({
       content: notificationContent,
-      author: 'HR Department',
-      recipient: updatedLeaveRequest.user._id, // Assign the notification to the specific user
-      link: '/leaves/report' // Link them to their leave report page
+      author: 'HR Management',
+      recipient: updatedLeaveRequest.user._id,
+      link: '/leaves/report',
+      isRead: false,
+      createdAt: new Date(),
     });
 
     await HRAuditLog.create({
@@ -58,7 +63,7 @@ export default async function handler(req, res) {
     if (targetUser && targetUser.pushSubscriptions && targetUser.pushSubscriptions.length > 0) {
         const pushPromises = targetUser.pushSubscriptions.map(sub => 
             sendPushNotification(sub, {
-                title: status === 'Approved' ? 'Leave Approved ✅' : 'Leave Declined ❌',
+                title: `Leave Request ${status} ${statusEmoji}`,
                 body: notificationContent,
                 url: '/leaves/report',
                 icon: '/paw.png'
