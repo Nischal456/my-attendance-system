@@ -151,18 +151,7 @@ export default async function handler(req, res) {
                 createdAt: populatedMessage.createdAt
             });
 
-            // 3. Create In-App Notification document for receiver
-            const shortText = message.length > 70 ? message.substring(0, 70) + '...' : message;
-            await Notification.create({
-                recipient: receiverId,
-                author: senderUser?.name || 'Colleague',
-                content: `💬 ${senderUser?.name}: "${shortText}"`,
-                link: '/workspace?view=chat',
-                isRead: false,
-                createdAt: new Date(),
-            });
-
-            // 4. Send Web Push Notification to Receiver's devices (Messenger Mobile / System Banner)
+            // 3. Send Web Push Notification to Receiver's devices (Messenger Mobile / System Banner)
             const receiverUser = await User.findById(receiverId).select('pushSubscriptions').lean();
             if (receiverUser?.pushSubscriptions && receiverUser.pushSubscriptions.length > 0) {
                 const pushPayload = {

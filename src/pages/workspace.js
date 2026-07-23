@@ -2712,16 +2712,16 @@ export default function Workspace({ user, canAccessHub }) {
                     {/* Header */}
                     <header className={`sticky top-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-xl shadow-md border-b border-white/20' : 'bg-transparent'}`}>
                         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
-                            <div className="flex justify-between items-center h-20 sm:h-24">
+                            <div className="flex justify-between items-center h-20 sm:h-24 gap-2">
                                 {/* Logo Area */}
-                                <div className="flex items-center space-x-4">
-                                    <Link href="/dashboard" className="flex items-center gap-3 sm:gap-4 group">
-                                        <div className="relative">
+                                <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 shrink">
+                                    <Link href="/dashboard" className="flex items-center gap-3 sm:gap-4 group min-w-0">
+                                        <div className="relative shrink-0">
                                             <div className="absolute inset-0 bg-emerald-200 blur-md rounded-full opacity-0 group-hover:opacity-50 transition-opacity"></div>
                                             <Image src="/logo.png" alt="GeckoWorks Logo" width={55} height={55} className="" style={{ width: 'auto', height: 'auto' }} />
                                         </div>
-                                        <div>
-                                            <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-none">
+                                        <div className="min-w-0">
+                                            <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-none truncate">
                                                 My Workspace
                                             </h1>
 
@@ -2733,12 +2733,11 @@ export default function Workspace({ user, canAccessHub }) {
                                                 )}
                                             </p>
                                         </div>
-
                                     </Link>
                                 </div>
 
                                 {/* Controls Area */}
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 shrink-0">
                                     {/* ✅ Projects Canvas Button (Icon-Only on Mobile, Full Pill on Desktop) */}
                                     <Link
                                         href="/projects"
@@ -2782,6 +2781,7 @@ export default function Workspace({ user, canAccessHub }) {
                                             </p>
                                         </div>
                                     </Link>
+
                                     {/* Date/Time Pill */}
                                     <div className="hidden lg:flex items-center gap-6 text-sm text-slate-600 bg-white/70 backdrop-blur-md border border-white/50 shadow-sm px-6 py-2.5 rounded-2xl">
                                         <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-emerald-500" /><span className="font-semibold">{currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' })}</span></div>
@@ -2849,7 +2849,7 @@ export default function Workspace({ user, canAccessHub }) {
                                             {/* Smooth Chevron */}
                                             <motion.div
                                                 animate={{ rotate: isDropdownOpen ? 180 : 0 }}
-                                                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} // Custom Bezier for smoothness
+                                                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                                                 className="hidden md:flex items-center justify-center text-slate-400 group-hover:text-emerald-600"
                                             >
                                                 <ChevronDown size={16} strokeWidth={2.5} />
