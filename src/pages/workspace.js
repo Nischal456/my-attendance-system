@@ -77,8 +77,8 @@ const formatElapsedTime = (startTime) => {
     if (!startTime) return '00:00:00';
     const now = new Date(Date.now() + timeOffset);
     const start = new Date(startTime);
-    const s = Math.floor((now - start) / 1000);
-    if (s < 0) return '00:00:00';
+    let s = Math.floor((now - start) / 1000);
+    if (s < 0) s = 0;
     const hh = Math.floor(s / 3600).toString().padStart(2, '0');
     const mm = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
     const ss = (s % 60).toString().padStart(2, '0');
@@ -1272,6 +1272,15 @@ const ChatSidebar = ({
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
+    /* ---------------- FILTER ACTIVE PERSONAL USERS ---------------- */
+    const activePersonalUsers = useMemo(() => {
+        return (users || []).filter(u =>
+            u._id !== currentUser._id &&
+            u.isActive !== false &&
+            !['Finance', 'HR', 'Project Manager', 'Superadmin', 'Expense Manager', 'Alumni', 'Inactive'].includes(u.role)
+        );
+    }, [users, currentUser._id]);
+
     /* ---------------- SORT CONVERSATIONS ---------------- */
     const sortedConversations = useMemo(() => {
         return [...conversations].sort((a, b) => {
@@ -1289,12 +1298,10 @@ const ChatSidebar = ({
     /* ---------------- FILTER USERS (SEARCH) ---------------- */
     const filteredUsers = useMemo(() => {
         if (!searchTerm) return [];
-        return users.filter(
-            u =>
-                u._id !== currentUser._id &&
-                u.name.toLowerCase().includes(searchTerm.toLowerCase())
+        return activePersonalUsers.filter(
+            u => u.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [users, searchTerm, currentUser._id]);
+    }, [activePersonalUsers, searchTerm]);
 
     return (
         <div className="w-full h-full flex flex-col bg-white border-r border-slate-100">
@@ -1366,109 +1373,140 @@ const ChatSidebar = ({
                 ) : (
                     /* === RECENT CHATS MODE === */
                     <>
-                        <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">
-                            Recent Chats
-                        </h3>
-
                         {sortedConversations.length === 0 ? (
-                            // Empty State for No Conversations
-                            <div className="flex flex-col items-center justify-center text-center mt-10 p-6">
-                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-                                    <MessageSquarePlus size={24} className="text-slate-300" />
-                                </div>
-                                <h4 className="text-slate-600 font-bold text-sm">No chats yet</h4>
-                                <p className="text-xs text-slate-400 mt-1 max-w-[150px]">
-                                    Search for a colleague above to start a conversation.
-                                </p>
-                            </div>
-                        ) : (
-                            // Conversation List
-                            sortedConversations.map(conv => {
-                                const otherUser = conv.participants.find(
-                                    p => p._id !== currentUser._id
-                                );
+                            // Show Team Members to chat with if no active conversations exist
+                            <>
+                                <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+                                    Team Members
+                                </h3>
 
-                                // Skip if user data is missing (integrity check)
-                                if (!otherUser) return null;
-
-                                const isUnread = conv.unreadCount > 0;
-                                const isSelected = selectedConvId === conv._id;
-
-                                return (
-                                    <div
-                                        key={conv._id}
-                                        onClick={() => onSelect(otherUser, conv)}
-                                        className={`group relative p-3 flex items-center gap-4 cursor-pointer rounded-2xl transition-all duration-200 border border-transparent ${isSelected
-                                            ? 'bg-emerald-50/80 shadow-sm border-emerald-100/50'
-                                            : 'hover:bg-slate-50'
-                                            }`}
-                                    >
-                                        {/* Avatar Wrapper */}
-                                        <div className="relative w-12 h-12 flex-shrink-0">
-                                            <div className={`relative w-full h-full rounded-full overflow-hidden ${isUnread ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}>
+                                {activePersonalUsers.length > 0 ? (
+                                    activePersonalUsers.map(user => (
+                                        <div
+                                            key={user._id}
+                                            onClick={() => onSelect(user)}
+                                            className="p-3 flex items-center gap-3 cursor-pointer hover:bg-emerald-50/60 rounded-2xl transition-all group"
+                                        >
+                                            <div className="relative w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border border-slate-100">
                                                 <Image
-                                                    src={otherUser.avatar}
-                                                    alt={otherUser.name}
+                                                    src={user.avatar}
+                                                    alt={user.name}
                                                     fill
-                                                    className="object-cover"
+                                                    className="object-cover group-hover:scale-110 transition-transform duration-500"
                                                 />
                                             </div>
-
-                                            {/* Online Status / Unread Badge */}
-                                            {isUnread && (
-                                                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white z-10">
-                                                    {conv.unreadCount}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Text Content */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-baseline mb-0.5">
-                                                <p
-                                                    className={`truncate text-sm transition-colors ${isUnread
-                                                        ? 'font-extrabold text-slate-900'
-                                                        : 'font-bold text-slate-700'
-                                                        }`}
-                                                >
-                                                    {otherUser.name}
+                                            <div>
+                                                <p className="font-bold text-slate-700 text-sm group-hover:text-emerald-700 transition-colors">
+                                                    {user.name}
                                                 </p>
+                                                <p className="text-[11px] text-slate-400 font-medium">
+                                                    {user.role || 'Staff'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center text-center mt-10 p-6">
+                                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                                            <MessageSquarePlus size={24} className="text-slate-300" />
+                                        </div>
+                                        <h4 className="text-slate-600 font-bold text-sm">No chats yet</h4>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <h3 className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+                                    Recent Chats
+                                </h3>
+                                {/* Conversation List */}
+                                {sortedConversations.map(conv => {
+                                    const otherUser = conv.participants.find(
+                                        p => p._id !== currentUser._id
+                                    );
 
-                                                <span className={`text-[10px] font-medium whitespace-nowrap ml-2 ${isUnread ? 'text-emerald-600' : 'text-slate-400'}`}>
-                                                    {conv.lastMessage?.createdAt &&
-                                                        formatDistanceToNow(
-                                                            new Date(conv.lastMessage.createdAt),
-                                                            { addSuffix: false }
-                                                        ).replace('about ', '') // Clean up text for tighter UI
-                                                    }
-                                                </span>
+                                    // Skip if user data is missing (integrity check)
+                                    if (!otherUser) return null;
+
+                                    const isUnread = conv.unreadCount > 0;
+                                    const isSelected = selectedConvId === conv._id;
+
+                                    return (
+                                        <div
+                                            key={conv._id}
+                                            onClick={() => onSelect(otherUser, conv)}
+                                            className={`group relative p-3 flex items-center gap-4 cursor-pointer rounded-2xl transition-all duration-200 border border-transparent ${isSelected
+                                                ? 'bg-emerald-50/80 shadow-sm border-emerald-100/50'
+                                                : 'hover:bg-slate-50'
+                                                }`}
+                                        >
+                                            {/* Avatar Wrapper */}
+                                            <div className="relative w-12 h-12 flex-shrink-0">
+                                                <div className={`relative w-full h-full rounded-full overflow-hidden ${isUnread ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}>
+                                                    <Image
+                                                        src={otherUser.avatar}
+                                                        alt={otherUser.name}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                </div>
+
+                                                {/* Online Status / Unread Badge */}
+                                                {isUnread && (
+                                                    <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white z-10">
+                                                        {conv.unreadCount}
+                                                    </span>
+                                                )}
                                             </div>
 
-                                            <p
-                                                className={`text-xs truncate transition-colors ${isUnread
-                                                    ? 'text-slate-800 font-semibold'
-                                                    : 'text-slate-500 group-hover:text-slate-600'
-                                                    }`}
-                                            >
-                                                {conv.lastMessage?.senderId === currentUser._id && 'You: '}
-                                                {conv.lastMessage?.message || 'Start the conversation...'}
-                                            </p>
-                                        </div>
+                                            {/* Text Content */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-baseline mb-0.5">
+                                                    <p
+                                                        className={`truncate text-sm transition-colors ${isUnread
+                                                            ? 'font-extrabold text-slate-900'
+                                                            : 'font-bold text-slate-700'
+                                                            }`}
+                                                    >
+                                                        {otherUser.name}
+                                                    </p>
 
-                                        {/* Delete Button (Visible on Group Hover) */}
-                                        <button
-                                            onClick={e => {
-                                                e.stopPropagation();
-                                                onDelete(conv._id);
-                                            }}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100 z-20"
-                                            title="Delete Conversation"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                );
-                            })
+                                                    <span className={`text-[10px] font-medium whitespace-nowrap ml-2 ${isUnread ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                        {conv.lastMessage?.createdAt &&
+                                                            formatDistanceToNow(
+                                                                new Date(conv.lastMessage.createdAt),
+                                                                { addSuffix: false }
+                                                            ).replace('about ', '') // Clean up text for tighter UI
+                                                        }
+                                                    </span>
+                                                </div>
+
+                                                <p
+                                                    className={`text-xs truncate transition-colors ${isUnread
+                                                        ? 'text-slate-800 font-semibold'
+                                                        : 'text-slate-500 group-hover:text-slate-600'
+                                                        }`}
+                                                >
+                                                    {conv.lastMessage?.senderId === currentUser._id && 'You: '}
+                                                    {conv.lastMessage?.message || 'Start the conversation...'}
+                                                </p>
+                                            </div>
+
+                                            {/* Delete Button (Visible on Group Hover) */}
+                                            <button
+                                                onClick={e => {
+                                                    e.stopPropagation();
+                                                    onDelete(conv._id);
+                                                }}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100 z-20"
+                                                title="Delete Conversation"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </>
                         )}
                     </>
                 )}
@@ -1480,32 +1518,39 @@ const ChatSidebar = ({
 
 const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBack }) => {
     const isMobile = useMediaQuery('(max-width: 767px)');
+    const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
 
     /* ---------------- FETCH MESSAGES ---------------- */
+    const conversationId = conversation?._id;
+
     useEffect(() => {
         let mounted = true;
 
-        const loadMessages = async () => {
-            // Clear messages immediately if switching users to prevent showing old data
-            if (!conversation) {
-                setMessages([]);
-                return;
-            }
+        if (!conversationId) {
+            setMessages([]);
+            setIsLoading(false);
+            return;
+        }
 
+        const loadMessages = async () => {
             setIsLoading(true);
             try {
-                const res = await fetch(`/api/chat/messages?conversationId=${conversation._id}`);
+                const res = await fetch(`/api/chat/messages?conversationId=${conversationId}`);
                 const data = await res.json();
 
-                // Add a tiny delay to ensure the premium skeleton animation is seen (prevents flicker)
                 if (mounted && data.success) {
-                    setTimeout(() => {
-                        setMessages(data.messages.map(m => ({ ...m, status: 'sent' })));
-                        setIsLoading(false);
-                    }, 400);
+                    setMessages(data.messages.map(m => ({ ...m, status: 'sent' })));
+                    setIsLoading(false);
+
+                    // Silently mark as read without triggering re-fetch loop
+                    fetch('/api/chat/mark-as-read', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ conversationId: conversationId }),
+                    });
                 }
             } catch {
                 toast.error('Failed to load messages');
@@ -1516,37 +1561,42 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
         loadMessages();
 
         let pusher, channel;
-        if (conversation) {
-            pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
-                cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
-            });
+        pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
+            cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+        });
 
-            channel = pusher.subscribe(`chat-${conversation._id}`);
-            channel.bind('new-message', data => {
-                if (data.senderId._id !== currentUser._id) {
-                    setMessages(prev => [...prev, { ...data, status: 'sent' }]);
+        channel = pusher.subscribe(`chat-${conversationId}`);
+
+        channel.bind('new-message', data => {
+            if ((data.senderId._id || data.senderId) !== currentUser._id) {
+                setMessages(prev => [...prev, { ...data, status: 'delivered' }]);
+                fetch('/api/chat/mark-as-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ conversationId: conversationId }),
+                });
+            }
+        });
+
+        channel.bind('messages-seen', data => {
+            setMessages(prev => prev.map(m => {
+                const existingReadBy = m.readBy || [];
+                const alreadyRead = existingReadBy.some(id => String(typeof id === 'object' ? id._id : id) === String(data.readerId));
+                if (!alreadyRead) {
+                    return { ...m, readBy: [...existingReadBy, data.readerId] };
                 }
-            });
-        }
+                return m;
+            }));
+        });
 
         return () => {
             mounted = false;
-            if (pusher && conversation) {
-                pusher.unsubscribe(`chat-${conversation._id}`);
+            if (pusher) {
+                pusher.unsubscribe(`chat-${conversationId}`);
                 pusher.disconnect();
             }
         };
-    }, [conversation, currentUser._id]);
-
-    /* ---------------- MARK READ ---------------- */
-    useEffect(() => {
-        if (!conversation?.unreadCount) return;
-        fetch('/api/chat/mark-as-read', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ conversationId: conversation._id }),
-        }).then(onMessageSent);
-    }, [conversation, onMessageSent]);
+    }, [conversationId, currentUser._id]);
 
     /* ---------------- AUTO SCROLL (FAST) ---------------- */
     useEffect(() => {
@@ -1635,7 +1685,7 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
 
                 <div>
                     <h3 className="font-bold text-slate-800">{selectedUser.name}</h3>
-                    <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                    <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
                         {selectedUser.role}
                     </span>
                 </div>
@@ -1680,41 +1730,86 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
                 )}
 
                 {!isLoading && messages.map((msg, i) => {
-                    const isMe = msg.senderId._id === currentUser._id;
+                    const senderIdStr = msg.senderId?._id || msg.senderId;
+                    const isMe = String(senderIdStr) === String(currentUser._id);
                     const prev = messages[i - 1];
-                    const showAvatar = !isMe && (!prev || prev.senderId._id !== msg.senderId._id);
+                    const prevSenderIdStr = prev ? (prev.senderId?._id || prev.senderId) : null;
+                    const showAvatar = !isMe && (!prev || String(prevSenderIdStr) !== String(senderIdStr));
+
+                    const isSeen = isMe && (
+                        msg.readBy && msg.readBy.some(r => {
+                            const rId = typeof r === 'object' ? r._id : r;
+                            return String(rId) === String(selectedUser._id);
+                        })
+                    );
 
                     return (
-                        <div
-                            key={msg._id}
-                            className={`flex items-end gap-3 ${isMe ? 'justify-end' : 'justify-start'}`}
+                        <motion.div
+                            key={msg._id || i}
+                            initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                            className={`flex items-end gap-2.5 ${isMe ? 'justify-end' : 'justify-start'} group`}
                         >
                             {!isMe && (
                                 <div className="w-8 h-8 shrink-0">
                                     {showAvatar && (
                                         <Image
-                                            src={msg.senderId.avatar}
+                                            src={msg.senderId?.avatar || selectedUser.avatar}
                                             width={32}
                                             height={32}
-                                            className="rounded-full object-cover"
+                                            className="rounded-full object-cover shadow-sm ring-1 ring-slate-100"
                                             alt=""
                                         />
                                     )}
                                 </div>
                             )}
 
-                            <div
-                                className={`px-4 py-2 text-sm max-w-[75%] shadow-sm ${isMe
-                                    ? 'bg-emerald-600 text-white rounded-2xl rounded-br-sm'
-                                    : 'bg-white border rounded-2xl rounded-bl-sm'
-                                    }`}
-                            >
-                                {msg.message}
-                                <div className={`text-[10px] mt-1 text-right ${isMe ? 'text-emerald-100' : 'text-slate-400'}`}>
-                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <div className="flex flex-col items-end max-w-[75%]">
+                                <div
+                                    className={`px-4 py-2.5 text-sm shadow-sm relative transition-all ${isMe
+                                        ? 'bg-emerald-600 text-white rounded-2xl rounded-br-xs'
+                                        : 'bg-white text-slate-800 border border-slate-100 rounded-2xl rounded-bl-xs'
+                                        }`}
+                                >
+                                    {msg.message}
+                                    <div className={`text-[10px] mt-1 text-right flex items-center justify-end gap-1.5 ${isMe ? 'text-emerald-100' : 'text-slate-400'}`}>
+                                        <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+
+                                        {/* Messenger Status Indicator for Sent Messages */}
+                                        {isMe && (
+                                            msg.status === 'sending' ? (
+                                                <div className="flex items-center gap-1 text-[9px] text-emerald-200 font-semibold" title="Sending...">
+                                                    <LucideLoader2 size={11} className="animate-spin text-emerald-200 shrink-0" />
+                                                    <span>Sending</span>
+                                                </div>
+                                            ) : msg.status === 'failed' ? (
+                                                <div className="flex items-center gap-1 text-[9px] text-rose-300 font-semibold" title="Failed to send">
+                                                    <AlertCircle size={11} className="shrink-0" />
+                                                    <span>Failed</span>
+                                                </div>
+                                            ) : isSeen ? (
+                                                <div className="flex items-center gap-1 ml-0.5" title={`Seen by ${selectedUser.name}`}>
+                                                    <span className="text-[9px] font-bold text-emerald-200">Seen</span>
+                                                    <div className="relative w-3.5 h-3.5 shrink-0">
+                                                        <Image
+                                                            src={selectedUser.avatar}
+                                                            fill
+                                                            className="rounded-full object-cover ring-1 ring-white/90 shadow-sm"
+                                                            alt="Seen"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <span title="Sent & Delivered" className="flex items-center text-emerald-200">
+                                                    <CheckCircle size={11} className="stroke-[2.5]" />
+                                                </span>
+                                            )
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
                     );
                 })}
 
@@ -1728,11 +1823,11 @@ const ChatBox = ({ selectedUser, conversation, currentUser, onMessageSent, onBac
                         value={newMessage}
                         onChange={e => setNewMessage(e.target.value)}
                         placeholder="Type a message…"
-                        className="flex-1 px-4 py-3 rounded-full bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 transition-all"
+                        className="flex-1 px-4 py-3 rounded-full bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 transition-all text-sm font-medium"
                     />
                     <button
                         disabled={!newMessage.trim()}
-                        className="p-3 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50 disabled:scale-100"
+                        className="p-3 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50 disabled:scale-100 shadow-md shadow-emerald-500/20"
                     >
                         <Send size={18} />
                     </button>
@@ -1952,7 +2047,7 @@ const DashboardSkeleton = () => (
 
 
 // --- Shift Target & Note Link Helpers ---
-const SHIFT_TARGET_SECONDS = 8 * 3600; // 8 Hours Daily Shift Target
+const SHIFT_TARGET_SECONDS = 7 * 3600; // 7 Hours Daily Shift Target
 
 const getElapsedSeconds = (timeStr) => {
     if (!timeStr) return 0;
@@ -2154,6 +2249,93 @@ export default function Workspace({ user, canAccessHub }) {
         fetchUnreadCount();
     }, [activeView]);
 
+    /* ---------------- REAL-TIME CHAT MESSENGER NOTIFICATIONS ---------------- */
+    useEffect(() => {
+        if (!user?._id) return;
+        let pusher;
+        try {
+            pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
+                cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+            });
+
+            const channel = pusher.subscribe(`user-${user._id}`);
+            channel.bind('new-chat-notification', (data) => {
+                setTotalUnreadMessages(prev => prev + 1);
+
+                // Audio Notification Chime (subtle mobile ding)
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.3);
+                } catch (e) {
+                    // Audio context fallback
+                }
+
+                // Display iOS / Android Messenger style floating top banner toast
+                toast.custom((t) => (
+                    <div
+                        onClick={() => {
+                            toast.dismiss(t.id);
+                            setActiveView('chat');
+                        }}
+                        className={`${t.visible ? 'animate-in slide-in-from-top-6 fade-in duration-300' : 'animate-out slide-out-to-top-6 fade-out duration-200'} max-w-md w-full bg-slate-900/95 backdrop-blur-xl text-white shadow-2xl rounded-3xl p-4 border border-slate-800 flex items-center gap-3.5 cursor-pointer hover:bg-slate-900 transition-all group pointer-events-auto z-50`}
+                    >
+                        {/* Messenger Gradient Badge & Avatar */}
+                        <div className="relative w-12 h-12 flex-shrink-0">
+                            <img
+                                src={data.sender?.avatar || 'https://res.cloudinary.com/demo/image/upload/v1620297675/samples/people/smiling-man.jpg'}
+                                alt={data.sender?.name}
+                                className="w-12 h-12 rounded-full object-cover ring-2 ring-emerald-400/50"
+                            />
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-tr from-blue-600 via-purple-600 to-pink-500 rounded-full flex items-center justify-center shadow-md">
+                                <MessageSquare size={10} className="text-white" fill="currentColor" />
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                                <h4 className="text-xs font-black text-white truncate flex items-center gap-1.5">
+                                    {data.sender?.name || 'Messenger'}
+                                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                        Messenger
+                                    </span>
+                                </h4>
+                                <span className="text-[10px] font-semibold text-slate-400">now</span>
+                            </div>
+                            <p className="text-xs text-slate-300 truncate font-medium">
+                                {data.message}
+                            </p>
+                        </div>
+
+                        {/* Action Button */}
+                        <button className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/30 transition-transform active:scale-95 flex-shrink-0">
+                            Reply
+                        </button>
+                    </div>
+                ), { duration: 6000 });
+            });
+        } catch (e) {
+            console.error("Pusher subscription error:", e);
+        }
+
+        return () => {
+            if (pusher && user?._id) {
+                pusher.unsubscribe(`user-${user._id}`);
+                pusher.disconnect();
+            }
+        };
+    }, [user?._id]);
+
     const fetchDashboardData = useCallback(async () => {
         try {
             const res = await fetch('/api/dashboard/data');
@@ -2305,17 +2487,21 @@ export default function Workspace({ user, canAccessHub }) {
     };
 
     const handleCheckIn = (location) => handleAction(`check-in`, async () => {
-        const clientNow = new Date().toISOString();
         const res = await fetch('/api/attendance/checkin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ workLocation: location, checkInTime: clientNow })
+            body: JSON.stringify({ workLocation: location })
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.message);
 
+        if (result.serverTime) {
+            timeOffset = new Date(result.serverTime).getTime() - Date.now();
+        }
+
         setActiveAttendance(result.data);
         setCheckInTime(result.data.checkInTime);
+        setElapsedTime(formatElapsedTime(result.data.checkInTime));
         setAttendance(prev => [result.data, ...prev]);
     }, `Checked in from ${location}!`);
 
@@ -2972,11 +3158,11 @@ export default function Workspace({ user, canAccessHub }) {
                                                                     </div>
                                                                 </div>
                                                                 <span className="mt-1 px-3 py-1 rounded-full bg-slate-100/80 text-slate-700 text-[10px] font-extrabold uppercase tracking-wider border border-slate-200/60">
-                                                                    {hoursLogged}h / 8.0h ({shiftPct}%)
+                                                                    {hoursLogged}h / 7.0h
                                                                 </span>
                                                                 {shiftPct >= 100 && (
                                                                     <span className="mt-2 text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 animate-bounce">
-                                                                        🎉 8.0 Hour Daily Target Shift Completed!
+                                                                        7.0 Hour Daily Target Shift Completed!
                                                                     </span>
                                                                 )}
                                                             </div>

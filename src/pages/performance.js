@@ -382,10 +382,10 @@ export default function PerformancePage({ user }) {
                                 <Target size={18} /> Daily Focus Goal
                             </h3>
                             <p className="text-xs font-medium text-emerald-100 leading-relaxed mb-4">
-                                Target 8.0 hours daily duration. Current daily average: <span className="font-extrabold text-white">{stats?.audit?.avgDailyHours ?? '0.0'}h</span>.
+                                Target 7.0 hours daily duration. Current daily average: <span className="font-extrabold text-white">{stats?.audit?.avgDailyHours ?? '0.0'}h</span>.
                             </p>
                             <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
-                                <div className="bg-white h-full transition-all" style={{ width: `${Math.min(100, ((stats?.audit?.avgDailyHours || 0) / 8.0) * 100)}%` }}></div>
+                                <div className="bg-white h-full transition-all" style={{ width: `${Math.min(100, ((stats?.audit?.avgDailyHours || 0) / 7.0) * 100)}%` }}></div>
                             </div>
                         </div>
 

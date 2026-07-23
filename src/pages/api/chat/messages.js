@@ -2,6 +2,8 @@ import dbConnect from '../../../../lib/dbConnect';
 import User from '../../../../models/User';
 import Conversation from '../../../../models/Conversation';
 import Message from '../../../../models/Message';
+import Notification from '../../../../models/Notification';
+import { sendPushNotification } from '../../../../lib/webPush';
 import jwt from 'jsonwebtoken';
 import Pusher from 'pusher';
 
@@ -83,8 +85,12 @@ export default async function handler(req, res) {
                 return { ...conv, unreadCount };
             }));
 
-            // Get all other users for starting new conversations
-            const users = await User.find({ _id: { $ne: currentUserId } }).select('name avatar role').sort({ name: 1 }).lean();
+            // Get all active personal team members for starting conversations (excluding inactive, alumni, finance, hr, pm, superadmin)
+            const users = await User.find({
+                _id: { $ne: currentUserId },
+                isActive: { $ne: false },
+                role: { $nin: ['Finance', 'HR', 'Project Manager', 'Superadmin', 'Expense Manager', 'Alumni', 'Inactive'] }
+            }).select('name avatar role').sort({ name: 1 }).lean();
 
             res.status(200).json({ success: true, conversations: conversationsWithUnread, users });
 
@@ -126,10 +132,63 @@ export default async function handler(req, res) {
             await conversation.save();
             
             // Populate sender info for the real-time event
-            const populatedMessage = await Message.findById(newMessage._id).populate('senderId', 'name avatar').lean();
+            const populatedMessage = await Message.findById(newMessage._id).populate('senderId', 'name avatar role').lean();
+            const senderUser = populatedMessage.senderId;
 
-            // Trigger Pusher event to notify the client
+            // 1. Trigger Pusher event to notify active chat box
             await pusher.trigger(`chat-${conversation._id}`, 'new-message', populatedMessage);
+
+            // 2. Trigger Pusher user-level event for Messenger style floating toast banner
+            await pusher.trigger(`user-${receiverId}`, 'new-chat-notification', {
+                conversationId: conversation._id,
+                sender: {
+                    _id: currentUserId,
+                    name: senderUser?.name || 'Colleague',
+                    avatar: senderUser?.avatar || 'https://res.cloudinary.com/demo/image/upload/v1620297675/samples/people/smiling-man.jpg',
+                    role: senderUser?.role || 'Staff'
+                },
+                message: message,
+                createdAt: populatedMessage.createdAt
+            });
+
+            // 3. Create In-App Notification document for receiver
+            const shortText = message.length > 70 ? message.substring(0, 70) + '...' : message;
+            await Notification.create({
+                recipient: receiverId,
+                author: senderUser?.name || 'Colleague',
+                content: `💬 ${senderUser?.name}: "${shortText}"`,
+                link: '/workspace?view=chat',
+                isRead: false,
+                createdAt: new Date(),
+            });
+
+            // 4. Send Web Push Notification to Receiver's devices (Messenger Mobile / System Banner)
+            const receiverUser = await User.findById(receiverId).select('pushSubscriptions').lean();
+            if (receiverUser?.pushSubscriptions && receiverUser.pushSubscriptions.length > 0) {
+                const pushPayload = {
+                    title: `💬 ${senderUser?.name || 'Messenger'}`,
+                    body: message.length > 100 ? message.substring(0, 100) + '...' : message,
+                    url: '/workspace?view=chat',
+                    icon: senderUser?.avatar || '/favicon.ico',
+                    tag: `chat-msg-${conversation._id}`
+                };
+
+                const validSubscriptions = [];
+                let hasExpired = false;
+
+                for (const sub of receiverUser.pushSubscriptions) {
+                    const result = await sendPushNotification(sub, pushPayload);
+                    if (result?.error === 'ExpiredSubscription' || result?.error?.statusCode === 410) {
+                        hasExpired = true;
+                    } else {
+                        validSubscriptions.push(sub);
+                    }
+                }
+
+                if (hasExpired) {
+                    await User.findByIdAndUpdate(receiverId, { pushSubscriptions: validSubscriptions });
+                }
+            }
 
             res.status(201).json({ success: true, message: 'Message sent!', data: populatedMessage });
         } catch (error) {
